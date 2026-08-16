@@ -18,20 +18,22 @@
         <p class="eyebrow">ROMA · PROTOTIPO</p>
         <h1>Qualità dell'aria</h1>
       </div>
-      <button id="installBtn" class="icon-btn hidden" aria-label="Installa app">＋</button>
+      <button id="installBtn" class="install-btn" type="button" aria-label="Installa app">
+        <span aria-hidden="true">⇩</span> Installa app
+      </button>
     </header>
 
     <section class="toolbar" aria-label="Filtri">
       <label>Fonte<select id="sourceSelect"><option value="demo">Demo locale</option><option value="eea">EEA</option><option value="cams">CAMS</option><option value="openaq">OpenAQ</option></select></label>
       <label>Inquinante<select id="pollutantSelect"><option>PM2.5</option><option>PM10</option><option>NO₂</option><option>O₃</option></select></label>
-      <label>Anno<select id="yearSelect"></select></label>
+      <label id="singleYearField">Anno<select id="yearSelect"></select></label>
       <label>Periodo<select id="monthSelect"><option value="0">Intero anno</option><option value="1">Gennaio</option><option value="2">Febbraio</option><option value="3">Marzo</option><option value="4">Aprile</option><option value="5">Maggio</option><option value="6">Giugno</option><option value="7">Luglio</option><option value="8">Agosto</option><option value="9">Settembre</option><option value="10">Ottobre</option><option value="11">Novembre</option><option value="12">Dicembre</option></select></label>
     </section>
 
     <nav class="mode-tabs" aria-label="Modalità">
-      <button class="tab active" data-mode="map">Mappa</button>
-      <button class="tab" data-mode="compare">Confronto</button>
-      <button class="tab" data-mode="difference">Differenza</button>
+      <button class="tab active" data-mode="map" type="button">Mappa</button>
+      <button class="tab" data-mode="compare" type="button">Confronto</button>
+      <button class="tab" data-mode="difference" type="button">Differenza</button>
     </nav>
 
     <section id="comparePanel" class="compare-panel hidden">
@@ -40,13 +42,31 @@
     </section>
 
     <section class="map-card">
-      <div id="map"></div>
+      <div id="singleMapWrap" class="map-stage">
+        <div id="map" class="map-canvas"></div>
+      </div>
+
+      <div id="compareMapWrap" class="map-stage compare-stage hidden" aria-label="Confronto con divisore trascinabile">
+        <div id="mapBefore" class="map-canvas"></div>
+        <div id="afterClip" class="swipe-after">
+          <div id="mapAfter" class="map-canvas"></div>
+        </div>
+        <div id="swipeDivider" class="swipe-divider" role="slider" aria-label="Confronta i due periodi" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" tabindex="0">
+          <span class="swipe-knob">↔</span>
+        </div>
+        <span id="beforeBadge" class="period-badge badge-a">2015</span>
+        <span id="afterBadge" class="period-badge badge-b">2025</span>
+      </div>
+
       <div class="map-badge" id="mapBadge">PM2.5 · 2025</div>
-      <div class="legend"><span>Buona</span><i></i><span>Critica</span></div>
+      <div id="standardLegend" class="legend"><span>Buona</span><i class="air-gradient"></i><span>Critica</span></div>
+      <div id="differenceLegend" class="legend hidden"><span>Migliora</span><i class="diff-gradient"></i><span>Peggiora</span></div>
     </section>
 
+    <p id="mapHint" class="map-hint">Le zone colorate sono una visualizzazione interpolata a partire dai punti disponibili.</p>
+
     <section class="summary" id="summaryCard">
-      <div><span class="kicker">Media</span><strong id="avgValue">—</strong><small>µg/m³</small></div>
+      <div><span class="kicker" id="avgLabel">Media</span><strong id="avgValue">—</strong><small>µg/m³</small></div>
       <div><span class="kicker">Stazioni</span><strong id="stationCount">—</strong><small>demo</small></div>
       <div><span class="kicker">Periodo</span><strong id="periodValue">—</strong><small id="sourceValue">—</small></div>
     </section>
@@ -56,7 +76,8 @@
       <div id="stations"></div>
     </section>
 
-    <footer class="app-footer">v<span id="appVersion">0.1.0</span> · dataset <span id="dataVersion">1</span></footer>
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+    <footer class="app-footer">v<span id="appVersion">0.1.1</span> · dataset <span id="dataVersion">1</span></footer>
   </main>
 
   <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
