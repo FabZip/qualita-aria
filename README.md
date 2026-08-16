@@ -2,6 +2,13 @@
 
 PWA mobile per esplorare e confrontare la qualità dell'aria nel tempo.
 
+## v0.1.6
+
+- legenda colori spostata in alto a sinistra
+- controllo attribuzione MapLibre/OpenFreeMap sempre libero in basso a destra
+- aumentato lo z-index del controllo attribuzione
+- corretta la sovrapposizione tra legenda e pulsante compatto `i`
+
 ## v0.1.5
 
 ### Cartografia
