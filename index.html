@@ -5,17 +5,17 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#07111d">
   <meta name="description" content="Mappa mobile per esplorare e confrontare la qualità dell'aria nel tempo.">
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="manifest.json?v=0.1.2">
   <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
-  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/app.css?v=0.1.2">
   <title>Qualità dell'aria</title>
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
       <div>
-        <p class="eyebrow">ROMA · PROTOTIPO</p>
+        <p class="eyebrow">ROMA · DATI PUBBLICI</p>
         <h1>Qualità dell'aria</h1>
       </div>
       <button id="installBtn" class="install-btn" type="button" aria-label="Installa app">
@@ -24,10 +24,33 @@
     </header>
 
     <section class="toolbar" aria-label="Filtri">
-      <label>Fonte<select id="sourceSelect"><option value="demo">Demo locale</option><option value="eea">EEA</option><option value="cams">CAMS</option><option value="openaq">OpenAQ</option></select></label>
-      <label>Inquinante<select id="pollutantSelect"><option>PM2.5</option><option>PM10</option><option>NO₂</option><option>O₃</option></select></label>
+      <label>Fonte
+        <select id="sourceSelect">
+          <option value="eea" selected>EEA · stazioni ufficiali</option>
+          <option value="arpa" disabled>ARPA Lazio · prossimamente</option>
+          <option value="cams" disabled>CAMS · prossimamente</option>
+          <option value="openaq" disabled>OpenAQ · prossimamente</option>
+          <option value="demo">Demo locale</option>
+        </select>
+      </label>
+      <label>Inquinante
+        <select id="pollutantSelect">
+          <option value="PM2.5">PM2.5</option>
+          <option value="PM10">PM10</option>
+          <option value="NO2">NO₂</option>
+          <option value="O3" disabled>O₃ · prossimamente</option>
+        </select>
+      </label>
       <label id="singleYearField">Anno<select id="yearSelect"></select></label>
-      <label>Periodo<select id="monthSelect"><option value="0">Intero anno</option><option value="1">Gennaio</option><option value="2">Febbraio</option><option value="3">Marzo</option><option value="4">Aprile</option><option value="5">Maggio</option><option value="6">Giugno</option><option value="7">Luglio</option><option value="8">Agosto</option><option value="9">Settembre</option><option value="10">Ottobre</option><option value="11">Novembre</option><option value="12">Dicembre</option></select></label>
+      <label>Periodo
+        <select id="monthSelect">
+          <option value="0">Intero anno</option>
+          <option value="1">Gennaio</option><option value="2">Febbraio</option><option value="3">Marzo</option>
+          <option value="4">Aprile</option><option value="5">Maggio</option><option value="6">Giugno</option>
+          <option value="7">Luglio</option><option value="8">Agosto</option><option value="9">Settembre</option>
+          <option value="10">Ottobre</option><option value="11">Novembre</option><option value="12">Dicembre</option>
+        </select>
+      </label>
     </section>
 
     <nav class="mode-tabs" aria-label="Modalità">
@@ -42,6 +65,8 @@
     </section>
 
     <section class="map-card">
+      <div id="loadingOverlay" class="loading-overlay hidden"><span class="loader"></span><strong>Caricamento dati EEA…</strong></div>
+
       <div id="singleMapWrap" class="map-stage">
         <div id="map" class="map-canvas"></div>
       </div>
@@ -55,32 +80,32 @@
           <span class="swipe-knob">↔</span>
         </div>
         <span id="beforeBadge" class="period-badge badge-a">2015</span>
-        <span id="afterBadge" class="period-badge badge-b">2025</span>
+        <span id="afterBadge" class="period-badge badge-b">2024</span>
       </div>
 
-      <div class="map-badge" id="mapBadge">PM2.5 · 2025</div>
-      <div id="standardLegend" class="legend"><span>Buona</span><i class="air-gradient"></i><span>Critica</span></div>
+      <div class="map-badge" id="mapBadge">PM2.5 · 2024</div>
+      <div id="standardLegend" class="legend"><span>Bassa</span><i class="air-gradient"></i><span>Alta</span></div>
       <div id="differenceLegend" class="legend hidden"><span>Migliora</span><i class="diff-gradient"></i><span>Peggiora</span></div>
     </section>
 
-    <p id="mapHint" class="map-hint">Le zone colorate sono una visualizzazione interpolata a partire dai punti disponibili.</p>
+    <p id="mapHint" class="map-hint">Le aree colorate sono un'interpolazione grafica dei valori delle stazioni visualizzate, non una superficie modellistica ufficiale.</p>
 
     <section class="summary" id="summaryCard">
-      <div><span class="kicker" id="avgLabel">Media</span><strong id="avgValue">—</strong><small>µg/m³</small></div>
-      <div><span class="kicker">Stazioni</span><strong id="stationCount">—</strong><small>demo</small></div>
+      <div><span class="kicker" id="avgLabel">Media stazioni</span><strong id="avgValue">—</strong><small id="unitValue">µg/m³</small></div>
+      <div><span class="kicker">Stazioni</span><strong id="stationCount">—</strong><small>visualizzate</small></div>
       <div><span class="kicker">Periodo</span><strong id="periodValue">—</strong><small id="sourceValue">—</small></div>
     </section>
 
     <section class="station-list">
-      <div class="section-title"><h2>Stazioni visualizzate</h2><span id="dataNotice">Dati dimostrativi</span></div>
+      <div class="section-title"><h2>Stazioni visualizzate</h2><span id="dataNotice">—</span></div>
       <div id="stations"></div>
     </section>
 
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
-    <footer class="app-footer">v<span id="appVersion">0.1.1</span> · dataset <span id="dataVersion">1</span></footer>
+    <footer class="app-footer">v<span id="appVersion">0.1.2</span> · dataset <span id="dataVersion">2</span></footer>
   </main>
 
   <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
-  <script src="js/app.js" defer></script>
+  <script src="js/app.js?v=0.1.2" defer></script>
 </body>
 </html>

@@ -1,9 +1,10 @@
 {
-  "version": 1,
+  "version": 2,
   "updated_at": "2026-08-16",
   "sources": {
     "demo": 1,
-    "eea": 0,
+    "eea_live_annual": 1,
+    "arpa_lazio": 0,
     "cams": 0,
     "openaq": 0
   }

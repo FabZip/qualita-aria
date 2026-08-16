@@ -2,19 +2,24 @@
 
 PWA mobile per esplorare e confrontare la qualità dell'aria nel tempo.
 
-## v0.1.1
+## v0.1.2
 
-- aggiunta visualizzazione a zone/heatmap interpolata sopra la cartografia
-- mantenuti i punti delle stazioni sopra le zone colorate
-- modalità **Confronto** trasformata in confronto Swipe reale con due mappe sovrapposte
-- divisore verticale trascinabile e mappe sincronizzate per posizione e zoom
-- modalità **Differenza** con aree verdi (miglioramento) e rosse (peggioramento)
-- pulsante esplicito **Installa app** al posto del simbolo `+`
-- migliorata la gestione cache/service worker per gli aggiornamenti su GitHub Pages
-- nessun workflow GitHub Actions: il progetto è pensato per GitHub Pages `Deploy from a branch` su `main / root`
+- prima integrazione con **dati reali EEA**
+- statistiche annuali delle stazioni EEA nell'area di Roma (2013-2025)
+- PM2.5, PM10 e NO₂
+- valori numerici ripristinati direttamente nei marker sulla mappa
+- heatmap/interpolazione grafica basata sui valori delle stazioni
+- modalità Mappa, Confronto Swipe e Differenza
+- filtro minimo di copertura annuale quando disponibile (75%)
+- cache-busting degli asset v0.1.2
+- PWA e service worker aggiornati
 
-> I valori presenti in `data/rome-demo.json` sono sintetici e servono solo allo sviluppo dell'interfaccia. Le zone colorate sono un'interpolazione visuale dei punti demo, non una misura territoriale reale.
+### Nota sulla heatmap
 
-## Sorgenti previste
+La zona colorata è un'interpolazione grafica realizzata dal frontend a partire dai punti di misura visualizzati. Non deve essere interpretata come una superficie modellistica ufficiale EEA/CAMS.
 
-EEA, CAMS e OpenAQ. Le integrazioni reali verranno aggiunte mantenendo un formato interno normalizzato.
+### Periodicità
+
+La fonte EEA implementata in questa versione usa il servizio ufficiale delle **statistiche annuali**. Per questo il selettore del mese è disabilitato quando EEA è selezionata.
+
+La prossima fonte prevista è **ARPA Lazio**, che pubblica dati elementari e anche elaborazioni standard con medie giornaliere, mensili e annuali.

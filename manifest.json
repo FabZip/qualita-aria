@@ -1,7 +1,7 @@
 {
   "name": "Qualità dell'aria",
   "short_name": "Aria",
-  "description": "Esplora e confronta la qualità dell'aria nel tempo.",
+  "description": "Esplora e confronta la qualità dell'aria con dati pubblici EEA.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
