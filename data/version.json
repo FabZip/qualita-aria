@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "updated_at": "2026-08-16",
+  "sources": {
+    "demo": 1,
+    "eea": 0,
+    "cams": 0,
+    "openaq": 0
+  }
+}

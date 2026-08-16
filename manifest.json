@@ -1,0 +1,19 @@
+{
+  "name": "Qualità dell'aria",
+  "short_name": "Aria",
+  "description": "Esplora e confronta la qualità dell'aria nel tempo.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#06101b",
+  "theme_color": "#07111d",
+  "lang": "it",
+  "icons": [
+    {
+      "src": "assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

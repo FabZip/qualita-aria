@@ -1,0 +1,122 @@
+{
+  "meta": {
+    "source": "Demo locale",
+    "pollutant": "PM2.5",
+    "unit": "µg/m³",
+    "city": "Roma",
+    "notice": "Valori sintetici usati solo per sviluppare l'interfaccia; non sono dati ambientali reali."
+  },
+  "years": {
+    "2015": [
+      {
+        "id": "RM-FERMI",
+        "name": "Roma Fermi",
+        "lat": 41.8778,
+        "lon": 12.4741,
+        "value": 30.2
+      },
+      {
+        "id": "RM-TIBURTINA",
+        "name": "Roma Tiburtina",
+        "lat": 41.9102,
+        "lon": 12.5296,
+        "value": 31.7
+      },
+      {
+        "id": "RM-CINECITTA",
+        "name": "Roma Cinecittà",
+        "lat": 41.8527,
+        "lon": 12.5708,
+        "value": 27.3
+      },
+      {
+        "id": "RM-VILLA",
+        "name": "Villa Ada",
+        "lat": 41.9345,
+        "lon": 12.5011,
+        "value": 23.8
+      },
+      {
+        "id": "RM-OSTIENSE",
+        "name": "Roma Ostiense",
+        "lat": 41.8684,
+        "lon": 12.4832,
+        "value": 29.1
+      }
+    ],
+    "2020": [
+      {
+        "id": "RM-FERMI",
+        "name": "Roma Fermi",
+        "lat": 41.8778,
+        "lon": 12.4741,
+        "value": 24.4
+      },
+      {
+        "id": "RM-TIBURTINA",
+        "name": "Roma Tiburtina",
+        "lat": 41.9102,
+        "lon": 12.5296,
+        "value": 25.1
+      },
+      {
+        "id": "RM-CINECITTA",
+        "name": "Roma Cinecittà",
+        "lat": 41.8527,
+        "lon": 12.5708,
+        "value": 21.5
+      },
+      {
+        "id": "RM-VILLA",
+        "name": "Villa Ada",
+        "lat": 41.9345,
+        "lon": 12.5011,
+        "value": 18.9
+      },
+      {
+        "id": "RM-OSTIENSE",
+        "name": "Roma Ostiense",
+        "lat": 41.8684,
+        "lon": 12.4832,
+        "value": 22.7
+      }
+    ],
+    "2025": [
+      {
+        "id": "RM-FERMI",
+        "name": "Roma Fermi",
+        "lat": 41.8778,
+        "lon": 12.4741,
+        "value": 17.2
+      },
+      {
+        "id": "RM-TIBURTINA",
+        "name": "Roma Tiburtina",
+        "lat": 41.9102,
+        "lon": 12.5296,
+        "value": 18.1
+      },
+      {
+        "id": "RM-CINECITTA",
+        "name": "Roma Cinecittà",
+        "lat": 41.8527,
+        "lon": 12.5708,
+        "value": 15.6
+      },
+      {
+        "id": "RM-VILLA",
+        "name": "Villa Ada",
+        "lat": 41.9345,
+        "lon": 12.5011,
+        "value": 13.9
+      },
+      {
+        "id": "RM-OSTIENSE",
+        "name": "Roma Ostiense",
+        "lat": 41.8684,
+        "lon": 12.4832,
+        "value": 16.8
+      }
+    ]
+  }
+}

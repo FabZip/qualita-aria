@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07111d">
+  <meta name="description" content="Mappa mobile per esplorare e confrontare la qualità dell'aria nel tempo.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="css/app.css">
+  <title>Qualità dell'aria</title>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">ROMA · PROTOTIPO</p>
+        <h1>Qualità dell'aria</h1>
+      </div>
+      <button id="installBtn" class="icon-btn hidden" aria-label="Installa app">＋</button>
+    </header>
+
+    <section class="toolbar" aria-label="Filtri">
+      <label>Fonte<select id="sourceSelect"><option value="demo">Demo locale</option><option value="eea">EEA</option><option value="cams">CAMS</option><option value="openaq">OpenAQ</option></select></label>
+      <label>Inquinante<select id="pollutantSelect"><option>PM2.5</option><option>PM10</option><option>NO₂</option><option>O₃</option></select></label>
+      <label>Anno<select id="yearSelect"></select></label>
+      <label>Periodo<select id="monthSelect"><option value="0">Intero anno</option><option value="1">Gennaio</option><option value="2">Febbraio</option><option value="3">Marzo</option><option value="4">Aprile</option><option value="5">Maggio</option><option value="6">Giugno</option><option value="7">Luglio</option><option value="8">Agosto</option><option value="9">Settembre</option><option value="10">Ottobre</option><option value="11">Novembre</option><option value="12">Dicembre</option></select></label>
+    </section>
+
+    <nav class="mode-tabs" aria-label="Modalità">
+      <button class="tab active" data-mode="map">Mappa</button>
+      <button class="tab" data-mode="compare">Confronto</button>
+      <button class="tab" data-mode="difference">Differenza</button>
+    </nav>
+
+    <section id="comparePanel" class="compare-panel hidden">
+      <div><span>Periodo A</span><select id="compareYearA"></select></div>
+      <div><span>Periodo B</span><select id="compareYearB"></select></div>
+    </section>
+
+    <section class="map-card">
+      <div id="map"></div>
+      <div class="map-badge" id="mapBadge">PM2.5 · 2025</div>
+      <div class="legend"><span>Buona</span><i></i><span>Critica</span></div>
+    </section>
+
+    <section class="summary" id="summaryCard">
+      <div><span class="kicker">Media</span><strong id="avgValue">—</strong><small>µg/m³</small></div>
+      <div><span class="kicker">Stazioni</span><strong id="stationCount">—</strong><small>demo</small></div>
+      <div><span class="kicker">Periodo</span><strong id="periodValue">—</strong><small id="sourceValue">—</small></div>
+    </section>
+
+    <section class="station-list">
+      <div class="section-title"><h2>Stazioni visualizzate</h2><span id="dataNotice">Dati dimostrativi</span></div>
+      <div id="stations"></div>
+    </section>
+
+    <footer class="app-footer">v<span id="appVersion">0.1.0</span> · dataset <span id="dataVersion">1</span></footer>
+  </main>
+
+  <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+  <script src="js/app.js" defer></script>
+</body>
+</html>
