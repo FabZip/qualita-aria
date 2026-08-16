@@ -1,7 +1,7 @@
 {
   "name": "Qualità dell'aria",
   "short_name": "Aria",
-  "description": "Esplora e confronta la qualità dell'aria a Roma con dati reali EEA Discodata e ARPA Lazio.",
+  "description": "Qualità dell'aria a Roma con dati reali EEA e ARPA Lazio su cartografia neutra.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

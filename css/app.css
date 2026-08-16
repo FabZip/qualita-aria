@@ -34,3 +34,9 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
 .diagnostics summary{cursor:pointer;padding:11px 13px;color:var(--muted);font-size:.7rem;font-weight:700;user-select:none}
 .diagnostics[open] summary{border-bottom:1px solid var(--line)}
 .diagnostics pre{margin:0;padding:12px 13px;max-height:320px;overflow:auto;white-space:pre-wrap;word-break:break-word;color:#b8c9d8;font-size:.61rem;line-height:1.45}
+
+/* v0.1.5: basemap chiara e neutra per dare priorità ai dati cromatici */
+.map-card{background:#e8ebed}
+.maplibregl-ctrl-group{box-shadow:0 1px 4px rgba(0,0,0,.22)}
+.maplibregl-popup-content{color:#17212b;background:rgba(255,255,255,.96)}
+.maplibregl-popup-tip{border-top-color:rgba(255,255,255,.96)!important}

@@ -9,7 +9,7 @@ const state={
 };
 
 const $=id=>document.getElementById(id);
-const MAP_STYLE='https://tiles.openfreemap.org/styles/liberty';
+const MAP_STYLE='https://tiles.openfreemap.org/styles/positron';
 const ROME={center:[12.4964,41.9028],zoom:10.2,bbox:[12.15,41.65,12.85,42.15]};
 
 /*
@@ -23,14 +23,14 @@ const EEA_SQL_API='https://discodata.eea.europa.eu/sql';
  * ARPA Lazio:
  * Annual municipal indicators are loaded from Open Data Lazio (CKAN DataStore).
  */
-const ARPA_API='https://dati.lazio.it/api/3/action/datastore_search';
+const ARPA_API='https://dati.lazio.it/it/api/3/action/datastore_search';
 
 /*
- * Geographic scope for the Comune di Roma:
- * public Rome/ATAC ArcGIS municipality polygons. We render the polygons rather
- * than a screen-pixel circle so their geographic extent remains fixed on zoom.
+ * Geographic scope for the Comune di Roma.
+ * The file contains municipality boundaries in WGS84 derived from ISTAT limits.
+ * We download the Rome-province collection once and retain only ISTAT 058091.
  */
-const ROME_MUNICIPI_QUERY='https://viaggiacon.atac.roma.it/server/rest/services/Viaggiacon/IdentifyMunicipiWgs84/MapServer/0/query';
+const ROME_BOUNDARY_URL='https://raw.githubusercontent.com/guglielmo/geojson-italy/main/geojson/limits_P_58_municipalities.geojson';
 
 const POLLUTANTS={
   'PM2.5':{eeaCode:6001,label:'PM2.5',arpaPrefix:'PM2.5 media annua'},
@@ -59,7 +59,7 @@ const SOURCE_INFO={
     name:'EEA',
     years:EEA_YEARS,
     description:'<strong>EEA:</strong> statistiche annuali delle stazioni ufficialmente riportate dai Paesi europei.',
-    hint:"Le aree colorate sono un'interpolazione grafica dei valori delle stazioni EEA mostrate sulla mappa; non sono una superficie modellistica ufficiale."
+    hint:"Le zone colorate sono una sfumatura grafica attorno alle stazioni EEA reali. La copertura resta limitata dove le stazioni sono poche; per una superficie continua useremo CAMS."
   },
   arpa:{
     name:'ARPA Lazio',
@@ -316,25 +316,37 @@ function isRomeRecord(record){
 async function fetchRomeBoundary(){
   if(state.romeBoundary)return state.romeBoundary;
 
-  const params=new URLSearchParams({
-    where:'1=1',
-    outFields:'*',
-    returnGeometry:'true',
-    outSR:'4326',
-    f:'geojson'
-  });
-
   try{
-    const response=await fetch(`${ROME_MUNICIPI_QUERY}?${params}`,{cache:'no-store'});
+    const response=await fetch(ROME_BOUNDARY_URL,{cache:'force-cache'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
-    const geo=await response.json();
-    if(!Array.isArray(geo?.features)||!geo.features.length)throw new Error('nessun poligono ricevuto');
-    state.romeBoundary=geo;
-    return geo
+
+    const collection=await response.json();
+    const feature=(collection.features||[]).find(f=>{
+      const p=f.properties||{};
+      return String(p.com_istat_code||'')==='058091'
+        || Number(p.com_istat_code_num)===58091
+        || normalizeText(p.name)==='roma'
+    });
+
+    if(!feature?.geometry)throw new Error('confine del Comune di Roma non trovato');
+
+    state.romeBoundary={
+      type:'FeatureCollection',
+      features:[{
+        type:'Feature',
+        properties:{
+          ...(feature.properties||{}),
+          scope:'Comune di Roma',
+          source:'ISTAT / geojson-italy'
+        },
+        geometry:feature.geometry
+      }]
+    };
+
+    return state.romeBoundary
   }catch(err){
-    // Fallback is only cartographic: ARPA value remains real. Do not fake a geographic circle.
     console.error('Perimetro Roma non disponibile',err);
-    return null
+    throw new Error(`Perimetro Roma non disponibile: ${err.message||err}`)
   }
 }
 
@@ -415,6 +427,7 @@ async function fetchArpaRows(year,pollutant){
     min,med,max,
     fields:{fieldMin,fieldMed,fieldMax},
     boundaryFeatures:boundary?.features?.length||0,
+    boundarySource:'ISTAT municipality limits · geojson-italy · ISTAT 058091',
     note:'Il perimetro visualizzato indica il territorio a cui si riferisce il dato comunale; non una concentrazione uniforme.'
   };
   diagnostics(diagnostic);
@@ -507,7 +520,7 @@ function addAirLayers(map,prefix='air'){
     source:`${prefix}-boundary`,
     paint:{
       'fill-color':['step',['get','value'],'#35d07f',10,'#e6cf43',20,'#ff914d',30,'#ff5864'],
-      'fill-opacity':.28
+      'fill-opacity':.44
     }
   });
   map.addLayer({
@@ -515,7 +528,7 @@ function addAirLayers(map,prefix='air'){
     type:'line',
     source:`${prefix}-boundary`,
     paint:{
-      'line-color':'rgba(255,255,255,.58)',
+      'line-color':'rgba(20,28,36,.78)',
       'line-width':['interpolate',['linear'],['zoom'],8,.7,12,1.3,15,2]
     }
   });
@@ -526,13 +539,14 @@ function addAirLayers(map,prefix='air'){
     maxzoom:15,
     paint:{
       'heatmap-weight':['interpolate',['linear'],['get','value'],0,0,40,1],
-      'heatmap-intensity':['interpolate',['linear'],['zoom'],8,.72,12,1.3],
-      'heatmap-radius':['interpolate',['linear'],['zoom'],8,38,10,68,12,105],
-      'heatmap-opacity':['interpolate',['linear'],['zoom'],8,.56,12,.7,15,.22],
+      'heatmap-intensity':['interpolate',['linear'],['zoom'],7,.9,10,1.55,13,1.85],
+      'heatmap-radius':['interpolate',['linear'],['zoom'],7,62,9,92,10.5,128,13,178],
+      'heatmap-opacity':['interpolate',['linear'],['zoom'],7,.68,10,.78,13,.62,15,.34],
       'heatmap-color':['interpolate',['linear'],['heatmap-density'],
-        0,'rgba(53,208,127,0)',.12,'rgba(53,208,127,.72)',
-        .35,'rgba(230,207,67,.78)',.58,'rgba(255,145,77,.82)',
-        .82,'rgba(255,88,100,.9)',1,'rgba(174,22,31,.94)']
+        0,'rgba(53,208,127,0)',.035,'rgba(53,208,127,.42)',
+        .18,'rgba(53,208,127,.72)',.38,'rgba(230,207,67,.82)',
+        .62,'rgba(255,145,77,.86)',.84,'rgba(255,88,100,.92)',
+        1,'rgba(174,22,31,.96)']
     }
   });
 
@@ -540,7 +554,7 @@ function addAirLayers(map,prefix='air'){
     id:`${prefix}-points`,type:'circle',source:`${prefix}-source`,
     paint:{
       'circle-radius':['case',
-        ['==',['get','kind'],'municipal'],17,
+        ['==',['get','kind'],'municipal'],13,
         ['interpolate',['linear'],['zoom'],8,8,10,11,13,14]
       ],
       'circle-color':['step',['get','value'],'#35d07f',10,'#e6cf43',20,'#ff914d',30,'#ff5864'],
@@ -603,7 +617,7 @@ function addDifferenceLayers(map){
     source:'diff-boundary',
     paint:{
       'fill-color':['case',['<=',['get','delta'],0],'#21b866','#ef4f4f'],
-      'fill-opacity':.28
+      'fill-opacity':.44
     }
   });
   map.addLayer({
@@ -611,7 +625,7 @@ function addDifferenceLayers(map){
     type:'line',
     source:'diff-boundary',
     paint:{
-      'line-color':'rgba(255,255,255,.58)',
+      'line-color':'rgba(20,28,36,.78)',
       'line-width':['interpolate',['linear'],['zoom'],8,.7,12,1.3,15,2]
     }
   });
@@ -645,7 +659,7 @@ function addDifferenceLayers(map){
   map.addLayer({
     id:'diff-points',type:'circle',source:'diff-source',
     paint:{
-      'circle-radius':['case',['==',['get','kind'],'municipal'],17,
+      'circle-radius':['case',['==',['get','kind'],'municipal'],13,
         ['interpolate',['linear'],['zoom'],8,8,10,11,13,14]],
       'circle-color':['case',['<=',['get','delta'],0],'#21b866','#ef4f4f'],
       'circle-stroke-width':2,'circle-stroke-color':'#fff'
@@ -960,8 +974,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.1.4',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.1.4',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.1.5',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.1.5',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -975,7 +989,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.1.4')
+    navigator.serviceWorker.register('./service-worker.js?v=0.1.5')
       .then(reg=>reg.update())
       .catch(console.error)
   }
