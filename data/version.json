@@ -1,11 +1,19 @@
 {
-  "version": 2,
+  "version": 3,
   "updated_at": "2026-08-16",
   "sources": {
-    "demo": 1,
-    "eea_live_annual": 1,
-    "arpa_lazio": 0,
-    "cams": 0,
-    "openaq": 0
+    "eea_live_annual": {
+      "enabled": true,
+      "type": "station_measurement_statistics",
+      "years": "2013-2025"
+    },
+    "arpa_lazio_open_data": {
+      "enabled": true,
+      "type": "municipal_modelled_evaluation",
+      "years": "2013-2023"
+    },
+    "demo": {
+      "enabled": false
+    }
   }
 }
