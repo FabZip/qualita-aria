@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#07111d">
   <meta name="description" content="Mappa mobile per esplorare e confrontare la qualità dell'aria con dati pubblici reali.">
-  <link rel="manifest" href="manifest.json?v=0.1.3">
+  <link rel="manifest" href="manifest.json?v=0.1.4">
   <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
-  <link rel="stylesheet" href="css/app.css?v=0.1.3">
+  <link rel="stylesheet" href="css/app.css?v=0.1.4">
   <title>Qualità dell'aria</title>
 </head>
 <body>
@@ -49,6 +49,7 @@
     </section>
 
     <p id="sourceDescription" class="source-description"></p>
+<p class="co2-note"><strong>CO₂:</strong> non fa parte di questi dataset di qualità dell’aria; è diverso dal CO (monossido di carbonio) e richiede una fonte dedicata ai gas serra.</p>
 
     <nav class="mode-tabs" aria-label="Modalità">
       <button class="tab active" data-mode="map" type="button">Mappa</button>
@@ -119,13 +120,19 @@
       <div id="stations"></div>
     </section>
 
+
+    <details class="diagnostics">
+      <summary>Diagnostica dati ricevuti</summary>
+      <pre id="diagnosticsContent">In attesa del primo caricamento…</pre>
+    </details>
+
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
     <footer class="app-footer">
-      v<span id="appVersion">0.1.3</span> · dataset <span id="dataVersion">3</span>
+      v<span id="appVersion">0.1.4</span> · dataset <span id="dataVersion">4</span>
     </footer>
   </main>
 
   <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
-  <script src="js/app.js?v=0.1.3" defer></script>
+  <script src="js/app.js?v=0.1.4" defer></script>
 </body>
 </html>

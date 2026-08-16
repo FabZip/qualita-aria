@@ -1,19 +1,19 @@
 {
-  "version": 3,
+  "version": 4,
   "updated_at": "2026-08-16",
   "sources": {
-    "eea_live_annual": {
+    "eea_discodata": {
       "enabled": true,
-      "type": "station_measurement_statistics",
+      "type": "station_annual_statistics",
+      "table": "AirQualityDataFlows.latest.AirQualityStatistics",
+      "aggregation": "P1Y",
       "years": "2013-2025"
     },
     "arpa_lazio_open_data": {
       "enabled": true,
       "type": "municipal_modelled_evaluation",
-      "years": "2013-2023"
-    },
-    "demo": {
-      "enabled": false
+      "years": "2013-2023",
+      "scope_geometry": "Rome municipality polygons"
     }
   }
 }
