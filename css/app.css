@@ -309,3 +309,10 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
   .arpa-history-legend{justify-content:flex-start;margin-top:7px}
   .arpa-year{width:55px;min-width:55px}
 }
+
+
+/* v0.1.16: selezione geografica EEA Roma / Italia / Europa */
+#eeaScopeField.hidden{display:none!important}
+@media(min-width:600px){
+  .toolbar{grid-template-columns:repeat(3,1fr)}
+}

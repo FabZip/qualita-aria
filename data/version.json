@@ -1,12 +1,27 @@
 {
-  "version": 8,
+  "version": 9,
   "updated_at": "2026-08-19",
   "sources": {
     "eea_discodata": {
       "enabled": true,
       "type": "station_annual_statistics",
       "aggregation": "P1Y",
-      "years": "2013-2025"
+      "years": "2013-2025",
+      "scopes": [
+        "Roma",
+        "Italia",
+        "Europa"
+      ],
+      "pagination": {
+        "page_size": 1000,
+        "max_pages": 20
+      },
+      "europe_bbox": [
+        -25.0,
+        27.0,
+        45.0,
+        72.0
+      ]
     },
     "arpa_lazio_static": {
       "enabled": true,
