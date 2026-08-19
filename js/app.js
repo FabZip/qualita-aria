@@ -11,6 +11,14 @@ const state={
 const $=id=>document.getElementById(id);
 const MAP_STYLE='https://tiles.openfreemap.org/styles/positron';
 const ROME={center:[12.4964,41.9028],zoom:10.2,bbox:[12.15,41.65,12.85,42.15]};
+const ITALY={center:[12.5,42.3],zoom:5.2,bbox:[6.3,35.4,19.0,47.6]};
+const EUROPE={center:[10.0,50.0],zoom:3.15,bbox:[-25.0,27.0,45.0,72.0]};
+
+const EEA_SCOPES={
+  rome:{label:'Roma',bbox:ROME.bbox,center:ROME.center,zoom:ROME.zoom,country:'IT'},
+  italy:{label:'Italia',bbox:ITALY.bbox,center:ITALY.center,zoom:ITALY.zoom,country:'IT'},
+  europe:{label:'Europa',bbox:EUROPE.bbox,center:EUROPE.center,zoom:EUROPE.zoom,country:null}
+};
 
 /*
  * EEA:
@@ -63,7 +71,7 @@ const SOURCE_INFO={
     name:'EEA',
     years:EEA_YEARS,
     description:'<strong>EEA:</strong> statistiche annuali delle stazioni ufficialmente riportate dai Paesi europei.',
-    hint:"Le zone colorate sono una sfumatura grafica attorno alle stazioni EEA reali. La copertura resta limitata dove le stazioni sono poche; per una superficie continua useremo CAMS."
+    hint:"EEA mostra stazioni reali sull’area selezionata. La sfumatura è solo una visualizzazione attorno alle stazioni, non una superficie modellata continua."
   },
   arpa:{
     name:'ARPA Lazio',
@@ -74,6 +82,8 @@ const SOURCE_INFO={
 };
 
 function source(){return $('sourceSelect').value}
+function eeaScope(){return $('eeaScopeSelect')?.value||'rome'}
+function currentEeaScope(){return EEA_SCOPES[eeaScope()]||EEA_SCOPES.rome}
 function currentYears(){return SOURCE_INFO[source()].years}
 function normalizeText(v){return String(v??'').toLowerCase().replace(/\s+/g,' ').trim()}
 function fmt(v){return Number(v).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})}
@@ -120,6 +130,7 @@ function fillYears(){
 function configureSourceUI(){
   const info=SOURCE_INFO[source()];
   $('sourceDescription').innerHTML=info.description;
+  $('eeaScopeField').classList.toggle('hidden',source()!=='eea');
   $('monthSelect').disabled=true;
   $('monthSelect').title='Le fonti reali attive in questa versione espongono statistiche annuali.';
   if(source()==='eea'){
@@ -137,7 +148,13 @@ function configureSourceUI(){
 
 function eeaSql(year,pollutant){
   const code=POLLUTANTS[pollutant].eeaCode;
-  const [minLon,minLat,maxLon,maxLat]=ROME.bbox;
+  const scope=currentEeaScope();
+  const [minLon,minLat,maxLon,maxLat]=scope.bbox;
+
+  const countryFilter=scope.country
+    ?`AND CountryCode='${scope.country}'`
+    :'';
+
   return `
 SELECT
   AcceptedforProducts,
@@ -164,9 +181,9 @@ SELECT
   Verification,
   YearOfStatistics
 FROM [AirQualityDataFlows].[latest].[AirQualityStatistics]
-WHERE CountryCode='IT'
-  AND YearOfStatistics=${Number(year)}
+WHERE YearOfStatistics=${Number(year)}
   AND component_code=${Number(code)}
+  ${countryFilter}
   AND Latitude BETWEEN ${minLat} AND ${maxLat}
   AND Longitude BETWEEN ${minLon} AND ${maxLon}
   AND AirPollutionLevel IS NOT NULL
@@ -177,6 +194,34 @@ WHERE CountryCode='IT'
     OR DataAggregationProcess LIKE '%Annual mean%'
   )
 `.trim()
+}
+
+async function fetchDiscodataPages(sql,{pageSize=1000,maxPages=20}={}){
+  const rows=[];
+
+  for(let page=1;page<=maxPages;page++){
+    const url=`${EEA_SQL_API}?${new URLSearchParams({
+      query:sql,
+      p:String(page),
+      nrOfHits:String(pageSize)
+    })}`;
+
+    const response=await fetch(url,{cache:'no-store'});
+    if(!response.ok)throw new Error(`HTTP ${response.status} · pagina ${page}`);
+
+    const data=await response.json();
+    const chunk=Array.isArray(data?.results)?data.results:
+      Array.isArray(data)?data:
+      Array.isArray(data?.data)?data.data:[];
+
+    rows.push(...chunk);
+
+    if(chunk.length<pageSize){
+      return{rows,pages:page,truncated:false}
+    }
+  }
+
+  return{rows,pages:maxPages,truncated:true}
 }
 
 function acceptedRank(v){
@@ -197,7 +242,9 @@ function eeaRecordScore(r){
 }
 
 async function fetchEeaRows(year,pollutant){
-  const cacheKey=`${year}:${pollutant}`;
+  const scope=currentEeaScope();
+  const cacheKey=`${eeaScope()}:${year}:${pollutant}`;
+
   if(state.eeaCache.has(cacheKey)){
     const cached=state.eeaCache.get(cacheKey);
     diagnostics({...cached.diagnostic,cache:'memory'});
@@ -205,17 +252,14 @@ async function fetchEeaRows(year,pollutant){
   }
 
   const sql=eeaSql(year,pollutant);
-  const url=`${EEA_SQL_API}?${new URLSearchParams({query:sql,p:'1',nrOfHits:'1000'})}`;
+  let paged;
 
-  let response;
-  let data;
   try{
-    response=await fetch(url,{cache:'no-store'});
-    if(!response.ok)throw new Error(`HTTP ${response.status}`);
-    data=await response.json()
+    paged=await fetchDiscodataPages(sql)
   }catch(err){
     diagnostics({
       source:'EEA / Discodata',
+      scope:scope.label,
       year,pollutant,
       aggregation:'P1Y annual mean',
       endpoint:EEA_SQL_API,
@@ -224,9 +268,7 @@ async function fetchEeaRows(year,pollutant){
     throw new Error(`EEA: impossibile leggere Discodata (${err.message||err}).`)
   }
 
-  const raw=Array.isArray(data?.results)?data.results:
-            Array.isArray(data)?data:
-            Array.isArray(data?.data)?data.data:[];
+  const raw=paged.rows;
 
   const best=new Map();
   for(const r of raw){
@@ -245,6 +287,7 @@ async function fetchEeaRows(year,pollutant){
     return{
       id,
       name:String(r.AQStationName||r.AirQualityStation||id),
+      country:String(r.CountryCode||''),
       lat:parseNumber(r.Latitude),
       lon:parseNumber(r.Longitude),
       value:parseNumber(r.AirPollutionLevel),
@@ -256,9 +299,13 @@ async function fetchEeaRows(year,pollutant){
       kind:'station',
       provider:'EEA'
     }
-  }).sort((a,b)=>a.name.localeCompare(b.name,'it'));
+  }).sort((a,b)=>{
+    const countryCmp=a.country.localeCompare(b.country);
+    return countryCmp||a.name.localeCompare(b.name,'it')
+  });
 
   const sample=raw[0]?{
+    CountryCode:raw[0].CountryCode,
     AQStationName:raw[0].AQStationName,
     AirQualityStationEoICode:raw[0].AirQualityStationEoICode,
     AirPollutionLevel:raw[0].AirPollutionLevel,
@@ -273,21 +320,31 @@ async function fetchEeaRows(year,pollutant){
 
   const diagnostic={
     source:'EEA / Discodata',
+    scope:scope.label,
+    boundingBox:scope.bbox,
     table:'AirQualityDataFlows.latest.AirQualityStatistics',
     year,pollutant,
     component_code:POLLUTANTS[pollutant].eeaCode,
     aggregation:'P1Y annual mean',
-    boundingBox:ROME.bbox,
+    pages:paged.pages,
+    truncated:paged.truncated,
     rowsReceived:raw.length,
     stationsUsed:rows.length,
+    countries:[...new Set(rows.map(r=>r.country).filter(Boolean))].sort(),
     sample
   };
+
   diagnostics(diagnostic);
   state.eeaCache.set(cacheKey,{rows,diagnostic});
 
   if(!rows.length){
-    throw new Error(`EEA: Discodata ha restituito ${raw.length} record ma nessuna stazione utilizzabile per Roma, ${pollutant}, ${year}. Apri “Diagnostica dati ricevuti” per vedere il risultato.`)
+    throw new Error(`EEA: nessuna stazione utilizzabile per ${scope.label}, ${pollutant}, ${year}.`)
   }
+
+  if(paged.truncated){
+    showToast(`EEA: raggiunto il limite di ${paged.pages*1000} record. Restringi l’area per un risultato completo.`)
+  }
+
   return rows
 }
 
@@ -1029,7 +1086,7 @@ function toGeoJSON(rows){
       type:'Feature',
       properties:{
         id:r.id,name:r.name,value:r.value,label:fmt(r.value),
-        coverage:r.coverage??'',kind:r.kind||'station',
+        coverage:r.coverage??'',country:r.country??'',kind:r.kind||'station',
         min:r.min??'',max:r.max??'',provider:r.provider||''
       },
       geometry:{type:'Point',coordinates:[r.lon,r.lat]}
@@ -1106,9 +1163,9 @@ function addAirLayers(map,prefix='air'){
     maxzoom:15,
     paint:{
       'heatmap-weight':['interpolate',['linear'],['get','value'],0,0,40,1],
-      'heatmap-intensity':['interpolate',['linear'],['zoom'],7,.9,10,1.55,13,1.85],
-      'heatmap-radius':['interpolate',['linear'],['zoom'],7,62,9,92,10.5,128,13,178],
-      'heatmap-opacity':['interpolate',['linear'],['zoom'],7,.68,10,.78,13,.62,15,.34],
+      'heatmap-intensity':['interpolate',['linear'],['zoom'],3,.55,5,.7,7,.95,10,1.55,13,1.85],
+      'heatmap-radius':['interpolate',['linear'],['zoom'],3,8,5,18,7,40,9,86,10.5,128,13,178],
+      'heatmap-opacity':['interpolate',['linear'],['zoom'],3,.48,5,.58,7,.68,10,.78,13,.62,15,.34],
       'heatmap-color':['interpolate',['linear'],['heatmap-density'],
         0,'rgba(53,208,127,0)',.035,'rgba(53,208,127,.42)',
         .18,'rgba(53,208,127,.72)',.38,'rgba(230,207,67,.82)',
@@ -1122,7 +1179,7 @@ function addAirLayers(map,prefix='air'){
     paint:{
       'circle-radius':['case',
         ['==',['get','kind'],'municipal'],13,
-        ['interpolate',['linear'],['zoom'],8,8,10,11,13,14]
+        ['interpolate',['linear'],['zoom'],3,2.5,5,4,8,8,10,11,13,14]
       ],
       'circle-color':['step',['get','value'],'#35d07f',10,'#e6cf43',20,'#ff914d',30,'#ff5864'],
       'circle-stroke-width':2,
@@ -1133,6 +1190,7 @@ function addAirLayers(map,prefix='air'){
 
   map.addLayer({
     id:`${prefix}-labels`,type:'symbol',source:`${prefix}-source`,
+    minzoom:6,
     layout:{
       'text-field':['get','label'],
       'text-size':['case',
@@ -1161,7 +1219,7 @@ function addAirLayers(map,prefix='air'){
     }
     new maplibregl.Popup({offset:18})
       .setLngLat(f.geometry.coordinates)
-      .setHTML(`<strong>${p.name}</strong><br>${fmt(p.value)} µg/m³${extra}`)
+      .setHTML(`<strong>${p.name}</strong>${p.country?` · ${p.country}`:''}<br>${fmt(p.value)} µg/m³${extra}`)
       .addTo(map)
   });
 }
@@ -1297,7 +1355,7 @@ function renderList(rows,isDiff=false){
       :'';
 
     const detail=r.kind==='station'
-      ?`${r.id}${r.coverage!==null&&r.coverage!==undefined?` · copertura ${fmt(r.coverage)}%`:''}`
+      ?`${r.country?`${r.country} · `:''}${r.id}${r.coverage!==null&&r.coverage!==undefined?` · copertura ${fmt(r.coverage)}%`:''}`
       :`Comune di Roma${r.zone?` · zona ${r.zone}`:''}`;
 
     return `<div class="station-row">
@@ -1318,6 +1376,7 @@ function mergeComparisonRows(rowsA,rowsB){
       name:row.name,
       kind:row.kind,
       provider:row.provider,
+      country:row.country||'',
       verification:row.verification,
       valueA:row.value,
       valueB:null,
@@ -1333,6 +1392,7 @@ function mergeComparisonRows(rowsA,rowsB){
     if(current){
       current.name=row.name||current.name;
       current.provider=row.provider||current.provider;
+      current.country=row.country||current.country;
       current.verification=row.verification||current.verification;
       current.valueB=row.value;
       current.coverageB=row.coverage
@@ -1342,6 +1402,7 @@ function mergeComparisonRows(rowsA,rowsB){
         name:row.name,
         kind:row.kind,
         provider:row.provider,
+        country:row.country||'',
         verification:row.verification,
         valueA:null,
         valueB:row.value,
@@ -1390,7 +1451,7 @@ function renderComparisonList(rows){
 
     return `<div class="station-row">
       <i style="background:linear-gradient(90deg,${leftColor} 0 50%,${rightColor} 50% 100%)"></i>
-      <div><strong>${r.name}</strong><small>${r.id||''}</small></div>
+      <div><strong>${r.name}</strong><small>${r.country?`${r.country} · `:'' }${r.id||''}</small></div>
       <b class="comparison-values" aria-label="Valori a confronto: ${left} e ${right}${trend?`. ${trend.label}`:''}">${left}&nbsp;↔&nbsp;${right}${trendHtml}</b>
     </div>`
   }).join('')
@@ -1579,17 +1640,34 @@ function updateArpaHistoryVisibility(){
   panel.classList.toggle('hidden',!visible)
 }
 
+function fitEeaScope(map){
+  if(!map||source()!=='eea')return;
+  const scope=currentEeaScope();
+  const [minLon,minLat,maxLon,maxLat]=scope.bbox;
+  map.fitBounds([[minLon,minLat],[maxLon,maxLat]],{
+    padding:scope===EEA_SCOPES.rome?34:22,
+    duration:0,
+    maxZoom:scope.zoom
+  })
+}
+
+function fitCurrentScope(map,rows){
+  if(source()==='arpa')fitArpaScope(map,rows);
+  else fitEeaScope(map)
+}
+
 function setLoading(on){
   $('loadingOverlay').classList.toggle('hidden',!on);
   $('loadingText').textContent=source()==='eea'
-    ?'Caricamento EEA Discodata…'
+    ?`Caricamento EEA · ${currentEeaScope().label}…`
     :'Caricamento file ARPA Lazio…'
 }
 
 function sourceNotice(rows){
   if(source()==='arpa')return'ARPA Lazio · Standard comunali';
   const unverified=rows.some(r=>normalizeText(r.verification).includes('unverified'));
-  return unverified?'EEA · presenti dati non verificati':'EEA · statistiche annuali P1Y'
+  const scope=currentEeaScope().label;
+  return unverified?`EEA · ${scope} · presenti dati non verificati`:`EEA · ${scope} · statistiche annuali P1Y`
 }
 
 async function updateCompareMaps(){
@@ -1599,10 +1677,8 @@ async function updateCompareMaps(){
   ]);
   setAirData(state.mapBefore,a,'before');
   setAirData(state.mapAfter,b,'after');
-  if(source()==='arpa'){
-    fitArpaScope(state.mapBefore,a);
-    fitArpaScope(state.mapAfter,b)
-  }
+  fitCurrentScope(state.mapBefore,a);
+  fitCurrentScope(state.mapAfter,b);
   $('beforeBadge').textContent=$('compareYearA').value;
   $('afterBadge').textContent=$('compareYearB').value;
   return{a,b}
@@ -1630,7 +1706,7 @@ async function render(){
       if(token!==state.renderToken)return;
 
       showDifferenceOnSingle(rows);
-      if(source()==='arpa')fitArpaScope(state.map,rows);
+      fitCurrentScope(state.map,rows);
       renderList(rows,true);
       $('mapBadge').textContent=`Δ ${$('compareYearB').value} − ${$('compareYearA').value}`;
       $('avgLabel').textContent=source()==='arpa'?'Differenza MED':'Differenza media stazioni';
@@ -1664,7 +1740,7 @@ async function render(){
       if(token!==state.renderToken)return;
 
       showAirOnSingle(rows);
-      if(source()==='arpa')fitArpaScope(state.map,rows);
+      fitCurrentScope(state.map,rows);
       renderList(rows);
       $('mapBadge').textContent=`${POLLUTANTS[$('pollutantSelect').value].label} · ${$('yearSelect').value}`;
       $('avgLabel').textContent=source()==='arpa'?'Valore MED':'Media stazioni';
@@ -1673,7 +1749,7 @@ async function render(){
     }
 
     $('stationCount').textContent=source()==='arpa'?'Roma':rows.length;
-    $('sourceValue').textContent=SOURCE_INFO[source()].name;
+    $('sourceValue').textContent=source()==='eea'?`EEA · ${currentEeaScope().label}`:SOURCE_INFO[source()].name;
     $('dataNotice').textContent=sourceNotice(rows);
     $('mapHint').textContent=SOURCE_INFO[source()].hint;
   }catch(err){
@@ -1812,6 +1888,10 @@ function bind(){
     render()
   });
 
+  $('eeaScopeSelect').addEventListener('change',()=>{
+    if(source()==='eea')render()
+  });
+
   ['pollutantSelect','yearSelect','compareYearA','compareYearB']
     .forEach(id=>$(id).addEventListener('change',render));
 
@@ -1826,8 +1906,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.1.15',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.1.15',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.2.0',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.2.0',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -1841,7 +1921,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.1.15')
+    navigator.serviceWorker.register('./service-worker.js?v=0.2.0')
       .then(reg=>reg.update())
       .catch(console.error)
   }
