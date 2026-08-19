@@ -66,3 +66,246 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
 .trend-up{color:var(--bad)}
 .trend-down{color:var(--good)}
 .trend-stable{color:var(--warn)}
+
+
+/* v0.1.15: storico ARPA MIN / MED / MAX, scorrimento orizzontale mobile */
+.arpa-history{
+  margin:10px 0;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:12px;
+  overflow:hidden;
+}
+.arpa-history-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+.arpa-history-head h2{
+  margin:0;
+  font-size:.9rem;
+}
+.arpa-history-head p{
+  margin:3px 0 0;
+  color:var(--muted);
+  font-size:.62rem;
+}
+.arpa-history-legend{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:9px;
+  flex-wrap:wrap;
+  color:var(--muted);
+  font-size:.58rem;
+  white-space:nowrap;
+}
+.arpa-history-legend span{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+}
+.history-range-sample{
+  display:inline-block;
+  width:8px;
+  height:18px;
+  border-radius:4px;
+  background:rgba(37,216,255,.28);
+  border:1px solid rgba(37,216,255,.72);
+}
+.history-med-sample{
+  display:inline-block;
+  width:14px;
+  height:3px;
+  border-radius:99px;
+  background:#fff;
+}
+.arpa-history-detail{
+  min-height:30px;
+  display:flex;
+  align-items:center;
+  margin:0 0 8px;
+  padding:7px 9px;
+  border-radius:9px;
+  background:var(--panel2);
+  color:#d9e4ef;
+  font-size:.66rem;
+}
+.arpa-history-detail strong{color:#fff}
+.arpa-history-detail .history-detail-a{color:#58d887}
+.arpa-history-detail .history-detail-b{color:#64a3ff}
+.arpa-history-chart{
+  display:grid;
+  grid-template-columns:38px minmax(0,1fr);
+  min-height:236px;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  background:rgba(5,15,25,.24);
+}
+.arpa-history-loading,
+.arpa-history-error{
+  grid-column:1/-1;
+  min-height:236px;
+  display:grid;
+  place-items:center;
+  padding:20px;
+  color:var(--muted);
+  font-size:.7rem;
+  text-align:center;
+}
+.arpa-history-axis{
+  position:relative;
+  height:210px;
+  margin-top:8px;
+  color:#718398;
+  font-size:.54rem;
+  border-right:1px solid var(--line);
+}
+.arpa-history-axis span{
+  position:absolute;
+  right:6px;
+  transform:translateY(50%);
+  white-space:nowrap;
+}
+.arpa-history-scroll{
+  position:relative;
+  overflow-x:auto;
+  overflow-y:hidden;
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-x;
+  scrollbar-width:thin;
+  scrollbar-color:#39516b transparent;
+}
+.arpa-history-inner{
+  position:relative;
+  display:flex;
+  align-items:stretch;
+  gap:5px;
+  min-width:max-content;
+  height:218px;
+  padding:8px 9px 0;
+}
+.arpa-history-grid{
+  position:absolute;
+  inset:8px 0 28px 0;
+  pointer-events:none;
+}
+.arpa-history-grid i{
+  position:absolute;
+  left:0;
+  right:0;
+  border-top:1px dashed rgba(145,161,181,.16);
+}
+.arpa-year{
+  position:relative;
+  z-index:1;
+  width:58px;
+  min-width:58px;
+  height:210px;
+  border:1px solid transparent;
+  border-radius:10px;
+  background:transparent;
+  color:var(--text);
+  padding:0;
+  cursor:pointer;
+}
+.arpa-year:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:1px;
+}
+.arpa-year.selected-a{
+  background:rgba(22,131,65,.1);
+  border-color:rgba(53,208,127,.48);
+}
+.arpa-year.selected-b{
+  background:rgba(23,98,214,.11);
+  border-color:rgba(78,124,255,.58);
+}
+.arpa-year.selected-a.selected-b{
+  background:linear-gradient(90deg,rgba(22,131,65,.12),rgba(23,98,214,.13));
+  border-color:var(--accent);
+}
+.arpa-year-plot{
+  position:absolute;
+  left:0;
+  right:0;
+  top:0;
+  height:180px;
+}
+.arpa-range-bar{
+  position:absolute;
+  left:50%;
+  width:20px;
+  transform:translateX(-50%);
+  min-height:3px;
+  border-radius:6px;
+  background:rgba(37,216,255,.25);
+  border:1px solid rgba(37,216,255,.78);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.03);
+}
+.arpa-med-line{
+  position:absolute;
+  left:50%;
+  width:28px;
+  height:3px;
+  transform:translate(-50%,50%);
+  border-radius:99px;
+  background:#fff;
+  box-shadow:0 0 0 1px rgba(0,0,0,.22);
+}
+.arpa-value-label{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  padding:1px 3px;
+  border-radius:4px;
+  background:rgba(5,15,25,.78);
+  color:#dbe7f2;
+  font-size:.5rem;
+  line-height:1.15;
+  white-space:nowrap;
+  pointer-events:none;
+}
+.arpa-value-max{transform:translate(-50%,-100%)}
+.arpa-value-med{
+  left:calc(50% + 17px);
+  transform:translateY(45%);
+  color:#fff;
+  font-weight:800;
+}
+.arpa-value-min{transform:translate(-50%,100%)}
+.arpa-year-label{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:7px;
+  text-align:center;
+  color:#a9b9ca;
+  font-size:.6rem;
+  font-weight:800;
+}
+.arpa-year.selected-a .arpa-year-label{color:#58d887}
+.arpa-year.selected-b .arpa-year-label{color:#64a3ff}
+.arpa-year-missing{
+  position:absolute;
+  inset:0 0 28px;
+  display:grid;
+  place-items:center;
+  color:#65788c;
+  font-size:.58rem;
+}
+.arpa-history-help{
+  margin:7px 1px 0;
+  color:#70849a;
+  font-size:.59rem;
+  text-align:right;
+}
+@media(max-width:420px){
+  .arpa-history-head{display:block}
+  .arpa-history-legend{justify-content:flex-start;margin-top:7px}
+  .arpa-year{width:55px;min-width:55px}
+}

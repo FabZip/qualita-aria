@@ -834,11 +834,12 @@ function fitArpaScope(map,rows){
   }
 }
 
-async function fetchArpaRows(year,pollutant){
+async function fetchArpaRows(year,pollutant,silent=false){
+  const report=silent?()=>{}:diagnostics;
   const cacheKey=`${year}:${pollutant}`;
   if(state.arpaCache.has(cacheKey)){
     const cached=state.arpaCache.get(cacheKey);
-    diagnostics({...cached.diagnostic,cache:'memory'});
+    report({...cached.diagnostic,cache:'memory'});
     return cached.rows
   }
 
@@ -848,7 +849,7 @@ async function fetchArpaRows(year,pollutant){
   try{
     boundary=await fetchRomeBoundary()
   }catch(err){
-    diagnostics({
+    report({
       source:'ARPA Lazio',
       year,pollutant,
       geometry:'FAILED',
@@ -861,7 +862,7 @@ async function fetchArpaRows(year,pollutant){
   try{
     loaded=await loadArpaStaticRecords(year)
   }catch(err){
-    diagnostics({
+    report({
       source:'ARPA Lazio · file statico ufficiale',
       year,pollutant,
       geometry:'OK',
@@ -877,7 +878,7 @@ async function fetchArpaRows(year,pollutant){
   const record=records.find(isRomeRecord);
 
   if(!record){
-    diagnostics({
+    report({
       source:'ARPA Lazio · file statico ufficiale',
       year,pollutant,
       geometry:'OK',
@@ -921,7 +922,7 @@ async function fetchArpaRows(year,pollutant){
   }
 
   if(med===null){
-    diagnostics({
+    report({
       source:'ARPA Lazio · file statico ufficiale',
       year,pollutant,
       geometry:'OK',
@@ -996,7 +997,7 @@ async function fetchArpaRows(year,pollutant){
     note:'Nessuna chiamata CKAN DataStore viene eseguita a runtime.'
   };
 
-  diagnostics(diagnostic);
+  report(diagnostic);
   state.arpaCache.set(cacheKey,{rows,diagnostic});
   return rows
 }
@@ -1395,6 +1396,189 @@ function renderComparisonList(rows){
   }).join('')
 }
 
+function arpaHistoryTickMax(series){
+  const maxima=series
+    .filter(item=>item&&item.max!==null&&item.max!==undefined)
+    .map(item=>Number(item.max))
+    .filter(Number.isFinite);
+
+  const rawMax=maxima.length?Math.max(...maxima):10;
+  const step=rawMax<=20?5:rawMax<=50?10:20;
+  return Math.max(step,Math.ceil(rawMax/step)*step)
+}
+
+function arpaHistoryPercent(value,axisMax){
+  const n=Number(value);
+  if(!Number.isFinite(n)||!axisMax)return 0;
+  return Math.max(0,Math.min(100,(n/axisMax)*100))
+}
+
+function arpaHistoryDetailHtml(item){
+  if(!item||item.missing){
+    return item
+      ?`<strong>${item.year}</strong>&nbsp;· dati non disponibili`
+      :'Seleziona una barra per vedere i valori.'
+  }
+
+  const selectedA=String(item.year)===$('compareYearA').value;
+  const selectedB=String(item.year)===$('compareYearB').value;
+
+  const selectedClass=selectedA&&selectedB
+    ?'history-detail-a'
+    :selectedA
+      ?'history-detail-a'
+      :selectedB
+        ?'history-detail-b'
+        :'';
+
+  return `<strong class="${selectedClass}">${item.year}</strong>&nbsp;·&nbsp;`
+    +`MIN <strong>${fmt(item.min)}</strong>&nbsp;&nbsp;`
+    +`MED <strong>${fmt(item.med)}</strong>&nbsp;&nbsp;`
+    +`MAX <strong>${fmt(item.max)}</strong> µg/m³`
+}
+
+function renderArpaHistoryBars(series){
+  const chart=$('arpaHistoryChart');
+  if(!chart)return;
+
+  const valid=series.filter(item=>item&&!item.missing);
+  if(!valid.length){
+    chart.innerHTML='<div class="arpa-history-error">Nessun dato storico ARPA disponibile.</div>';
+    chart.setAttribute('aria-busy','false');
+    return
+  }
+
+  const axisMax=arpaHistoryTickMax(valid);
+  const ticks=[axisMax,axisMax*.75,axisMax*.5,axisMax*.25,0];
+
+  const axis=`<div class="arpa-history-axis" aria-hidden="true">${
+    ticks.map(value=>{
+      const bottom=(value/axisMax)*100;
+      return `<span style="bottom:${bottom}%">${fmt(value)}</span>`
+    }).join('')
+  }</div>`;
+
+  const grid=`<div class="arpa-history-grid" aria-hidden="true">${
+    ticks.map(value=>{
+      const bottom=(value/axisMax)*100;
+      return `<i style="bottom:${bottom}%"></i>`
+    }).join('')
+  }</div>`;
+
+  const yearA=$('compareYearA').value;
+  const yearB=$('compareYearB').value;
+
+  const items=series.map(item=>{
+    const selectedA=String(item.year)===yearA;
+    const selectedB=String(item.year)===yearB;
+    const selectedClass=`${selectedA?' selected-a':''}${selectedB?' selected-b':''}`;
+
+    if(item.missing){
+      return `<button type="button" class="arpa-year${selectedClass}" data-history-year="${item.year}"
+        aria-label="${item.year}: dati non disponibili">
+        <span class="arpa-year-missing">n/d</span>
+        <span class="arpa-year-label">${item.year}</span>
+      </button>`
+    }
+
+    const minP=arpaHistoryPercent(item.min,axisMax);
+    const medP=arpaHistoryPercent(item.med,axisMax);
+    const maxP=arpaHistoryPercent(item.max,axisMax);
+    const barBottom=minP;
+    const barHeight=Math.max(1,maxP-minP);
+
+    const aria=`${item.year}: minimo ${fmt(item.min)}, medio ${fmt(item.med)}, massimo ${fmt(item.max)} microgrammi per metro cubo`;
+
+    return `<button type="button" class="arpa-year${selectedClass}" data-history-year="${item.year}"
+      aria-label="${aria}">
+      <span class="arpa-year-plot">
+        <span class="arpa-range-bar" style="bottom:${barBottom}%;height:${barHeight}%"></span>
+        <span class="arpa-med-line" style="bottom:${medP}%"></span>
+        <span class="arpa-value-label arpa-value-max" style="bottom:${maxP}%">${fmt(item.max)}</span>
+        <span class="arpa-value-label arpa-value-med" style="bottom:${medP}%">${fmt(item.med)}</span>
+        <span class="arpa-value-label arpa-value-min" style="bottom:${minP}%">${fmt(item.min)}</span>
+      </span>
+      <span class="arpa-year-label">${item.year}</span>
+    </button>`
+  }).join('');
+
+  chart.innerHTML=`${axis}<div class="arpa-history-scroll"><div class="arpa-history-inner">${grid}${items}</div></div>`;
+  chart.setAttribute('aria-busy','false');
+
+  const byYear=new Map(series.map(item=>[String(item.year),item]));
+  chart.querySelectorAll('[data-history-year]').forEach(button=>{
+    button.addEventListener('click',()=>{
+      const item=byYear.get(button.dataset.historyYear);
+      $('arpaHistoryDetail').innerHTML=arpaHistoryDetailHtml(item)
+    })
+  });
+
+  const defaultItem=byYear.get(yearB)||byYear.get(yearA)||valid.at(-1);
+  $('arpaHistoryDetail').innerHTML=arpaHistoryDetailHtml(defaultItem);
+
+  // Start with Periodo B visible without moving the whole page vertically.
+  requestAnimationFrame(()=>{
+    const scroll=chart.querySelector('.arpa-history-scroll');
+    const target=chart.querySelector(`[data-history-year="${CSS.escape(yearB)}"]`)
+      ||chart.querySelector(`[data-history-year="${CSS.escape(yearA)}"]`);
+    if(scroll&&target){
+      const desired=target.offsetLeft-(scroll.clientWidth-target.offsetWidth)/2;
+      scroll.scrollLeft=Math.max(0,desired)
+    }
+  })
+}
+
+async function loadArpaHistorySeries(renderToken){
+  const panel=$('arpaHistoryPanel');
+  const chart=$('arpaHistoryChart');
+  if(!panel||!chart)return;
+
+  panel.classList.remove('hidden');
+  chart.setAttribute('aria-busy','true');
+  chart.innerHTML='<div class="arpa-history-loading">Caricamento storico ARPA…</div>';
+  $('arpaHistorySubtitle').textContent=`${POLLUTANTS[$('pollutantSelect').value].label} · MIN, MED e MAX annuali · Comune di Roma`;
+  $('arpaHistoryDetail').textContent='Caricamento dei valori annuali…';
+
+  const pollutant=$('pollutantSelect').value;
+  const years=[...ARPA_YEARS].sort((a,b)=>Number(a)-Number(b));
+  const results=new Array(years.length);
+  let cursor=0;
+
+  async function worker(){
+    while(cursor<years.length){
+      const index=cursor++;
+      const year=years[index];
+
+      try{
+        const rows=await fetchArpaRows(year,pollutant,true);
+        const row=rows[0];
+        results[index]=row
+          ?{year,min:row.min,med:row.value,max:row.max,missing:false}
+          :{year,missing:true}
+      }catch(err){
+        console.warn(`Storico ARPA ${year} non disponibile`,err);
+        results[index]={year,missing:true}
+      }
+
+      if(renderToken!==state.renderToken)return
+    }
+  }
+
+  // Three concurrent downloads are enough for mobile without hammering ARPA.
+  await Promise.all([worker(),worker(),worker()]);
+  if(renderToken!==state.renderToken)return;
+
+  renderArpaHistoryBars(results)
+}
+
+function updateArpaHistoryVisibility(){
+  const panel=$('arpaHistoryPanel');
+  if(!panel)return;
+
+  const visible=state.mode==='compare'&&source()==='arpa';
+  panel.classList.toggle('hidden',!visible)
+}
+
 function setLoading(on){
   $('loadingOverlay').classList.toggle('hidden',!on);
   $('loadingText').textContent=source()==='eea'
@@ -1436,6 +1620,7 @@ async function render(){
   $('standardLegend').classList.toggle('hidden',state.mode==='difference');
   $('differenceLegend').classList.toggle('hidden',state.mode!=='difference');
   $('mapBadge').classList.toggle('hidden',state.mode==='compare');
+  updateArpaHistoryVisibility();
 
   try{
     let rows=[];
@@ -1461,7 +1646,8 @@ async function render(){
         renderComparisonList(rows)
       }else{
         rows=pair.b;
-        renderList(rows)
+        renderList(rows);
+        loadArpaHistorySeries(token)
       }
 
       $('avgLabel').textContent=source()==='arpa'
@@ -1640,8 +1826,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.1.14',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.1.14',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.1.15',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.1.15',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -1655,7 +1841,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.1.14')
+    navigator.serviceWorker.register('./service-worker.js?v=0.1.15')
       .then(reg=>reg.update())
       .catch(console.error)
   }

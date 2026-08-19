@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#07111d">
   <meta name="description" content="Mappa mobile per esplorare e confrontare la qualità dell'aria con dati pubblici reali.">
-  <link rel="manifest" href="manifest.json?v=0.1.14">
+  <link rel="manifest" href="manifest.json?v=0.1.15">
   <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
-  <link rel="stylesheet" href="css/app.css?v=0.1.14">
+  <link rel="stylesheet" href="css/app.css?v=0.1.15">
   <title>Qualità dell'aria</title>
 </head>
 <body>
@@ -100,6 +100,29 @@
 
     <p id="mapHint" class="map-hint"></p>
 
+    <section id="arpaHistoryPanel" class="arpa-history hidden" aria-labelledby="arpaHistoryTitle">
+      <div class="arpa-history-head">
+        <div>
+          <h2 id="arpaHistoryTitle">Andamento storico ARPA</h2>
+          <p id="arpaHistorySubtitle">MIN, MED e MAX annuali · Comune di Roma</p>
+        </div>
+        <div class="arpa-history-legend" aria-label="Legenda grafico">
+          <span><i class="history-range-sample"></i> MIN–MAX</span>
+          <span><i class="history-med-sample"></i> MED</span>
+        </div>
+      </div>
+
+      <div id="arpaHistoryDetail" class="arpa-history-detail" aria-live="polite">
+        Seleziona una barra per vedere i valori.
+      </div>
+
+      <div id="arpaHistoryChart" class="arpa-history-chart" aria-busy="false">
+        <div class="arpa-history-loading">Caricamento storico ARPA…</div>
+      </div>
+
+      <p class="arpa-history-help">Scorri orizzontalmente per visualizzare tutti gli anni.</p>
+    </section>
+
     <section class="summary">
       <div>
         <span class="kicker" id="avgLabel">Media stazioni</span>
@@ -131,12 +154,12 @@
 
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
     <footer class="app-footer">
-      v<span id="appVersion">0.1.14</span> · dataset <span id="dataVersion">8</span>
+      v<span id="appVersion">0.1.15</span> · dataset <span id="dataVersion">8</span>
     </footer>
   </main>
 
   <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="js/app.js?v=0.1.14" defer></script>
+  <script src="js/app.js?v=0.1.15" defer></script>
 </body>
 </html>
