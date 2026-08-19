@@ -53,3 +53,16 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
 
 /* v0.1.8: legenda esterna alla mappa; nessuna sovrapposizione con anni/confronto */
 .legend-bar + .map-card{margin-top:0}
+
+/* v0.1.14: indicatore andamento nel confronto EEA */
+.comparison-values{white-space:nowrap}
+.trend-indicator{
+  display:inline-block;
+  margin-left:5px;
+  font-size:.72rem;
+  line-height:1;
+  vertical-align:1px;
+}
+.trend-up{color:var(--bad)}
+.trend-down{color:var(--good)}
+.trend-stable{color:var(--warn)}

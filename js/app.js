@@ -1354,6 +1354,21 @@ function mergeComparisonRows(rowsA,rowsB){
     .sort((a,b)=>a.name.localeCompare(b.name,'it'))
 }
 
+function comparisonTrend(valueA,valueB){
+  if(valueA===null||valueA===undefined||valueB===null||valueB===undefined){
+    return null
+  }
+
+  // Compare the same one-decimal values shown to the user, avoiding
+  // meaningless floating-point differences hidden by the UI formatting.
+  const a=Math.round(Number(valueA)*10)/10;
+  const b=Math.round(Number(valueB)*10)/10;
+
+  if(b>a)return{kind:'up',symbol:'▲',label:'Aumentato'};
+  if(b<a)return{kind:'down',symbol:'▼',label:'Diminuito'};
+  return{kind:'stable',symbol:'●',label:'Stabile'}
+}
+
 function renderComparisonList(rows){
   if(!rows.length){
     $('stations').innerHTML='<div class="empty-state">Nessun dato reale disponibile per questo confronto.</div>';
@@ -1366,11 +1381,16 @@ function renderComparisonList(rows){
 
     const leftColor=r.valueA===null||r.valueA===undefined?'#64748b':colorFor(r.valueA);
     const rightColor=r.valueB===null||r.valueB===undefined?'#64748b':colorFor(r.valueB);
+    const trend=comparisonTrend(r.valueA,r.valueB);
+
+    const trendHtml=trend
+      ?` <span class="trend-indicator trend-${trend.kind}" title="${trend.label}" aria-label="${trend.label}">${trend.symbol}</span>`
+      :'';
 
     return `<div class="station-row">
       <i style="background:linear-gradient(90deg,${leftColor} 0 50%,${rightColor} 50% 100%)"></i>
       <div><strong>${r.name}</strong><small>${r.id||''}</small></div>
-      <b aria-label="Valori a confronto: ${left} e ${right}">${left}&nbsp;↔&nbsp;${right}</b>
+      <b class="comparison-values" aria-label="Valori a confronto: ${left} e ${right}${trend?`. ${trend.label}`:''}">${left}&nbsp;↔&nbsp;${right}${trendHtml}</b>
     </div>`
   }).join('')
 }
@@ -1620,8 +1640,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.1.13',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.1.13',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.1.14',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.1.14',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -1635,7 +1655,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.1.13')
+    navigator.serviceWorker.register('./service-worker.js?v=0.1.14')
       .then(reg=>reg.update())
       .catch(console.error)
   }
