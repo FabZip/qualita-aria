@@ -1307,6 +1307,74 @@ function renderList(rows,isDiff=false){
   }).join('')
 }
 
+function mergeComparisonRows(rowsA,rowsB){
+  const merged=new Map();
+
+  for(const row of rowsA){
+    const key=String(row.id||row.name);
+    merged.set(key,{
+      id:row.id,
+      name:row.name,
+      kind:row.kind,
+      provider:row.provider,
+      verification:row.verification,
+      valueA:row.value,
+      valueB:null,
+      coverageA:row.coverage,
+      coverageB:null
+    })
+  }
+
+  for(const row of rowsB){
+    const key=String(row.id||row.name);
+    const current=merged.get(key);
+
+    if(current){
+      current.name=row.name||current.name;
+      current.provider=row.provider||current.provider;
+      current.verification=row.verification||current.verification;
+      current.valueB=row.value;
+      current.coverageB=row.coverage
+    }else{
+      merged.set(key,{
+        id:row.id,
+        name:row.name,
+        kind:row.kind,
+        provider:row.provider,
+        verification:row.verification,
+        valueA:null,
+        valueB:row.value,
+        coverageA:null,
+        coverageB:row.coverage
+      })
+    }
+  }
+
+  return[...merged.values()]
+    .sort((a,b)=>a.name.localeCompare(b.name,'it'))
+}
+
+function renderComparisonList(rows){
+  if(!rows.length){
+    $('stations').innerHTML='<div class="empty-state">Nessun dato reale disponibile per questo confronto.</div>';
+    return
+  }
+
+  $('stations').innerHTML=rows.map(r=>{
+    const left=r.valueA===null||r.valueA===undefined?'—':fmt(r.valueA);
+    const right=r.valueB===null||r.valueB===undefined?'—':fmt(r.valueB);
+
+    const leftColor=r.valueA===null||r.valueA===undefined?'#64748b':colorFor(r.valueA);
+    const rightColor=r.valueB===null||r.valueB===undefined?'#64748b':colorFor(r.valueB);
+
+    return `<div class="station-row">
+      <i style="background:linear-gradient(90deg,${leftColor} 0 50%,${rightColor} 50% 100%)"></i>
+      <div><strong>${r.name}</strong><small>${r.id||''}</small></div>
+      <b aria-label="Valori a confronto: ${left} e ${right}">${left}&nbsp;↔&nbsp;${right}</b>
+    </div>`
+  }).join('')
+}
+
 function setLoading(on){
   $('loadingOverlay').classList.toggle('hidden',!on);
   $('loadingText').textContent=source()==='eea'
@@ -1368,12 +1436,18 @@ async function render(){
       const pair=await updateCompareMaps();
       if(token!==state.renderToken)return;
 
-      rows=pair.b;
-      renderList(rows);
+      if(source()==='eea'){
+        rows=mergeComparisonRows(pair.a,pair.b);
+        renderComparisonList(rows)
+      }else{
+        rows=pair.b;
+        renderList(rows)
+      }
+
       $('avgLabel').textContent=source()==='arpa'
         ?`MED ${$('compareYearB').value}`
         :`Media stazioni ${$('compareYearB').value}`;
-      $('avgValue').textContent=fmt(avg(rows));
+      $('avgValue').textContent=fmt(avg(pair.b));
       $('periodValue').textContent=`${$('compareYearA').value}↔${$('compareYearB').value}`;
       requestAnimationFrame(()=>{
         state.mapBefore.resize();
@@ -1546,8 +1620,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.1.12',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.1.12',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.1.13',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.1.13',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -1561,7 +1635,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.1.12')
+    navigator.serviceWorker.register('./service-worker.js?v=0.1.13')
       .then(reg=>reg.update())
       .catch(console.error)
   }
