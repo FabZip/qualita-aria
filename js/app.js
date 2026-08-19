@@ -23,23 +23,37 @@ const EEA_SQL_API='https://discodata.eea.europa.eu/sql';
  * ARPA Lazio:
  * Do not depend on the CKAN DataStore API at runtime.
  * The application reads the official static annual files published by ARPA Lazio.
- * 2021-2025 are XLSX; 2013-2020 are CSV.
+ * 2013-2024 use official flat CSV resources; 2025 uses the official ARPA XLSX.
  */
 const ARPA_STATIC_FILES={
-  '2025':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_Comunali_2025.xlsx'},
-  '2024':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2024.xlsx',
-          fallback:'https://dati.lazio.it/dataset/79dfc4f3-6872-4fd9-84e3-786a824509cf/resource/9111d47e-6a37-49bc-8864-a6a0a9c1dc2e/download/standard-comunali_2024.csv'},
-  '2023':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2023.xlsx'},
-  '2022':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2022.xlsx'},
-  '2021':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2021.xlsx'},
-  '2020':{type:'csv', url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2020.csv'},
-  '2019':{type:'csv', url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2019.csv'},
-  '2018':{type:'csv', url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2018.csv'},
-  '2017':{type:'csv', url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2017.csv'},
-  '2016':{type:'csv', url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2016.csv'},
-  '2015':{type:'csv', url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2015.csv'},
-  '2014':{type:'csv', url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2014.csv'},
-  '2013':{type:'csv', url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2013.csv'}
+  '2025':{
+    type:'xlsx',
+    url:'https://www.arpalazio.it/documents/20124/430865/Standard_Comunali_2025.xlsx'
+  },
+  '2024':{
+    type:'csv',
+    url:'https://dati.lazio.it/dataset/79dfc4f3-6872-4fd9-84e3-786a824509cf/resource/9111d47e-6a37-49bc-8864-a6a0a9c1dc2e/download/standard-comunali_2024.csv'
+  },
+  '2023':{
+    type:'csv',
+    url:'https://dati.lazio.it/dataset/79dfc4f3-6872-4fd9-84e3-786a824509cf/resource/a5141779-55c3-4f23-8927-8cd2ba644798/download/standardcomunali2023.csv'
+  },
+  '2022':{
+    type:'csv',
+    url:'https://dati.lazio.it/dataset/79dfc4f3-6872-4fd9-84e3-786a824509cf/resource/f671c878-9c45-473c-9445-1491da97d123/download/standardcomunali2022_mod.csv'
+  },
+  '2021':{
+    type:'csv',
+    url:'https://dati.lazio.it/dataset/79dfc4f3-6872-4fd9-84e3-786a824509cf/resource/13df26b3-03bf-47ed-8725-9515ece6899c/download/standard_comunali_2021.csv'
+  },
+  '2020':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2020.csv'},
+  '2019':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2019.csv'},
+  '2018':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2018.csv'},
+  '2017':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2017.csv'},
+  '2016':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2016.csv'},
+  '2015':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2015.csv'},
+  '2014':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2014.csv'},
+  '2013':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2013.csv'}
 };
 
 /*
@@ -482,103 +496,103 @@ function cleanHeaderPart(v){
     .trim()
 }
 
-function isArpaParentHeaderRow(row){
-  const cells=(row||[])
-    .map(normalizeArpaKey)
-    .filter(Boolean);
+function isArpaDescriptor(v){
+  const n=normalizeArpaKey(v);
+  if(!n)return false;
 
-  if(!cells.length)return false;
+  const hasPollutant=
+    n.includes('pm2.5')||
+    n.includes('pm10')||
+    n.includes('no2')||
+    n.includes('o3')||
+    n.includes('so2')||
+    n.includes('benzene')||
+    /(^|\s)co(\s|$)/.test(n);
 
-  const pollutantHits=cells.filter(v=>
-    v.includes('pm2.5')||
-    v.includes('pm10')||
-    v.includes('no2')||
-    v.includes('o3')||
-    v.includes('so2')||
-    v.includes('benzene')||
-    /\bco\b/.test(v)
-  ).length;
+  const hasMetric=
+    n.includes('media annua')||
+    n.includes('media 8')||
+    n.includes('massima media')||
+    n.includes('superament')||
+    n.includes('n° sup')||
+    n.includes('n. sup')||
+    n.includes('vl=')||
+    n.includes('µg/m3')||
+    n.includes('mg/m3');
 
-  const metricHits=cells.filter(v=>
-    v.includes('media annua')||
-    v.includes('massima media')||
-    v.includes('superament')||
-    v.includes('concentrazione')
-  ).length;
-
-  // A real municipality data row contains numbers in many columns; a parent
-  // header row normally contains pollutant names/text and very few/no numbers.
-  const numericish=cells.filter(v=>
-    /^[-+]?[0-9]+(?:[.,][0-9]+)?$/.test(v)
-  ).length;
-
-  return pollutantHits>=1 && (pollutantHits+metricHits)>=2 && numericish<=1
+  return hasPollutant&&hasMetric
 }
 
 function buildArpaHeaders(matrix,headerRow){
-  const headerRows=[];
+  const parentRows=[];
 
-  /*
-   * ARPA 2021+ uses a two-level header where the pollutant/group name is often
-   * ABOVE the row containing "cod ISTAT / nome / zona / MIN / MED / MAX".
-   * Look backwards first. This keeps the parser compatible with the flat
-   * 2013-2020 files and with layouts where subheaders are below the main row.
-   */
-  for(let r=Math.max(0,headerRow-2);r<headerRow;r++){
-    if(isArpaParentHeaderRow(matrix[r]))headerRows.push(r)
+  // 2025 can place the pollutant/group descriptor several rows above
+  // the MIN/MED/MAX row. Scan every physical row above the detected header.
+  for(let r=0;r<headerRow;r++){
+    if((matrix[r]||[]).some(isArpaDescriptor))parentRows.push(r)
   }
 
-  headerRows.push(headerRow);
+  const lowerRows=[headerRow];
 
-  // Also accept subheader rows below the detected identity/header row.
+  // Retain compatibility with layouts where MIN/MED/MAX are below
+  // an identity/main header row.
   for(let r=headerRow+1;r<Math.min(matrix.length,headerRow+3);r++){
-    if(isArpaSubheaderRow(matrix[r]))headerRows.push(r);
+    if(isArpaSubheaderRow(matrix[r]))lowerRows.push(r);
     else break
   }
 
-  // Preserve physical worksheet order and remove duplicates.
-  const orderedRows=[...new Set(headerRows)].sort((a,b)=>a-b);
-
-  const maxCols=Math.max(...orderedRows.map(r=>(matrix[r]||[]).length),0);
+  const usedRows=[...new Set([...parentRows,...lowerRows])].sort((a,b)=>a-b);
+  const maxCols=Math.max(...usedRows.map(r=>(matrix[r]||[]).length),0);
   const headers=[];
 
   for(let c=0;c<maxCols;c++){
-    const parts=[];
+    const childParts=lowerRows
+      .map(r=>cleanHeaderPart(matrix[r]?.[c]))
+      .filter(Boolean);
 
-    for(const r of orderedRows){
-      const part=cleanHeaderPart(matrix[r]?.[c]);
-      if(!part)continue;
+    const child=childParts.join(' ').trim();
+    const childNorm=normalizeArpaKey(child);
 
-      const normalized=normalizeArpaKey(part);
+    const isIdentity=
+      childNorm.includes('istat')||
+      childNorm==='nome'||
+      childNorm.includes('comune')||
+      childNorm.includes('denominazione')||
+      childNorm==='zona'||
+      childNorm.includes('note');
 
-      // Do not repeat the same text introduced by an expanded merged cell.
-      if(!parts.some(existing=>normalizeArpaKey(existing)===normalized)){
-        parts.push(part)
+    if(isIdentity){
+      headers[c]=child||`__col_${c}`;
+      continue
+    }
+
+    const parentParts=[];
+    for(const r of parentRows){
+      const value=cleanHeaderPart(matrix[r]?.[c]);
+      if(!isArpaDescriptor(value))continue;
+
+      if(!parentParts.some(p=>normalizeArpaKey(p)===normalizeArpaKey(value))){
+        parentParts.push(value)
       }
     }
 
-    /*
-     * In the 2021+ XLSX files the parent pollutant name + child metric become,
-     * for example:
-     * "PM2.5 media annua (µg/m3)" + "MED"
-     * -> "PM2.5 media annua (µg/m3) MED"
-     */
-    headers[c]=parts.join(' ').trim()||`__col_${c}`
-  }
+    const allParts=[...parentParts,...childParts]
+      .filter(Boolean)
+      .filter((v,i,arr)=>
+        arr.findIndex(x=>normalizeArpaKey(x)===normalizeArpaKey(v))===i
+      );
 
-  /*
-   * Data always begins after the lowest header/subheader row. A parent row
-   * above headerRow must not shift dataStartRow backwards.
-   */
-  const lowestHeaderRow=Math.max(...orderedRows);
+    headers[c]=allParts.join(' ').trim()||`__col_${c}`
+  }
 
   return{
     headers,
-    headerRows:orderedRows,
-    dataStartRow:lowestHeaderRow+1
+    headerRows:usedRows,
+    parentRows,
+    lowerRows,
+    dataStartRow:Math.max(...lowerRows)+1
   }
 }
-
 function matrixToArpaRecords(matrix){
   const headerRow=findArpaHeaderRow(matrix);
   if(headerRow<0){
@@ -606,6 +620,8 @@ function matrixToArpaRecords(matrix){
     records,
     headerRow,
     headerRows:built.headerRows,
+    parentRows:built.parentRows||[],
+    lowerRows:built.lowerRows||[],
     dataStartRow:built.dataStartRow,
     headers:built.headers
   }
@@ -643,7 +659,7 @@ function parseArpaWorkbook(buffer){
   const inspected=[];
   for(const sheetName of workbook.SheetNames){
     const sheet=workbook.Sheets[sheetName];
-    const rawMatrix=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false,blankrows:false});
+    const rawMatrix=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false,blankrows:true});
     const matrix=expandSheetMerges(rawMatrix,sheet);
     const parsed=matrixToArpaRecords(matrix);
 
@@ -652,11 +668,14 @@ function parseArpaWorkbook(buffer){
       rows:parsed.records.length,
       headerRow:parsed.headerRow>=0?parsed.headerRow+1:null,
       headerRows:parsed.headerRows.map(r=>r+1),
+      parentRows:(parsed.parentRows||[]).map(r=>r+1),
+      lowerRows:(parsed.lowerRows||[]).map(r=>r+1),
       dataStartRow:parsed.dataStartRow>=0?parsed.dataStartRow+1:null,
-      sampleHeaders:parsed.headers.filter(h=>!h.startsWith('__col_')).slice(0,24),
-      headerMatrix:parsed.headerRows.map(r=>
-        (matrix[r]||[]).slice(0,24).map(v=>String(v??'').trim())
-      )
+      sampleHeaders:parsed.headers.filter(h=>!h.startsWith('__col_')).slice(0,30),
+      headerMatrix:parsed.headerRows.map(r=>({
+        row:r+1,
+        cells:(matrix[r]||[]).slice(0,30).map(v=>String(v??'').trim())
+      }))
     });
 
     if(parsed.records.length&&parsed.records.some(isRomeRecord)){
@@ -665,6 +684,8 @@ function parseArpaWorkbook(buffer){
         sheetName,
         headerRow:parsed.headerRow+1,
         headerRows:parsed.headerRows.map(r=>r+1),
+        parentRows:(parsed.parentRows||[]).map(r=>r+1),
+        lowerRows:(parsed.lowerRows||[]).map(r=>r+1),
         dataStartRow:parsed.dataStartRow+1,
         headers:parsed.headers,
         inspected
@@ -701,6 +722,8 @@ async function loadArpaStaticRecords(year){
           sheetName:parsed.sheetName,
           headerRow:parsed.headerRow,
           headerRows:parsed.headerRows,
+          parentRows:parsed.parentRows,
+          lowerRows:parsed.lowerRows,
           dataStartRow:parsed.dataStartRow,
           parsedHeaders:parsed.headers,
           workbookInspection:parsed.inspected
@@ -838,6 +861,8 @@ async function fetchArpaRows(year,pollutant){
         MAX:fieldMax||null
       },
       parsedHeaderRows:loaded.headerRows||null,
+      parentRows:loaded.parentRows||null,
+      lowerRows:loaded.lowerRows||null,
       dataStartRow:loaded.dataStartRow||null,
       availableColumns:Object.keys(record),
       parsedHeaders:loaded.parsedHeaders||Object.keys(record)
@@ -867,6 +892,8 @@ async function fetchArpaRows(year,pollutant){
     sheetName:loaded.sheetName||null,
     headerRow:loaded.headerRow||null,
     headerRows:loaded.headerRows||null,
+    parentRows:loaded.parentRows||null,
+    lowerRows:loaded.lowerRows||null,
     dataStartRow:loaded.dataStartRow||null,
     workbookInspection:loaded.workbookInspection||null,
     parsedHeaders:(loaded.parsedHeaders||Object.keys(record)).slice(0,30),
@@ -1435,8 +1462,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.1.10',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.1.10',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.1.11',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.1.11',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -1450,7 +1477,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.1.10')
+    navigator.serviceWorker.register('./service-worker.js?v=0.1.11')
       .then(reg=>reg.update())
       .catch(console.error)
   }
