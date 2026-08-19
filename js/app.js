@@ -282,18 +282,36 @@ async function fetchEeaRows(year,pollutant){
   return rows
 }
 
+function normalizeArpaKey(v){
+  return normalizeText(v)
+    .replaceAll('μ','µ')
+    .replace(/pm\s*2\s*[,\.]\s*5/g,'pm2.5')
+    .replace(/pm\s*10/g,'pm10')
+    .replace(/no\s*2/g,'no2')
+    .replace(/\s+/g,' ')
+    .trim()
+}
 function arpaField(record,prefix,suffix){
-  const p=normalizeText(prefix);
-  const s=normalizeText(suffix);
+  const p=normalizeArpaKey(prefix);
+  const s=normalizeArpaKey(suffix);
   return Object.keys(record).find(k=>{
-    const n=normalizeText(k);
-    return n.includes(p)&&n.endsWith(s)
+    const n=normalizeArpaKey(k);
+    return n.includes(p)&&(n.endsWith(s)||n.includes(` ${s} `))
   })
 }
 function isRomeRecord(record){
-  const raw=String(record['cod ISTAT']??record['Cod ISTAT']??record['cod_istat']??'').replace(/\D/g,'');
+  const entries=Object.entries(record||{});
+  const istatEntry=entries.find(([k])=>normalizeArpaKey(k).includes('istat'));
+  const raw=String(istatEntry?.[1]??'').replace(/\D/g,'');
   const code=raw.padStart(6,'0');
-  return code==='058091'||normalizeText(record.nome)==='roma'||normalizeText(record.nome)==='roma capitale'
+  if(code==='058091')return true;
+
+  const nameEntry=entries.find(([k])=>{
+    const n=normalizeArpaKey(k);
+    return n==='nome'||n.includes('comune')||n.includes('denominazione')
+  });
+  const name=normalizeText(nameEntry?.[1]??'');
+  return name==='roma'||name==='roma capitale'
 }
 
 async function fetchRomeBoundary(){
@@ -342,23 +360,18 @@ function fetchWithTimeout(url,options={},timeoutMs=16000){
 }
 
 function csvDelimiter(text){
-  const first=(text.split(/\r?\n/,1)[0]||'');
+  const sample=text.split(/\r?\n/).slice(0,15).join('\n');
   const candidates=[',',';','\t'];
   return candidates
-    .map(d=>({d,count:(first.match(new RegExp(d==='|'?'\\|':d==='\\t'?'\\t':d,'g'))||[]).length}))
+    .map(d=>({d,count:sample.split(d).length-1}))
     .sort((a,b)=>b.count-a.count)[0]?.d||';'
 }
 
-function parseCsvText(text){
-  const delimiter=csvDelimiter(text);
+function parseDelimitedRows(text,delimiter){
   const rows=[];
   let row=[],field='',quoted=false;
-
   const pushField=()=>{row.push(field);field=''};
-  const pushRow=()=>{
-    if(row.some(v=>String(v).trim()!==''))rows.push(row);
-    row=[]
-  };
+  const pushRow=()=>{if(row.some(v=>String(v).trim()!==''))rows.push(row);row=[]};
 
   for(let i=0;i<text.length;i++){
     const c=text[i];
@@ -370,57 +383,130 @@ function parseCsvText(text){
     }else if((c==='\n'||c==='\r')&&!quoted){
       if(c==='\r'&&text[i+1]==='\n')i++;
       pushField();pushRow()
-    }else{
-      field+=c
-    }
+    }else field+=c
   }
   if(field.length||row.length){pushField();pushRow()}
-  if(rows.length<2)return[];
+  return rows
+}
 
-  const headers=rows[0].map(h=>String(h).replace(/^\uFEFF/,'').trim());
-  return rows.slice(1).map(values=>{
-    const obj={};
-    headers.forEach((h,i)=>obj[h]=values[i]??'');
-    return obj
-  })
+function findArpaHeaderRow(matrix){
+  const limit=Math.min(matrix.length,40);
+  let best={index:-1,score:0};
+  for(let i=0;i<limit;i++){
+    const cells=(matrix[i]||[]).map(normalizeArpaKey);
+    let score=0;
+    if(cells.some(v=>v.includes('istat')))score+=5;
+    if(cells.some(v=>v==='nome'||v.includes('comune')))score+=3;
+    if(cells.some(v=>v.includes('pm10')&&v.includes('media annua')))score+=3;
+    if(cells.some(v=>v.includes('pm2.5')&&v.includes('media annua')))score+=3;
+    if(cells.some(v=>v.includes('no2')&&v.includes('media annua')))score+=3;
+    if(score>best.score)best={index:i,score}
+  }
+  return best.score>=8?best.index:-1
+}
+
+function matrixToArpaRecords(matrix){
+  const headerRow=findArpaHeaderRow(matrix);
+  if(headerRow<0)return{records:[],headerRow:-1};
+
+  const headers=(matrix[headerRow]||[]).map((v,i)=>{
+    const h=String(v??'').replace(/^\uFEFF/,'').replace(/\s+/g,' ').trim();
+    return h||`__col_${i}`
+  });
+  const records=[];
+  for(const values of matrix.slice(headerRow+1)){
+    if(!values||!values.some(v=>String(v??'').trim()!==''))continue;
+    const record={};
+    headers.forEach((h,i)=>record[h]=values[i]??'');
+    records.push(record)
+  }
+  return{records,headerRow}
+}
+
+function parseCsvText(text){
+  const clean=String(text??'').replace(/^\uFEFF/,'');
+  const lead=clean.trimStart().slice(0,120).toLowerCase();
+  if(lead.startsWith('<?xml')||lead.startsWith('<html')||lead.startsWith('<!doctype')){
+    throw new Error('il server ha restituito XML/HTML invece del CSV')
+  }
+  const matrix=parseDelimitedRows(clean,csvDelimiter(clean));
+  return matrixToArpaRecords(matrix)
+}
+
+function xlsxSignature(buffer){
+  const b=new Uint8Array(buffer.slice(0,4));
+  return b.length>=2&&b[0]===0x50&&b[1]===0x4b
+}
+
+function responsePreview(buffer){
+  try{return new TextDecoder('utf-8').decode(buffer.slice(0,240)).replace(/\s+/g,' ').trim()}
+  catch{return''}
+}
+
+function parseArpaWorkbook(buffer){
+  if(!window.XLSX)throw new Error('parser XLSX non disponibile');
+  if(!xlsxSignature(buffer)){
+    const preview=responsePreview(buffer);
+    const kind=preview.startsWith('<?xml')||preview.startsWith('<')?'XML/HTML':'contenuto non XLSX';
+    throw new Error(`il server ha restituito ${kind} invece di un file XLSX valido`)
+  }
+
+  const workbook=XLSX.read(buffer,{type:'array'});
+  const inspected=[];
+  for(const sheetName of workbook.SheetNames){
+    const sheet=workbook.Sheets[sheetName];
+    const matrix=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false,blankrows:false});
+    const parsed=matrixToArpaRecords(matrix);
+    inspected.push({sheet:sheetName,rows:parsed.records.length,headerRow:parsed.headerRow>=0?parsed.headerRow+1:null});
+    if(parsed.records.length&&parsed.records.some(isRomeRecord)){
+      return{records:parsed.records,sheetName,headerRow:parsed.headerRow+1,inspected}
+    }
+  }
+  const detail=inspected.map(x=>`${x.sheet}: header ${x.headerRow??'non trovato'}, ${x.rows} righe`).join('; ');
+  throw new Error(`XLSX letto, ma nessun foglio contiene una tabella comunale riconoscibile (${detail})`)
 }
 
 async function loadArpaStaticRecords(year){
   const cfg=ARPA_STATIC_FILES[year];
   if(!cfg)throw new Error(`ARPA Lazio: file ufficiale ${year} non configurato.`);
 
-  const candidates=[cfg.url,cfg.fallback].filter(Boolean);
+  // If a machine-readable CSV fallback exists, prefer it. XLSX remains the
+  // official fallback and is parsed by scanning every worksheet/header row.
+  const candidates=cfg.fallback
+    ?[{url:cfg.fallback,type:'csv'},{url:cfg.url,type:cfg.type}]
+    :[{url:cfg.url,type:cfg.type}];
   const attempts=[];
 
-  for(const url of candidates){
+  for(const candidate of candidates){
+    const {url,type}=candidate;
     try{
       const response=await fetchWithTimeout(url,{cache:'no-store',mode:'cors'});
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
-
       const contentType=(response.headers.get('content-type')||'').toLowerCase();
-      const isXlsx=cfg.type==='xlsx' && !url.toLowerCase().endsWith('.csv');
 
-      if(isXlsx){
-        if(!window.XLSX)throw new Error('parser XLSX non disponibile');
+      if(type==='xlsx'){
         const buffer=await response.arrayBuffer();
-        const workbook=XLSX.read(buffer,{type:'array'});
-        const sheet=workbook.Sheets[workbook.SheetNames[0]];
-        const records=XLSX.utils.sheet_to_json(sheet,{defval:'',raw:false});
-        if(!records.length)throw new Error('file XLSX senza righe');
-        return{records,url,format:'XLSX'}
+        const parsed=parseArpaWorkbook(buffer);
+        return{
+          records:parsed.records,url,format:'XLSX',contentType,
+          sheetName:parsed.sheetName,headerRow:parsed.headerRow,
+          workbookInspection:parsed.inspected
+        }
       }
 
       const text=await response.text();
-      const records=parseCsvText(text);
-      if(!records.length)throw new Error('file CSV senza righe');
-      return{records,url,format:'CSV'}
+      const parsed=parseCsvText(text);
+      if(!parsed.records.length)throw new Error('CSV letto ma tabella ARPA non riconosciuta');
+      return{records:parsed.records,url,format:'CSV',contentType,headerRow:parsed.headerRow+1}
     }catch(err){
-      attempts.push({url,error:String(err.message||err)})
+      attempts.push({url,type,error:String(err.message||err)})
     }
   }
 
-  const detail=attempts.map(a=>`${a.error}`).join(' · ');
-  throw new Error(`ARPA Lazio: impossibile leggere il file ufficiale ${year}. ${detail}`)
+  const detail=attempts.map(a=>`${a.type.toUpperCase()}: ${a.error}`).join(' · ');
+  const error=new Error(`ARPA Lazio: impossibile leggere i dati ${year}. ${detail}`);
+  error.attempts=attempts;
+  throw error
 }
 
 function coordinatesFromGeometry(geometry,acc=[]){
@@ -490,7 +576,8 @@ async function fetchArpaRows(year,pollutant){
       geometry:'OK',
       boundaryFeatures:boundary?.features?.length||0,
       data:'FAILED',
-      error:String(err.message||err)
+      error:String(err.message||err),
+      attempts:err.attempts||null
     });
     throw err
   }
@@ -556,6 +643,10 @@ async function fetchArpaRows(year,pollutant){
     year,pollutant,
     file:loaded.url,
     format:loaded.format,
+    contentType:loaded.contentType||null,
+    sheetName:loaded.sheetName||null,
+    headerRow:loaded.headerRow||null,
+    workbookInspection:loaded.workbookInspection||null,
     rowsReceived:records.length,
     romaRecordFound:true,
     metric:'MED',
@@ -1117,8 +1208,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.1.7',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.1.7',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.1.8',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.1.8',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -1132,7 +1223,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.1.7')
+    navigator.serviceWorker.register('./service-worker.js?v=0.1.8')
       .then(reg=>reg.update())
       .catch(console.error)
   }
