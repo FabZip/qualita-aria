@@ -482,40 +482,100 @@ function cleanHeaderPart(v){
     .trim()
 }
 
-function buildArpaHeaders(matrix,headerRow){
-  const headerRows=[headerRow];
+function isArpaParentHeaderRow(row){
+  const cells=(row||[])
+    .map(normalizeArpaKey)
+    .filter(Boolean);
 
-  // ARPA files can use one or more header rows. At present two rows are
-  // sufficient, but allow up to three to make the parser tolerant to changes.
+  if(!cells.length)return false;
+
+  const pollutantHits=cells.filter(v=>
+    v.includes('pm2.5')||
+    v.includes('pm10')||
+    v.includes('no2')||
+    v.includes('o3')||
+    v.includes('so2')||
+    v.includes('benzene')||
+    /\bco\b/.test(v)
+  ).length;
+
+  const metricHits=cells.filter(v=>
+    v.includes('media annua')||
+    v.includes('massima media')||
+    v.includes('superament')||
+    v.includes('concentrazione')
+  ).length;
+
+  // A real municipality data row contains numbers in many columns; a parent
+  // header row normally contains pollutant names/text and very few/no numbers.
+  const numericish=cells.filter(v=>
+    /^[-+]?[0-9]+(?:[.,][0-9]+)?$/.test(v)
+  ).length;
+
+  return pollutantHits>=1 && (pollutantHits+metricHits)>=2 && numericish<=1
+}
+
+function buildArpaHeaders(matrix,headerRow){
+  const headerRows=[];
+
+  /*
+   * ARPA 2021+ uses a two-level header where the pollutant/group name is often
+   * ABOVE the row containing "cod ISTAT / nome / zona / MIN / MED / MAX".
+   * Look backwards first. This keeps the parser compatible with the flat
+   * 2013-2020 files and with layouts where subheaders are below the main row.
+   */
+  for(let r=Math.max(0,headerRow-2);r<headerRow;r++){
+    if(isArpaParentHeaderRow(matrix[r]))headerRows.push(r)
+  }
+
+  headerRows.push(headerRow);
+
+  // Also accept subheader rows below the detected identity/header row.
   for(let r=headerRow+1;r<Math.min(matrix.length,headerRow+3);r++){
     if(isArpaSubheaderRow(matrix[r]))headerRows.push(r);
     else break
   }
 
-  const maxCols=Math.max(...headerRows.map(r=>(matrix[r]||[]).length),0);
+  // Preserve physical worksheet order and remove duplicates.
+  const orderedRows=[...new Set(headerRows)].sort((a,b)=>a-b);
+
+  const maxCols=Math.max(...orderedRows.map(r=>(matrix[r]||[]).length),0);
   const headers=[];
 
   for(let c=0;c<maxCols;c++){
     const parts=[];
 
-    for(const r of headerRows){
+    for(const r of orderedRows){
       const part=cleanHeaderPart(matrix[r]?.[c]);
       if(!part)continue;
 
-      // Expanded XLSX merges can repeat the parent pollutant title. Remove
-      // adjacent duplicates while keeping subheaders such as MIN/MED/MAX.
-      if(!parts.length||normalizeArpaKey(parts.at(-1))!==normalizeArpaKey(part)){
+      const normalized=normalizeArpaKey(part);
+
+      // Do not repeat the same text introduced by an expanded merged cell.
+      if(!parts.some(existing=>normalizeArpaKey(existing)===normalized)){
         parts.push(part)
       }
     }
 
+    /*
+     * In the 2021+ XLSX files the parent pollutant name + child metric become,
+     * for example:
+     * "PM2.5 media annua (µg/m3)" + "MED"
+     * -> "PM2.5 media annua (µg/m3) MED"
+     */
     headers[c]=parts.join(' ').trim()||`__col_${c}`
   }
 
+  /*
+   * Data always begins after the lowest header/subheader row. A parent row
+   * above headerRow must not shift dataStartRow backwards.
+   */
+  const lowestHeaderRow=Math.max(...orderedRows);
+
   return{
     headers,
-    headerRows,
-    dataStartRow:headerRows.at(-1)+1
+    headerRows:orderedRows,
+    dataStartRow:lowestHeaderRow+1
   }
 }
 
@@ -593,7 +653,10 @@ function parseArpaWorkbook(buffer){
       headerRow:parsed.headerRow>=0?parsed.headerRow+1:null,
       headerRows:parsed.headerRows.map(r=>r+1),
       dataStartRow:parsed.dataStartRow>=0?parsed.dataStartRow+1:null,
-      sampleHeaders:parsed.headers.filter(h=>!h.startsWith('__col_')).slice(0,18)
+      sampleHeaders:parsed.headers.filter(h=>!h.startsWith('__col_')).slice(0,24),
+      headerMatrix:parsed.headerRows.map(r=>
+        (matrix[r]||[]).slice(0,24).map(v=>String(v??'').trim())
+      )
     });
 
     if(parsed.records.length&&parsed.records.some(isRomeRecord)){
@@ -1372,8 +1435,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.1.9',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.1.9',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.1.10',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.1.10',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -1387,7 +1450,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.1.9')
+    navigator.serviceWorker.register('./service-worker.js?v=0.1.10')
       .then(reg=>reg.update())
       .catch(console.error)
   }
