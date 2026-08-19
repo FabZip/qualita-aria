@@ -21,9 +21,26 @@ const EEA_SQL_API='https://discodata.eea.europa.eu/sql';
 
 /*
  * ARPA Lazio:
- * Annual municipal indicators are loaded from Open Data Lazio (CKAN DataStore).
+ * Do not depend on the CKAN DataStore API at runtime.
+ * The application reads the official static annual files published by ARPA Lazio.
+ * 2021-2025 are XLSX; 2013-2020 are CSV.
  */
-const ARPA_API='https://dati.lazio.it/it/api/3/action/datastore_search';
+const ARPA_STATIC_FILES={
+  '2025':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_Comunali_2025.xlsx'},
+  '2024':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2024.xlsx',
+          fallback:'https://dati.lazio.it/dataset/79dfc4f3-6872-4fd9-84e3-786a824509cf/resource/9111d47e-6a37-49bc-8864-a6a0a9c1dc2e/download/standard-comunali_2024.csv'},
+  '2023':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2023.xlsx'},
+  '2022':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2022.xlsx'},
+  '2021':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2021.xlsx'},
+  '2020':{type:'csv', url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2020.csv'},
+  '2019':{type:'csv', url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2019.csv'},
+  '2018':{type:'csv', url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2018.csv'},
+  '2017':{type:'csv', url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2017.csv'},
+  '2016':{type:'csv', url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2016.csv'},
+  '2015':{type:'csv', url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2015.csv'},
+  '2014':{type:'csv', url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2014.csv'},
+  '2013':{type:'csv', url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2013.csv'}
+};
 
 /*
  * Geographic scope for the Comune di Roma.
@@ -40,19 +57,7 @@ const POLLUTANTS={
 
 const EEA_YEARS=Array.from({length:13},(_,i)=>String(2025-i));
 
-const ARPA_RESOURCES={
-  '2023':'a5141779-55c3-4f23-8927-8cd2ba644798',
-  '2022':'f671c878-9c45-473c-9445-1491da97d123',
-  '2021':'13df26b3-03bf-47ed-8725-9515ece6899c',
-  '2020':'92a3f892-6bc7-4c2e-90ca-941832fae417',
-  '2019':'fd145613-7d8e-4e3c-8861-e7d63f74d3bb',
-  '2018':'60550f81-105b-460b-ad47-d4feb8aa0a2e',
-  '2017':'15993ce0-6df3-4a1a-b116-61d841be6c33',
-  '2016':'bd020cef-90b1-450f-ad17-c6c03602aa41',
-  '2015':'948c1a63-81a5-48a2-a6e7-5f4bbbff0925',
-  '2014':'2da682d2-df06-46b3-b92f-60c8368af193',
-  '2013':'892d5160-4c24-408f-887f-21f109439462'
-};
+const ARPA_YEARS=Object.keys(ARPA_STATIC_FILES).sort((a,b)=>Number(b)-Number(a));
 
 const SOURCE_INFO={
   eea:{
@@ -63,8 +68,8 @@ const SOURCE_INFO={
   },
   arpa:{
     name:'ARPA Lazio',
-    years:Object.keys(ARPA_RESOURCES).sort((a,b)=>Number(b)-Number(a)),
-    description:'<strong>ARPA Lazio:</strong> valutazione annuale modellistica a livello comunale, ottenuta combinando rete di monitoraggio e modello di dispersione.',
+    years:ARPA_YEARS,
+    description:'<strong>ARPA Lazio:</strong> stime comunali ufficiali. I dati sono letti dai file annuali pubblicati da ARPA, senza dipendere dal Data API CKAN.',
     hint:'Il colore copre il territorio amministrativo di Roma per mostrare a quale area si riferisce il dato comunale. Non significa che la concentrazione sia uniforme in ogni punto del Comune.'
   }
 };
@@ -277,28 +282,6 @@ async function fetchEeaRows(year,pollutant){
   return rows
 }
 
-function jsonp(url,params,timeoutMs=12000){
-  return new Promise((resolve,reject)=>{
-    const callback=`__qa_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const script=document.createElement('script');
-    let finished=false;
-    let timer=null;
-    const cleanup=()=>{
-      if(finished)return;
-      finished=true;
-      if(timer)clearTimeout(timer);
-      script.remove();
-      try{delete window[callback]}catch{window[callback]=undefined}
-    };
-    window[callback]=data=>{cleanup();resolve(data)};
-    params={...params,callback};
-    script.src=`${url}?${new URLSearchParams(params)}`;
-    script.onerror=()=>{cleanup();reject(new Error('errore di collegamento al Data API'))};
-    timer=setTimeout(()=>{cleanup();reject(new Error('timeout Data API'))},timeoutMs);
-    document.head.appendChild(script)
-  })
-}
-
 function arpaField(record,prefix,suffix){
   const p=normalizeText(prefix);
   const s=normalizeText(suffix);
@@ -350,6 +333,130 @@ async function fetchRomeBoundary(){
   }
 }
 
+
+function fetchWithTimeout(url,options={},timeoutMs=16000){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),timeoutMs);
+  return fetch(url,{...options,signal:controller.signal})
+    .finally(()=>clearTimeout(timer))
+}
+
+function csvDelimiter(text){
+  const first=(text.split(/\r?\n/,1)[0]||'');
+  const candidates=[',',';','\t'];
+  return candidates
+    .map(d=>({d,count:(first.match(new RegExp(d==='|'?'\\|':d==='\\t'?'\\t':d,'g'))||[]).length}))
+    .sort((a,b)=>b.count-a.count)[0]?.d||';'
+}
+
+function parseCsvText(text){
+  const delimiter=csvDelimiter(text);
+  const rows=[];
+  let row=[],field='',quoted=false;
+
+  const pushField=()=>{row.push(field);field=''};
+  const pushRow=()=>{
+    if(row.some(v=>String(v).trim()!==''))rows.push(row);
+    row=[]
+  };
+
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(c==='"'){
+      if(quoted&&text[i+1]==='"'){field+='"';i++}
+      else quoted=!quoted
+    }else if(c===delimiter&&!quoted){
+      pushField()
+    }else if((c==='\n'||c==='\r')&&!quoted){
+      if(c==='\r'&&text[i+1]==='\n')i++;
+      pushField();pushRow()
+    }else{
+      field+=c
+    }
+  }
+  if(field.length||row.length){pushField();pushRow()}
+  if(rows.length<2)return[];
+
+  const headers=rows[0].map(h=>String(h).replace(/^\uFEFF/,'').trim());
+  return rows.slice(1).map(values=>{
+    const obj={};
+    headers.forEach((h,i)=>obj[h]=values[i]??'');
+    return obj
+  })
+}
+
+async function loadArpaStaticRecords(year){
+  const cfg=ARPA_STATIC_FILES[year];
+  if(!cfg)throw new Error(`ARPA Lazio: file ufficiale ${year} non configurato.`);
+
+  const candidates=[cfg.url,cfg.fallback].filter(Boolean);
+  const attempts=[];
+
+  for(const url of candidates){
+    try{
+      const response=await fetchWithTimeout(url,{cache:'no-store',mode:'cors'});
+      if(!response.ok)throw new Error(`HTTP ${response.status}`);
+
+      const contentType=(response.headers.get('content-type')||'').toLowerCase();
+      const isXlsx=cfg.type==='xlsx' && !url.toLowerCase().endsWith('.csv');
+
+      if(isXlsx){
+        if(!window.XLSX)throw new Error('parser XLSX non disponibile');
+        const buffer=await response.arrayBuffer();
+        const workbook=XLSX.read(buffer,{type:'array'});
+        const sheet=workbook.Sheets[workbook.SheetNames[0]];
+        const records=XLSX.utils.sheet_to_json(sheet,{defval:'',raw:false});
+        if(!records.length)throw new Error('file XLSX senza righe');
+        return{records,url,format:'XLSX'}
+      }
+
+      const text=await response.text();
+      const records=parseCsvText(text);
+      if(!records.length)throw new Error('file CSV senza righe');
+      return{records,url,format:'CSV'}
+    }catch(err){
+      attempts.push({url,error:String(err.message||err)})
+    }
+  }
+
+  const detail=attempts.map(a=>`${a.error}`).join(' · ');
+  throw new Error(`ARPA Lazio: impossibile leggere il file ufficiale ${year}. ${detail}`)
+}
+
+function coordinatesFromGeometry(geometry,acc=[]){
+  if(!geometry)return acc;
+  const walk=node=>{
+    if(!Array.isArray(node))return;
+    if(node.length>=2&&typeof node[0]==='number'&&typeof node[1]==='number'){
+      acc.push([node[0],node[1]]);
+      return
+    }
+    node.forEach(walk)
+  };
+  walk(geometry.coordinates);
+  return acc
+}
+
+function boundsFromGeoJSON(geo){
+  const coords=[];
+  (geo?.features||[]).forEach(f=>coordinatesFromGeometry(f.geometry,coords));
+  if(!coords.length)return null;
+  let minLon=Infinity,minLat=Infinity,maxLon=-Infinity,maxLat=-Infinity;
+  coords.forEach(([lon,lat])=>{
+    minLon=Math.min(minLon,lon);maxLon=Math.max(maxLon,lon);
+    minLat=Math.min(minLat,lat);maxLat=Math.max(maxLat,lat)
+  });
+  return[[minLon,minLat],[maxLon,maxLat]]
+}
+
+function fitArpaScope(map,rows){
+  const municipal=rows.find(r=>r.kind==='municipal'&&r.boundary);
+  const bounds=boundsFromGeoJSON(municipal?.boundary);
+  if(bounds&&map){
+    map.fitBounds(bounds,{padding:34,duration:0,maxZoom:10.4})
+  }
+}
+
 async function fetchArpaRows(year,pollutant){
   const cacheKey=`${year}:${pollutant}`;
   if(state.arpaCache.has(cacheKey)){
@@ -358,30 +465,52 @@ async function fetchArpaRows(year,pollutant){
     return cached.rows
   }
 
-  const resourceId=ARPA_RESOURCES[year];
-  if(!resourceId)throw new Error(`ARPA Lazio: anno ${year} non configurato.`);
-
-  let payload;
+  // Load the geographical scope independently, so a data failure can be
+  // distinguished from a map/geometry failure in diagnostics.
+  let boundary=null;
   try{
-    payload=await jsonp(ARPA_API,{resource_id:resourceId,limit:500})
+    boundary=await fetchRomeBoundary()
   }catch(err){
-    diagnostics({source:'ARPA Lazio / Open Data Lazio',year,pollutant,error:String(err.message||err)});
-    throw new Error(`ARPA Lazio: ${err.message||err}.`)
+    diagnostics({
+      source:'ARPA Lazio',
+      year,pollutant,
+      geometry:'FAILED',
+      geometryError:String(err.message||err)
+    });
+    throw err
   }
 
-  if(!payload?.success)throw new Error('ARPA Lazio: risposta Data API non valida.');
+  let loaded;
+  try{
+    loaded=await loadArpaStaticRecords(year)
+  }catch(err){
+    diagnostics({
+      source:'ARPA Lazio · file statico ufficiale',
+      year,pollutant,
+      geometry:'OK',
+      boundaryFeatures:boundary?.features?.length||0,
+      data:'FAILED',
+      error:String(err.message||err)
+    });
+    throw err
+  }
 
-  const records=payload.result?.records||[];
+  const records=loaded.records||[];
   const record=records.find(isRomeRecord);
+
   if(!record){
     diagnostics({
-      source:'ARPA Lazio / Open Data Lazio',
+      source:'ARPA Lazio · file statico ufficiale',
       year,pollutant,
+      geometry:'OK',
+      data:'OK',
+      file:loaded.url,
+      format:loaded.format,
       rowsReceived:records.length,
       romaRecordFound:false,
-      sample:records[0]||null
+      firstColumns:Object.keys(records[0]||{}).slice(0,12)
     });
-    throw new Error(`ARPA Lazio: record del Comune di Roma non trovato per il ${year}.`)
+    throw new Error(`ARPA Lazio: record del Comune di Roma non trovato nel file ${year}.`)
   }
 
   const prefix=POLLUTANTS[pollutant].arpaPrefix;
@@ -395,41 +524,49 @@ async function fetchArpaRows(year,pollutant){
 
   if(med===null){
     diagnostics({
-      source:'ARPA Lazio / Open Data Lazio',
+      source:'ARPA Lazio · file statico ufficiale',
       year,pollutant,
+      geometry:'OK',
+      data:'OK',
+      file:loaded.url,
+      format:loaded.format,
       rowsReceived:records.length,
       romaRecordFound:true,
       fields:{fieldMin,fieldMed,fieldMax},
-      romaRecord:record
+      availableColumns:Object.keys(record)
     });
     throw new Error(`ARPA Lazio: valore MED ${pollutant} non disponibile per Roma nel ${year}.`)
   }
 
-  const boundary=await fetchRomeBoundary();
   const rows=[{
     id:'ARPA-ROMA-058091',
     name:'Roma · valutazione comunale',
-    lat:ROME.center[1],lon:ROME.center[0],
+    lat:ROME.center[1],
+    lon:ROME.center[0],
     value:med,min,max,
-    zone:String(record.zona||''),
+    zone:String(record.zona||record.Zona||''),
     kind:'municipal',
     provider:'ARPA Lazio',
     boundary
   }];
 
   const diagnostic={
-    source:'ARPA Lazio / Open Data Lazio',
-    resourceId,
+    source:'ARPA Lazio · file statico ufficiale',
+    runtimeApi:false,
     year,pollutant,
+    file:loaded.url,
+    format:loaded.format,
     rowsReceived:records.length,
     romaRecordFound:true,
     metric:'MED',
     min,med,max,
     fields:{fieldMin,fieldMed,fieldMax},
+    geometry:'OK',
     boundaryFeatures:boundary?.features?.length||0,
     boundarySource:'ISTAT municipality limits · geojson-italy · ISTAT 058091',
-    note:'Il perimetro visualizzato indica il territorio a cui si riferisce il dato comunale; non una concentrazione uniforme.'
+    note:'Nessuna chiamata CKAN DataStore viene eseguita a runtime.'
   };
+
   diagnostics(diagnostic);
   state.arpaCache.set(cacheKey,{rows,diagnostic});
   return rows
@@ -745,7 +882,7 @@ function setLoading(on){
   $('loadingOverlay').classList.toggle('hidden',!on);
   $('loadingText').textContent=source()==='eea'
     ?'Caricamento EEA Discodata…'
-    :'Caricamento ARPA Lazio…'
+    :'Caricamento file ARPA Lazio…'
 }
 
 function sourceNotice(rows){
@@ -761,6 +898,10 @@ async function updateCompareMaps(){
   ]);
   setAirData(state.mapBefore,a,'before');
   setAirData(state.mapAfter,b,'after');
+  if(source()==='arpa'){
+    fitArpaScope(state.mapBefore,a);
+    fitArpaScope(state.mapAfter,b)
+  }
   $('beforeBadge').textContent=$('compareYearA').value;
   $('afterBadge').textContent=$('compareYearB').value;
   return{a,b}
@@ -787,6 +928,7 @@ async function render(){
       if(token!==state.renderToken)return;
 
       showDifferenceOnSingle(rows);
+      if(source()==='arpa')fitArpaScope(state.map,rows);
       renderList(rows,true);
       $('mapBadge').textContent=`Δ ${$('compareYearB').value} − ${$('compareYearA').value}`;
       $('avgLabel').textContent=source()==='arpa'?'Differenza MED':'Differenza media stazioni';
@@ -813,6 +955,7 @@ async function render(){
       if(token!==state.renderToken)return;
 
       showAirOnSingle(rows);
+      if(source()==='arpa')fitArpaScope(state.map,rows);
       renderList(rows);
       $('mapBadge').textContent=`${POLLUTANTS[$('pollutantSelect').value].label} · ${$('yearSelect').value}`;
       $('avgLabel').textContent=source()==='arpa'?'Valore MED':'Media stazioni';
@@ -974,8 +1117,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.1.6',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.1.6',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.1.7',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.1.7',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -989,7 +1132,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.1.6')
+    navigator.serviceWorker.register('./service-worker.js?v=0.1.7')
       .then(reg=>reg.update())
       .catch(console.error)
   }

@@ -49,3 +49,6 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
   .legend{width:min(218px,calc(100% - 76px));font-size:.61rem;padding:7px 9px}
   .map-badge{top:55px}
 }
+
+/* v0.1.7: il perimetro ARPA deve restare leggibile anche su cartografia chiara */
+.maplibregl-map .maplibregl-canvas{outline:none}

@@ -1,43 +1,50 @@
 # Qualità dell'aria
 
-PWA mobile per esplorare e confrontare la qualità dell'aria nel tempo.
+## v0.1.7
 
-## v0.1.6
-
-- legenda colori spostata in alto a sinistra
-- controllo attribuzione MapLibre/OpenFreeMap sempre libero in basso a destra
-- aumentato lo z-index del controllo attribuzione
-- corretta la sovrapposizione tra legenda e pulsante compatto `i`
-
-## v0.1.5
-
-### Cartografia
-- basemap cambiata da Liberty a **OpenFreeMap Positron**
-- cartografia neutra, quasi monocromatica, per aumentare il contrasto dei dati ambientali
-- punti, interpolazioni e differenze rimangono colorati
-
-### EEA
-- dati reali EEA Discodata invariati
-- valori numerici sempre visibili sui marker
-- heatmap resa più ampia e leggibile attorno alle stazioni reali
-- non vengono aggiunte stazioni o misure sintetiche
-- dove la rete di misura è rada, la copertura visiva rimane necessariamente meno dettagliata
+Questa release corregge il problema dei `503` ARPA eliminando la dipendenza
+runtime dal DataStore API di Open Data Lazio.
 
 ### ARPA Lazio
-- corretto endpoint Data API: `/it/api/3/action/datastore_search`
-- mantenuto JSONP, come documentato da Open Data Lazio
-- eliminata la dipendenza dal servizio ATAC per il perimetro
-- il dato comunale viene associato al vero limite amministrativo del Comune di Roma
-  (ISTAT 058091), caricato in WGS84 dal progetto geojson-italy
-- il poligono ha estensione geografica reale e quindi **non cambia dimensione geografica
-  quando si effettua zoom**
-- il valore MED resta mostrato al centro; MIN/MAX rimangono nel dettaglio
 
-### Nota metodologica
-EEA è una rete di punti di misura. Una heatmap più estesa migliora la leggibilità, ma non
-trasforma EEA in un modello continuo. Per una superficie geografica continua la fonte
-prevista è CAMS.
+L'app legge direttamente i file annuali ufficiali pubblicati da ARPA Lazio:
 
-ARPA Lazio, nel dataset Standard comunali, fornisce invece una valutazione a livello
-comunale: colorare il confine di Roma indica l'ambito territoriale a cui si riferisce il
-dato, non che la concentrazione sia identica in ogni punto del Comune.
+- 2021-2025: XLSX
+- 2013-2020: CSV
+- 2024 dispone anche del CSV Open Data Lazio come fallback
+
+Anni disponibili: **2013-2025**.
+
+Il browser estrae la riga del Comune di Roma (`ISTAT 058091`) e usa i campi
+`MIN`, `MED`, `MAX` di PM2.5, PM10 e NO2.
+
+Non viene più chiamato `datastore_search` per la fonte ARPA.
+
+### Visualizzazione ARPA
+
+Il perimetro amministrativo del Comune di Roma viene caricato separatamente
+dal dato ambientale. Questo consente alla diagnostica di distinguere:
+
+- errore nel file ARPA;
+- errore nella geometria;
+- errore di rendering.
+
+Quando ARPA viene selezionata, la mappa esegue `fitBounds` sul vero confine
+del Comune di Roma. Il poligono resta quindi geograficamente stabile a ogni zoom.
+
+### EEA
+
+EEA continua a usare Discodata con statistiche annuali di stazione.
+
+### Diagnostica
+
+Il pannello mostra ora per ARPA:
+
+- file effettivamente usato;
+- formato CSV/XLSX;
+- numero righe ricevute;
+- presenza del record Roma;
+- MIN/MED/MAX;
+- stato geometria;
+- numero di feature del perimetro;
+- conferma `runtimeApi: false`.

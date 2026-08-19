@@ -1,20 +1,23 @@
 {
-  "version": 5,
-  "updated_at": "2026-08-16",
+  "version": 6,
+  "updated_at": "2026-08-19",
   "sources": {
     "eea_discodata": {
       "enabled": true,
       "type": "station_annual_statistics",
-      "table": "AirQualityDataFlows.latest.AirQualityStatistics",
       "aggregation": "P1Y",
-      "years": "2013-2025",
-      "visualization": "enhanced heatmap around real station points"
+      "years": "2013-2025"
     },
-    "arpa_lazio_open_data": {
+    "arpa_lazio_static": {
       "enabled": true,
       "type": "municipal_modelled_evaluation",
-      "years": "2013-2023",
-      "api": "https://dati.lazio.it/it/api/3/action/datastore_search",
+      "years": "2013-2025",
+      "runtime_api": false,
+      "formats": {
+        "2013-2020": "CSV",
+        "2021-2025": "XLSX"
+      },
+      "source": "ARPA Lazio official annual files",
       "scope_geometry": "Comune di Roma ISTAT 058091"
     },
     "rome_boundary": {

@@ -1,8 +1,8 @@
-const CACHE='qualita-aria-v0.1.6';
+const CACHE='qualita-aria-v0.1.7';
 const CORE=[
   './','./index.html',
-  './css/app.css?v=0.1.6','./js/app.js?v=0.1.6',
-  './manifest.json?v=0.1.6','./version.json?v=0.1.6','./data/version.json?v=0.1.6',
+  './css/app.css?v=0.1.7','./js/app.js?v=0.1.7',
+  './manifest.json?v=0.1.7','./version.json?v=0.1.7','./data/version.json?v=0.1.7',
   './assets/icons/icon.svg','./assets/icons/icon-192.png','./assets/icons/icon-512.png'
 ];
 
@@ -28,6 +28,7 @@ self.addEventListener('fetch',event=>{
   if(
     url.hostname==='discodata.eea.europa.eu' ||
     url.hostname==='dati.lazio.it' ||
+    url.hostname==='www.arpalazio.it' ||
     url.hostname==='raw.githubusercontent.com'
   ){
     event.respondWith(fetch(event.request,{cache:'no-store'}));
