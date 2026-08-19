@@ -81,8 +81,18 @@ function fmt(v){return Number(v).toLocaleString('it-IT',{minimumFractionDigits:1
 function avg(rows){return rows.length?rows.reduce((s,r)=>s+r.value,0)/rows.length:0}
 function colorFor(v){if(v<10)return'#35d07f';if(v<20)return'#e6cf43';if(v<30)return'#ff914d';return'#ff5864'}
 function parseNumber(v){
+  if(v===null||v===undefined)return null;
   if(typeof v==='number')return Number.isFinite(v)?v:null;
-  const n=Number(String(v??'').trim().replace(',','.'));
+
+  const raw=String(v).trim();
+  if(!raw||/^(?:-|--|n\/?a|n\.d\.?|nd|null)$/i.test(raw))return null;
+
+  // Italian decimal comma; tolerate spaces/non-breaking spaces.
+  const normalized=raw
+    .replace(/[\u00a0\s]/g,'')
+    .replace(',','.');
+
+  const n=Number(normalized);
   return Number.isFinite(n)?n:null
 }
 function diagnostics(payload){
@@ -392,35 +402,153 @@ function parseDelimitedRows(text,delimiter){
 function findArpaHeaderRow(matrix){
   const limit=Math.min(matrix.length,40);
   let best={index:-1,score:0};
+
   for(let i=0;i<limit;i++){
     const cells=(matrix[i]||[]).map(normalizeArpaKey);
     let score=0;
+
     if(cells.some(v=>v.includes('istat')))score+=5;
-    if(cells.some(v=>v==='nome'||v.includes('comune')))score+=3;
+    if(cells.some(v=>v==='nome'||v.includes('comune')||v.includes('denominazione')))score+=3;
     if(cells.some(v=>v.includes('pm10')&&v.includes('media annua')))score+=3;
     if(cells.some(v=>v.includes('pm2.5')&&v.includes('media annua')))score+=3;
     if(cells.some(v=>v.includes('no2')&&v.includes('media annua')))score+=3;
+
     if(score>best.score)best={index:i,score}
   }
+
   return best.score>=8?best.index:-1
+}
+
+function copyMatrix(matrix){
+  return (matrix||[]).map(row=>Array.isArray(row)?[...row]:[])
+}
+
+/*
+ * In XLSX the pollutant title is often a merged cell spanning MIN/MED/MAX
+ * and other subcolumns. SheetJS returns the value only in the top-left cell.
+ * Expand the merge over the matrix before composing the final header.
+ */
+function expandSheetMerges(matrix,sheet){
+  const out=copyMatrix(matrix);
+  const merges=sheet?.['!merges']||[];
+
+  for(const merge of merges){
+    const source=out[merge.s.r]?.[merge.s.c];
+    if(source===undefined||source===null||String(source).trim()==='')continue;
+
+    for(let r=merge.s.r;r<=merge.e.r;r++){
+      if(!out[r])out[r]=[];
+      for(let c=merge.s.c;c<=merge.e.c;c++){
+        if(out[r][c]===undefined||out[r][c]===null||String(out[r][c]).trim()===''){
+          out[r][c]=source
+        }
+      }
+    }
+  }
+
+  return out
+}
+
+function isArpaSubheaderRow(row){
+  const cells=(row||[])
+    .map(normalizeArpaKey)
+    .filter(Boolean);
+
+  if(!cells.length)return false;
+
+  const tokens=[
+    'min','med','max',
+    'area superamento',
+    'popolazione esposta',
+    'popolazione estesa',
+    'note'
+  ];
+
+  const tokenHits=cells.filter(v=>tokens.some(t=>v===t||v.includes(t))).length;
+  const identityHits=cells.filter(v=>
+    v.includes('istat')||v==='nome'||v.includes('comune')||v==='zona'
+  ).length;
+
+  // Municipality data rows must not be mistaken for a second header row.
+  const numericish=cells.filter(v=>/^[-+]?[0-9]+(?:[.,][0-9]+)?$/.test(v)).length;
+
+  return tokenHits>=2 && identityHits<=1 && numericish===0
+}
+
+function cleanHeaderPart(v){
+  return String(v??'')
+    .replace(/^\uFEFF/,'')
+    .replace(/\s+/g,' ')
+    .trim()
+}
+
+function buildArpaHeaders(matrix,headerRow){
+  const headerRows=[headerRow];
+
+  // ARPA files can use one or more header rows. At present two rows are
+  // sufficient, but allow up to three to make the parser tolerant to changes.
+  for(let r=headerRow+1;r<Math.min(matrix.length,headerRow+3);r++){
+    if(isArpaSubheaderRow(matrix[r]))headerRows.push(r);
+    else break
+  }
+
+  const maxCols=Math.max(...headerRows.map(r=>(matrix[r]||[]).length),0);
+  const headers=[];
+
+  for(let c=0;c<maxCols;c++){
+    const parts=[];
+
+    for(const r of headerRows){
+      const part=cleanHeaderPart(matrix[r]?.[c]);
+      if(!part)continue;
+
+      // Expanded XLSX merges can repeat the parent pollutant title. Remove
+      // adjacent duplicates while keeping subheaders such as MIN/MED/MAX.
+      if(!parts.length||normalizeArpaKey(parts.at(-1))!==normalizeArpaKey(part)){
+        parts.push(part)
+      }
+    }
+
+    headers[c]=parts.join(' ').trim()||`__col_${c}`
+  }
+
+  return{
+    headers,
+    headerRows,
+    dataStartRow:headerRows.at(-1)+1
+  }
 }
 
 function matrixToArpaRecords(matrix){
   const headerRow=findArpaHeaderRow(matrix);
-  if(headerRow<0)return{records:[],headerRow:-1};
+  if(headerRow<0){
+    return{
+      records:[],
+      headerRow:-1,
+      headerRows:[],
+      dataStartRow:-1,
+      headers:[]
+    }
+  }
 
-  const headers=(matrix[headerRow]||[]).map((v,i)=>{
-    const h=String(v??'').replace(/^\uFEFF/,'').replace(/\s+/g,' ').trim();
-    return h||`__col_${i}`
-  });
+  const built=buildArpaHeaders(matrix,headerRow);
   const records=[];
-  for(const values of matrix.slice(headerRow+1)){
+
+  for(const values of matrix.slice(built.dataStartRow)){
     if(!values||!values.some(v=>String(v??'').trim()!==''))continue;
+
     const record={};
-    headers.forEach((h,i)=>record[h]=values[i]??'');
+    built.headers.forEach((h,i)=>record[h]=values[i]??'');
     records.push(record)
   }
-  return{records,headerRow}
+
+  return{
+    records,
+    headerRow,
+    headerRows:built.headerRows,
+    dataStartRow:built.dataStartRow,
+    headers:built.headers
+  }
 }
 
 function parseCsvText(text){
@@ -455,11 +583,29 @@ function parseArpaWorkbook(buffer){
   const inspected=[];
   for(const sheetName of workbook.SheetNames){
     const sheet=workbook.Sheets[sheetName];
-    const matrix=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false,blankrows:false});
+    const rawMatrix=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false,blankrows:false});
+    const matrix=expandSheetMerges(rawMatrix,sheet);
     const parsed=matrixToArpaRecords(matrix);
-    inspected.push({sheet:sheetName,rows:parsed.records.length,headerRow:parsed.headerRow>=0?parsed.headerRow+1:null});
+
+    inspected.push({
+      sheet:sheetName,
+      rows:parsed.records.length,
+      headerRow:parsed.headerRow>=0?parsed.headerRow+1:null,
+      headerRows:parsed.headerRows.map(r=>r+1),
+      dataStartRow:parsed.dataStartRow>=0?parsed.dataStartRow+1:null,
+      sampleHeaders:parsed.headers.filter(h=>!h.startsWith('__col_')).slice(0,18)
+    });
+
     if(parsed.records.length&&parsed.records.some(isRomeRecord)){
-      return{records:parsed.records,sheetName,headerRow:parsed.headerRow+1,inspected}
+      return{
+        records:parsed.records,
+        sheetName,
+        headerRow:parsed.headerRow+1,
+        headerRows:parsed.headerRows.map(r=>r+1),
+        dataStartRow:parsed.dataStartRow+1,
+        headers:parsed.headers,
+        inspected
+      }
     }
   }
   const detail=inspected.map(x=>`${x.sheet}: header ${x.headerRow??'non trovato'}, ${x.rows} righe`).join('; ');
@@ -489,7 +635,11 @@ async function loadArpaStaticRecords(year){
         const parsed=parseArpaWorkbook(buffer);
         return{
           records:parsed.records,url,format:'XLSX',contentType,
-          sheetName:parsed.sheetName,headerRow:parsed.headerRow,
+          sheetName:parsed.sheetName,
+          headerRow:parsed.headerRow,
+          headerRows:parsed.headerRows,
+          dataStartRow:parsed.dataStartRow,
+          parsedHeaders:parsed.headers,
           workbookInspection:parsed.inspected
         }
       }
@@ -605,11 +755,11 @@ async function fetchArpaRows(year,pollutant){
   const fieldMin=arpaField(record,prefix,'MIN');
   const fieldMax=arpaField(record,prefix,'MAX');
 
-  const med=parseNumber(record[fieldMed]);
-  const min=parseNumber(record[fieldMin]);
-  const max=parseNumber(record[fieldMax]);
+  const med=parseNumber(fieldMed?record[fieldMed]:null);
+  const min=parseNumber(fieldMin?record[fieldMin]:null);
+  const max=parseNumber(fieldMax?record[fieldMax]:null);
 
-  if(med===null){
+  if(!fieldMed||!fieldMin||!fieldMax||med===null){
     diagnostics({
       source:'ARPA Lazio · file statico ufficiale',
       year,pollutant,
@@ -619,8 +769,15 @@ async function fetchArpaRows(year,pollutant){
       format:loaded.format,
       rowsReceived:records.length,
       romaRecordFound:true,
-      fields:{fieldMin,fieldMed,fieldMax},
-      availableColumns:Object.keys(record)
+      fields:{
+        MIN:fieldMin||null,
+        MED:fieldMed||null,
+        MAX:fieldMax||null
+      },
+      parsedHeaderRows:loaded.headerRows||null,
+      dataStartRow:loaded.dataStartRow||null,
+      availableColumns:Object.keys(record),
+      parsedHeaders:loaded.parsedHeaders||Object.keys(record)
     });
     throw new Error(`ARPA Lazio: valore MED ${pollutant} non disponibile per Roma nel ${year}.`)
   }
@@ -646,12 +803,19 @@ async function fetchArpaRows(year,pollutant){
     contentType:loaded.contentType||null,
     sheetName:loaded.sheetName||null,
     headerRow:loaded.headerRow||null,
+    headerRows:loaded.headerRows||null,
+    dataStartRow:loaded.dataStartRow||null,
     workbookInspection:loaded.workbookInspection||null,
+    parsedHeaders:(loaded.parsedHeaders||Object.keys(record)).slice(0,30),
     rowsReceived:records.length,
     romaRecordFound:true,
     metric:'MED',
     min,med,max,
-    fields:{fieldMin,fieldMed,fieldMax},
+    fields:{
+      MIN:fieldMin||null,
+      MED:fieldMed||null,
+      MAX:fieldMax||null
+    },
     geometry:'OK',
     boundaryFeatures:boundary?.features?.length||0,
     boundarySource:'ISTAT municipality limits · geojson-italy · ISTAT 058091',
@@ -1208,8 +1372,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.1.8',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.1.8',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.1.9',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.1.9',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -1223,7 +1387,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.1.8')
+    navigator.serviceWorker.register('./service-worker.js?v=0.1.9')
       .then(reg=>reg.update())
       .catch(console.error)
   }
