@@ -1,8 +1,8 @@
-const CACHE='qualita-aria-v0.1.11';
+const CACHE='qualita-aria-v0.1.12';
 const CORE=[
   './','./index.html',
-  './css/app.css?v=0.1.11','./js/app.js?v=0.1.11',
-  './manifest.json?v=0.1.11','./version.json?v=0.1.11','./data/version.json?v=0.1.11',
+  './css/app.css?v=0.1.12','./js/app.js?v=0.1.12',
+  './manifest.json?v=0.1.12','./version.json?v=0.1.12','./data/version.json?v=0.1.12',
   './assets/icons/icon.svg','./assets/icons/icon-192.png','./assets/icons/icon-512.png'
 ];
 

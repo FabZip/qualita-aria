@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "updated_at": "2026-08-19",
   "sources": {
     "eea_discodata": {
@@ -14,14 +14,11 @@
       "years": "2013-2025",
       "runtime_api": false,
       "formats": {
-        "2013-2024": "CSV",
-        "2025": "XLSX"
+        "2013-2020": "CSV",
+        "2021-2025": "XLSX"
       },
-      "source": {
-        "2013-2020": "ARPA Lazio official CSV files",
-        "2021-2024": "Open Data Lazio official CSV resources",
-        "2025": "ARPA Lazio official XLSX"
-      },
+      "source": "ARPA Lazio official annual files",
+      "xlsx_metric_resolution": "named headers, then positional schema fallback",
       "scope_geometry": "Comune di Roma ISTAT 058091"
     },
     "rome_boundary": {

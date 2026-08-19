@@ -23,29 +23,14 @@ const EEA_SQL_API='https://discodata.eea.europa.eu/sql';
  * ARPA Lazio:
  * Do not depend on the CKAN DataStore API at runtime.
  * The application reads the official static annual files published by ARPA Lazio.
- * 2013-2024 use official flat CSV resources; 2025 uses the official ARPA XLSX.
+ * 2013-2020 use ARPA CSV; 2021-2025 use ARPA XLSX. Open Data Lazio is not fetched at runtime because its download endpoint blocks cross-origin browser requests.
  */
 const ARPA_STATIC_FILES={
-  '2025':{
-    type:'xlsx',
-    url:'https://www.arpalazio.it/documents/20124/430865/Standard_Comunali_2025.xlsx'
-  },
-  '2024':{
-    type:'csv',
-    url:'https://dati.lazio.it/dataset/79dfc4f3-6872-4fd9-84e3-786a824509cf/resource/9111d47e-6a37-49bc-8864-a6a0a9c1dc2e/download/standard-comunali_2024.csv'
-  },
-  '2023':{
-    type:'csv',
-    url:'https://dati.lazio.it/dataset/79dfc4f3-6872-4fd9-84e3-786a824509cf/resource/a5141779-55c3-4f23-8927-8cd2ba644798/download/standardcomunali2023.csv'
-  },
-  '2022':{
-    type:'csv',
-    url:'https://dati.lazio.it/dataset/79dfc4f3-6872-4fd9-84e3-786a824509cf/resource/f671c878-9c45-473c-9445-1491da97d123/download/standardcomunali2022_mod.csv'
-  },
-  '2021':{
-    type:'csv',
-    url:'https://dati.lazio.it/dataset/79dfc4f3-6872-4fd9-84e3-786a824509cf/resource/13df26b3-03bf-47ed-8725-9515ece6899c/download/standard_comunali_2021.csv'
-  },
+  '2025':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_Comunali_2025.xlsx'},
+  '2024':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2024.xlsx'},
+  '2023':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2023.xlsx'},
+  '2022':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2022.xlsx'},
+  '2021':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2021.xlsx'},
   '2020':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2020.csv'},
   '2019':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2019.csv'},
   '2018':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2018.csv'},
@@ -323,6 +308,68 @@ function arpaField(record,prefix,suffix){
     return n.includes(p)&&(n.endsWith(s)||n.includes(` ${s} `))
   })
 }
+const ARPA_POSITIONAL_GROUP={
+  'PM10':0,
+  'PM2.5':2,
+  'NO2':3
+};
+
+function arpaGenericHeaderToken(v){
+  const n=normalizeArpaKey(v);
+  if(n==='min')return'MIN';
+  if(n==='med')return'MED';
+  if(n==='max')return'MAX';
+  return null
+}
+
+function arpaPositionalMetric(record,headers,pollutant){
+  const cells=record?.__cells;
+  if(!Array.isArray(cells)||!Array.isArray(headers))return null;
+
+  const minColumns=[];
+  headers.forEach((header,index)=>{
+    if(arpaGenericHeaderToken(header)==='MIN')minColumns.push(index)
+  });
+
+  if(minColumns.length<2)return null;
+
+  const firstMetricColumn=minColumns[0];
+  const distances=[];
+  for(let i=1;i<minColumns.length;i++){
+    const distance=minColumns[i]-minColumns[i-1];
+    if(distance>0)distances.push(distance)
+  }
+
+  const frequency=new Map();
+  distances.forEach(d=>frequency.set(d,(frequency.get(d)||0)+1));
+
+  const groupWidth=[...frequency.entries()]
+    .sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0]?.[0];
+
+  const groupIndex=ARPA_POSITIONAL_GROUP[pollutant];
+  if(!Number.isInteger(groupWidth)||groupWidth<3||groupIndex===undefined)return null;
+
+  const base=firstMetricColumn+(groupIndex*groupWidth);
+  if(base+2>=cells.length)return null;
+
+  const min=parseNumber(cells[base]);
+  const med=parseNumber(cells[base+1]);
+  const max=parseNumber(cells[base+2]);
+  if(med===null)return null;
+
+  return{
+    min,med,max,
+    groupIndex,
+    groupWidth,
+    columns:{MIN:base,MED:base+1,MAX:base+2},
+    fields:{
+      MIN:`colonna ${base+1} · MIN`,
+      MED:`colonna ${base+2} · MED`,
+      MAX:`colonna ${base+3} · MAX`
+    }
+  }
+}
+
 function isRomeRecord(record){
   const entries=Object.entries(record||{});
   const istatEntry=entries.find(([k])=>normalizeArpaKey(k).includes('istat'));
@@ -613,6 +660,14 @@ function matrixToArpaRecords(matrix){
 
     const record={};
     built.headers.forEach((h,i)=>record[h]=values[i]??'');
+
+    Object.defineProperty(record,'__cells',{
+      value:[...values],
+      enumerable:false,
+      configurable:false,
+      writable:false
+    });
+
     records.push(record)
   }
 
@@ -837,15 +892,35 @@ async function fetchArpaRows(year,pollutant){
   }
 
   const prefix=POLLUTANTS[pollutant].arpaPrefix;
-  const fieldMed=arpaField(record,prefix,'MED');
-  const fieldMin=arpaField(record,prefix,'MIN');
-  const fieldMax=arpaField(record,prefix,'MAX');
+  let fieldMed=arpaField(record,prefix,'MED');
+  let fieldMin=arpaField(record,prefix,'MIN');
+  let fieldMax=arpaField(record,prefix,'MAX');
 
-  const med=parseNumber(fieldMed?record[fieldMed]:null);
-  const min=parseNumber(fieldMin?record[fieldMin]:null);
-  const max=parseNumber(fieldMax?record[fieldMax]:null);
+  let med=parseNumber(fieldMed?record[fieldMed]:null);
+  let min=parseNumber(fieldMin?record[fieldMin]:null);
+  let max=parseNumber(fieldMax?record[fieldMax]:null);
+  let metricResolution='header';
+  let positional=null;
 
-  if(!fieldMed||!fieldMin||!fieldMax||med===null){
+  if((!fieldMed||!fieldMin||!fieldMax||med===null)&&loaded.format==='XLSX'){
+    positional=arpaPositionalMetric(
+      record,
+      loaded.parsedHeaders||[],
+      pollutant
+    );
+
+    if(positional){
+      min=positional.min;
+      med=positional.med;
+      max=positional.max;
+      fieldMin=positional.fields.MIN;
+      fieldMed=positional.fields.MED;
+      fieldMax=positional.fields.MAX;
+      metricResolution='positional-schema'
+    }
+  }
+
+  if(med===null){
     diagnostics({
       source:'ARPA Lazio · file statico ufficiale',
       year,pollutant,
@@ -855,6 +930,8 @@ async function fetchArpaRows(year,pollutant){
       format:loaded.format,
       rowsReceived:records.length,
       romaRecordFound:true,
+      metricResolution,
+      positional,
       fields:{
         MIN:fieldMin||null,
         MED:fieldMed||null,
@@ -865,7 +942,8 @@ async function fetchArpaRows(year,pollutant){
       lowerRows:loaded.lowerRows||null,
       dataStartRow:loaded.dataStartRow||null,
       availableColumns:Object.keys(record),
-      parsedHeaders:loaded.parsedHeaders||Object.keys(record)
+      parsedHeaders:loaded.parsedHeaders||Object.keys(record),
+      workbookInspection:loaded.workbookInspection||null
     });
     throw new Error(`ARPA Lazio: valore MED ${pollutant} non disponibile per Roma nel ${year}.`)
   }
@@ -900,6 +978,12 @@ async function fetchArpaRows(year,pollutant){
     rowsReceived:records.length,
     romaRecordFound:true,
     metric:'MED',
+    metricResolution,
+    positional:positional?{
+      groupIndex:positional.groupIndex,
+      groupWidth:positional.groupWidth,
+      columns:positional.columns
+    }:null,
     min,med,max,
     fields:{
       MIN:fieldMin||null,
@@ -1462,8 +1546,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.1.11',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.1.11',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.1.12',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.1.12',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -1477,7 +1561,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.1.11')
+    navigator.serviceWorker.register('./service-worker.js?v=0.1.12')
       .then(reg=>reg.update())
       .catch(console.error)
   }
