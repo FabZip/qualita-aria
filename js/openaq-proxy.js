@@ -74,6 +74,32 @@
     }
   }
 
+
+  async function binaryRequest(path,params={}){
+    const url=await proxyUrl(path,params);
+    const response=await fetch(url.toString(),{
+      method:'GET',
+      mode:'cors',
+      cache:'no-store',
+      headers:{Accept:'application/octet-stream,*/*'}
+    });
+
+    if(!response.ok){
+      let detail=`HTTP ${response.status}`;
+      try{
+        const payload=await response.json();
+        detail=payload?.error||payload?.detail||detail
+      }catch{}
+      throw new Error(`Proxy dati: ${detail}`)
+    }
+
+    return{
+      data:await response.arrayBuffer(),
+      status:response.status,
+      size:Number(response.headers.get('Content-Length')||0)
+    }
+  }
+
   globalThis.QualitaAriaOpenAQProxy={
     loadConfig,
     reloadConfig:()=>loadConfig(true),
@@ -130,6 +156,25 @@
         pollutant,
         bbox,
         max_age_days:maxAgeDays
+      })
+    },
+
+    eeaUtdFiles({
+      country='IT',
+      city='',
+      pollutant='PM2.5'
+    }={}){
+      return request('/v1/eea/utd/files',{country,city,pollutant})
+    },
+
+    eeaUtdFile({
+      country='IT',
+      city='',
+      pollutant='PM2.5',
+      index=0
+    }={}){
+      return binaryRequest('/v1/eea/utd/file',{
+        country,city,pollutant,index
       })
     },
 

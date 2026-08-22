@@ -2,6 +2,32 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.2.11] - 2026-08-22
+
+### EEA · dati preliminari UTD
+
+- Aggiunto il fallback ufficiale EEA `E2a / UTD` per l'anno più recente quando la statistica annuale `E1a` validata non è disponibile.
+- L'app continua a dare priorità ai dati annuali validati `E1a`.
+- Il fallback UTD è attivo inizialmente per le città italiane selezionate nella fonte EEA.
+- I file Parquet UTD vengono richiesti tramite il Cloudflare Worker esistente, senza dipendere dal CORS del servizio EEA.
+- Aggiunta lettura Parquet nel browser tramite `hyparquet` e `hyparquet-compressors`, con versioni bloccate per supportare i principali codec Parquet.
+- Le osservazioni con `Validity` negativa vengono escluse.
+- Per ogni sampling point viene selezionata la serie con maggiore copertura tra aggregazione giornaliera, oraria e variabile.
+- Una media annuale preliminare viene visualizzata solo con copertura almeno del 75%.
+- I sampling point UTD vengono collegati ai metadati ufficiali EEA della tabella `Measurements`.
+- I record preliminari sono marcati `◐ Preliminare UTD`; quelli validati `✓ Validato E1a`.
+- Popup, elenco stazioni e confronto mantengono visibile lo stato di validazione.
+
+### Proxy Cloudflare
+
+- Aggiunti `/v1/eea/utd/files` e `/v1/eea/utd/file`.
+- Il Worker accetta soltanto indici di file restituiti direttamente dall'API EEA, evitando proxy verso URL arbitrari.
+- Aggiornato health check Worker alla versione `0.4.0` con `eeaUtd: true`.
+
+### Versioning
+
+- Aggiornata l'app a `0.2.11` build `29`.
+
 ## [0.2.10] - 2026-08-22
 
 ### EEA

@@ -1,4 +1,9 @@
 const OPENAQ_BASE='https://api.openaq.org/v3';
+const EEA_DOWNLOAD_BASE='https://eeadmz1-downloads-api-appservice.azurewebsites.net';
+const EEA_UTD_DATASET=1;
+const EEA_UTD_URL_CACHE_TTL=300;
+const EEA_UTD_MAX_FILES=100;
+const EEA_UTD_MAX_FILE_BYTES=40*1024*1024;
 
 const PARAMETERS={
   pm10:{id:1,label:'PM10',units:'µg/m³'},
@@ -671,6 +676,164 @@ async function worldLatest(request,env,ctx,origin,cors,pollutant,maxAgeHours){
   return response
 }
 
+
+function eeaPollutantNotation(value){
+  const raw=String(value||'').trim().toUpperCase().replace(/\s+/g,'');
+  const aliases={
+    'PM2.5':'PM2.5',
+    'PM25':'PM2.5',
+    'PM10':'PM10',
+    'NO2':'NO2',
+    'NO₂':'NO2'
+  };
+  return aliases[raw]||null
+}
+
+function validEeaCity(value){
+  const city=String(value||'').trim();
+  if(!city||city.length>100)return null;
+  if(/[\u0000-\u001f<>?#{}\\]/.test(city))return null;
+  return city
+}
+
+function parseEeaParquetUrls(text){
+  const matches=String(text||'').match(/https?:\/\/[^\s,"']+?\.parquet(?:\?[^\s,"']*)?/gi)||[];
+  return[...new Set(matches)].slice(0,EEA_UTD_MAX_FILES)
+}
+
+async function eeaUtdUrls(env,ctx,{country,city,pollutant}){
+  const cacheRequest=internalCacheRequest('eea-utd-urls',{
+    country,city,pollutant,dataset:EEA_UTD_DATASET
+  });
+  const cached=await internalJsonCacheGet(cacheRequest);
+  if(cached?.urls?.length)return{...cached,cache:'HIT'};
+
+  const payload={
+    countries:[country],
+    cities:[city],
+    pollutants:[pollutant],
+    dataset:EEA_UTD_DATASET,
+    source:'qualita-aria'
+  };
+
+  const response=await fetch(`${EEA_DOWNLOAD_BASE}/ParquetFile/urls`,{
+    method:'POST',
+    headers:{
+      'Accept':'text/plain, text/csv, */*',
+      'Content-Type':'application/json'
+    },
+    body:JSON.stringify(payload)
+  });
+
+  const text=await response.text();
+  if(!response.ok){
+    const err=new Error(`EEA Download API HTTP ${response.status}: ${text.slice(0,300)}`);
+    err.status=response.status;
+    throw err
+  }
+
+  const urls=parseEeaParquetUrls(text);
+  const result={
+    urls,
+    generatedAt:new Date().toISOString(),
+    country,city,pollutant,
+    dataset:'E2a/UTD',
+    datasetId:EEA_UTD_DATASET
+  };
+
+  internalJsonCachePut(cacheRequest,result,ctx,EEA_UTD_URL_CACHE_TTL);
+  return{...result,cache:'MISS'}
+}
+
+async function eeaUtdFilesResponse(env,ctx,cors,{country,city,pollutant}){
+  try{
+    const result=await eeaUtdUrls(env,ctx,{country,city,pollutant});
+    return json({
+      meta:{
+        country,city,pollutant,
+        dataset:'E2a/UTD',
+        datasetId:EEA_UTD_DATASET,
+        count:result.urls.length,
+        cache:result.cache,
+        generatedAt:result.generatedAt
+      },
+      files:result.urls.map((url,index)=>{
+        let name=`utd-${index}.parquet`;
+        try{
+          name=decodeURIComponent(new URL(url).pathname.split('/').pop()||name)
+        }catch{}
+        return{index,name}
+      })
+    },200,{
+      ...cors,
+      'Cache-Control':`public, max-age=${EEA_UTD_URL_CACHE_TTL}`,
+      'X-Qualita-Aria-Proxy':'EEA-UTD'
+    })
+  }catch(err){
+    return json({
+      error:`EEA UTD: ${err.message||err}`,
+      upstreamStatus:err.status||null
+    },502,{...cors,'Cache-Control':'no-store'})
+  }
+}
+
+async function eeaUtdFileResponse(env,ctx,cors,{country,city,pollutant,index}){
+  try{
+    const result=await eeaUtdUrls(env,ctx,{country,city,pollutant});
+    const target=result.urls[index];
+    if(!target){
+      return json({error:'File EEA UTD non trovato',index,count:result.urls.length},404,cors)
+    }
+
+    const upstream=await fetch(target,{
+      method:'GET',
+      headers:{'Accept':'application/octet-stream,*/*'}
+    });
+
+    if(!upstream.ok){
+      return json({
+        error:`Download file EEA UTD: HTTP ${upstream.status}`,
+        index
+      },502,{...cors,'Cache-Control':'no-store'})
+    }
+
+    const declared=Number(upstream.headers.get('content-length')||0);
+    if(Number.isFinite(declared)&&declared>EEA_UTD_MAX_FILE_BYTES){
+      return json({
+        error:`File EEA UTD troppo grande (${Math.round(declared/1024/1024)} MB)`,
+        code:'EEA_UTD_FILE_TOO_LARGE'
+      },413,{...cors,'Cache-Control':'no-store'})
+    }
+
+    const body=await upstream.arrayBuffer();
+    if(body.byteLength>EEA_UTD_MAX_FILE_BYTES){
+      return json({
+        error:`File EEA UTD troppo grande (${Math.round(body.byteLength/1024/1024)} MB)`,
+        code:'EEA_UTD_FILE_TOO_LARGE'
+      },413,{...cors,'Cache-Control':'no-store'})
+    }
+
+    return new Response(body,{
+      status:200,
+      headers:{
+        ...cors,
+        'Content-Type':'application/octet-stream',
+        'Content-Length':String(body.byteLength),
+        'Cache-Control':'public, max-age=3600',
+        'X-Content-Type-Options':'nosniff',
+        'X-Qualita-Aria-Proxy':'EEA-UTD',
+        'X-EEA-UTD-File-Index':String(index)
+      }
+    })
+  }catch(err){
+    return json({
+      error:`EEA UTD: ${err.message||err}`,
+      upstreamStatus:err.status||null
+    },502,{...cors,'Cache-Control':'no-store'})
+  }
+}
+
+
 function badRequest(message,cors={}){
   return json({error:message},400,cors)
 }
@@ -700,15 +863,42 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-openaq-proxy',
-        version:'0.3.0',
+        version:'0.4.0',
         openaqConfigured:Boolean(env.OPENAQ_API_KEY),
         upstream:'OpenAQ API v3',
         worldLatest:true,
         viewportLatest:true,
-        viewportMaxRecentLocations:VIEWPORT_MAX_RECENT_LOCATIONS
+        viewportMaxRecentLocations:VIEWPORT_MAX_RECENT_LOCATIONS,
+        eeaUtd:true,
+        eeaUtdDataset:'E2a/UTD'
       },200,{
         ...cors,
         'Cache-Control':'no-store'
+      })
+    }
+
+    if(url.pathname==='/v1/eea/utd/files'||url.pathname==='/v1/eea/utd/file'){
+      const country=validIso(url.searchParams.get('country')||'IT');
+      const city=validEeaCity(url.searchParams.get('city'));
+      const eeaPollutant=eeaPollutantNotation(url.searchParams.get('pollutant'));
+
+      if(!country)return badRequest('Codice Paese EEA non valido',cors);
+      if(!city)return badRequest('Città EEA non valida',cors);
+      if(!eeaPollutant)return badRequest('Inquinante EEA UTD non supportato',cors);
+
+      if(url.pathname==='/v1/eea/utd/files'){
+        return eeaUtdFilesResponse(env,ctx,cors,{
+          country,city,pollutant:eeaPollutant
+        })
+      }
+
+      const index=intParam(url.searchParams.get('index'),{
+        min:0,max:EEA_UTD_MAX_FILES-1,defaultValue:null
+      });
+      if(index===null)return badRequest('Indice file EEA UTD non valido',cors);
+
+      return eeaUtdFileResponse(env,ctx,cors,{
+        country,city,pollutant:eeaPollutant,index
       })
     }
 
@@ -866,6 +1056,8 @@ export default{
       error:'Endpoint non trovato',
       available:[
         '/health',
+        '/v1/eea/utd/files?country=IT&city=Bari&pollutant=PM2.5',
+        '/v1/eea/utd/file?country=IT&city=Bari&pollutant=PM2.5&index=0',
         '/v1/viewport/latest?pollutant=pm25&bbox=12,41,13,42&max_age_days=30',
         '/v1/world/latest?pollutant=pm25&max_age_hours=72',
         '/v1/locations?pollutant=pm25&page=1',

@@ -305,8 +305,14 @@
       ? `<div class="metric-range"><span>MIN ${fmtValue(row.min)}</span><span>MED ${fmtValue(row.value)}</span><span>MAX ${fmtValue(row.max)} µg/m³</span></div>`
       : '';
 
+    const dataStatus = row.dataStatus === 'preliminary'
+      ? ' · ◐ preliminare UTD'
+      : row.dataStatus === 'validated'
+        ? ' · ✓ validato'
+        : '';
+
     const detail = row.kind === 'station'
-      ? `${row.country?`${escapeHtml(row.country)} · `:''}${escapeHtml(row.id || '')}${row.coverage !== null && row.coverage !== undefined?` · copertura ${fmtValue(row.coverage)}%`:''}`
+      ? `${row.country?`${escapeHtml(row.country)} · `:''}${escapeHtml(row.id || '')}${row.coverage !== null && row.coverage !== undefined?` · copertura ${fmtValue(row.coverage)}%`:''}${dataStatus}`
       : `Comune di Roma${row.zone?` · zona ${escapeHtml(row.zone)}`:''}`;
 
     const dotColor = isDiff
@@ -341,7 +347,10 @@
       ? ` <span class="trend-indicator trend-${trend.kind}" title="${trend.label}" aria-label="${trend.label}">${trend.symbol}</span>`
       : '';
 
-    const detail = `${row.country?`${escapeHtml(row.country)} · `:''}${escapeHtml(row.id || '')}`;
+    const statusA = row.dataStatusA === 'preliminary' ? 'A ◐' : row.dataStatusA === 'validated' ? 'A ✓' : '';
+    const statusB = row.dataStatusB === 'preliminary' ? 'B ◐' : row.dataStatusB === 'validated' ? 'B ✓' : '';
+    const statuses = [statusA,statusB].filter(Boolean).join(' · ');
+    const detail = `${row.country?`${escapeHtml(row.country)} · `:''}${escapeHtml(row.id || '')}${statuses?` · ${statuses}`:''}`;
 
     const clickable=coordinatesForRow(row)?' station-row-clickable':'';
 

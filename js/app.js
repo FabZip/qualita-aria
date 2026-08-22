@@ -154,7 +154,7 @@ async function loadEeaCities(){
   let cities=fallback;
 
   try{
-    const response=await fetch('data/italian-capitals.json?v=0.2.10',{cache:'no-store'});
+    const response=await fetch('data/italian-capitals.json?v=0.2.11',{cache:'no-store'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
     const payload=await response.json();
     if(Array.isArray(payload?.cities)&&payload.cities.length){
@@ -1157,7 +1157,8 @@ function toGeoJSON(rows){
       properties:{
         id:r.id,name:r.name,value:r.value,label:fmt(r.value),
         coverage:r.coverage??'',country:r.country??'',kind:r.kind||'station',
-        min:r.min??'',max:r.max??'',provider:r.provider||''
+        min:r.min??'',max:r.max??'',provider:r.provider||'',
+        dataStatus:r.dataStatus||'',verification:r.verification||'',aggregation:r.aggregation||''
       },
       geometry:{type:'Point',coordinates:[r.lon,r.lat]}
     }))
@@ -1286,6 +1287,8 @@ function addAirLayers(map,prefix='air'){
     }else{
       const coverage=Number(p.coverage);
       if(Number.isFinite(coverage)&&coverage>0)extra=`<br>Copertura dati: ${fmt(coverage)}%`;
+      if(p.dataStatus==='preliminary')extra+=`<br>◐ Preliminare · EEA UTD/E2a`;
+      if(p.dataStatus==='validated')extra+=`<br>✓ Validato · EEA E1a`;
     }
     new maplibregl.Popup({offset:18})
       .setLngLat(f.geometry.coordinates)
@@ -1448,6 +1451,8 @@ function mergeComparisonRows(rowsA,rowsB){
       provider:row.provider,
       country:row.country||'',
       verification:row.verification,
+      dataStatusA:row.dataStatus||'',
+      dataStatusB:'',
       valueA:row.value,
       valueB:null,
       coverageA:row.coverage,
@@ -1464,6 +1469,7 @@ function mergeComparisonRows(rowsA,rowsB){
       current.provider=row.provider||current.provider;
       current.country=row.country||current.country;
       current.verification=row.verification||current.verification;
+      current.dataStatusB=row.dataStatus||'';
       current.valueB=row.value;
       current.coverageB=row.coverage
     }else{
@@ -1474,6 +1480,8 @@ function mergeComparisonRows(rowsA,rowsB){
         provider:row.provider,
         country:row.country||'',
         verification:row.verification,
+        dataStatusA:'',
+        dataStatusB:row.dataStatus||'',
         valueA:null,
         valueB:row.value,
         coverageA:null,
@@ -1998,8 +2006,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.2.10',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.2.10',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.2.11',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.2.11',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -2014,7 +2022,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.2.10')
+    navigator.serviceWorker.register('./service-worker.js?v=0.2.11')
       .then(reg=>reg.update())
       .catch(console.error)
   }
