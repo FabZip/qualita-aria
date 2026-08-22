@@ -10,6 +10,8 @@ const PARAMETERS={
 };
 
 const PROD_ORIGIN='https://fabzip.github.io';
+const PAGE_LIMIT=1000;
+const MAX_UPSTREAM_PAGES=20;
 
 function json(data,status=200,headers={}){
   return new Response(JSON.stringify(data,null,2),{
@@ -99,11 +101,12 @@ function validDate(value){
 }
 
 function cacheTtl(route,year=null){
-  if(route==='latest')return 900;       // 15 minuti
-  if(route==='locations')return 86400;  // 24 ore
-  if(route==='location')return 86400;   // 24 ore
+  if(route==='latest')return 900;          // 15 minuti
+  if(route==='world_latest')return 1800;   // 30 minuti
+  if(route==='locations')return 86400;     // 24 ore
+  if(route==='location')return 86400;      // 24 ore
 
-  if(route==='yearly'){
+  if(route==='yearly'||route==='years'){
     const currentYear=new Date().getUTCFullYear();
     return Number(year)===currentYear?21600:604800; // 6 ore / 7 giorni
   }
@@ -113,12 +116,85 @@ function cacheTtl(route,year=null){
 
 function cacheKeyFor(request,origin){
   const url=new URL(request.url);
-
-  // The response carries an origin-specific CORS header, therefore the origin
-  // is part of the internal cache key.
   url.searchParams.set('__qa_origin',origin||'server');
-
   return new Request(url.toString(),{method:'GET'})
+}
+
+async function cacheMatch(request,origin){
+  try{
+    return await caches.default.match(cacheKeyFor(request,origin))
+  }catch{
+    return null
+  }
+}
+
+function cachePut(request,origin,response,ctx){
+  try{
+    ctx.waitUntil(caches.default.put(cacheKeyFor(request,origin),response.clone()))
+  }catch{
+    // Cache API may be unavailable in local/dashboard preview environments.
+  }
+}
+
+async function openAqJson(env,endpoint){
+  const response=await fetch(`${OPENAQ_BASE}${endpoint}`,{
+    headers:{
+      'Accept':'application/json',
+      'X-API-Key':env.OPENAQ_API_KEY
+    }
+  });
+
+  const payload=await response.json().catch(()=>null);
+  if(!response.ok){
+    const detail=payload?.detail||payload?.error||`HTTP ${response.status}`;
+    const error=new Error(typeof detail==='string'?detail:JSON.stringify(detail));
+    error.status=response.status;
+    throw error
+  }
+
+  return payload||{results:[],meta:{}}
+}
+
+async function openAqPages(env,endpointForPage,{maxPages=MAX_UPSTREAM_PAGES}={}){
+  const first=await openAqJson(env,endpointForPage(1));
+  const firstRows=Array.isArray(first?.results)?first.results:[];
+  const foundRaw=Number(first?.meta?.found);
+  const found=Number.isFinite(foundRaw)?foundRaw:null;
+  const rows=[...firstRows];
+
+  if(firstRows.length<PAGE_LIMIT){
+    return{rows,found:found??firstRows.length,pages:1,truncated:false}
+  }
+
+  if(found!==null){
+    const requestedPages=Math.max(1,Math.ceil(found/PAGE_LIMIT));
+    const totalPages=Math.min(maxPages,requestedPages);
+
+    for(let start=2;start<=totalPages;start+=5){
+      const numbers=[];
+      for(let page=start;page<Math.min(start+5,totalPages+1);page++)numbers.push(page);
+      const batch=await Promise.all(numbers.map(page=>openAqJson(env,endpointForPage(page))));
+      batch.forEach(payload=>rows.push(...(Array.isArray(payload?.results)?payload.results:[])))
+    }
+
+    return{
+      rows,
+      found,
+      pages:totalPages,
+      truncated:requestedPages>totalPages
+    }
+  }
+
+  let pages=1;
+  for(let page=2;page<=maxPages;page++){
+    const payload=await openAqJson(env,endpointForPage(page));
+    const chunk=Array.isArray(payload?.results)?payload.results:[];
+    rows.push(...chunk);
+    pages=page;
+    if(chunk.length<PAGE_LIMIT)return{rows,found:rows.length,pages,truncated:false}
+  }
+
+  return{rows,found:rows.length,pages:maxPages,truncated:true}
 }
 
 async function cachedOpenAQ({
@@ -131,18 +207,11 @@ async function cachedOpenAQ({
   year=null
 }){
   const ttl=cacheTtl(route,year);
-  const key=cacheKeyFor(request,origin);
-  const cache=caches.default;
-
-  try{
-    const hit=await cache.match(key);
-    if(hit){
-      const response=new Response(hit.body,hit);
-      response.headers.set('X-Proxy-Cache','HIT');
-      return response
-    }
-  }catch{
-    // Cache API has no effect in some local/dashboard preview environments.
+  const hit=await cacheMatch(request,origin);
+  if(hit){
+    const response=new Response(hit.body,hit);
+    response.headers.set('X-Proxy-Cache','HIT');
+    return response
   }
 
   const upstream=new URL(`${OPENAQ_BASE}${endpoint}`);
@@ -172,15 +241,137 @@ async function cachedOpenAQ({
     headers
   });
 
-  if(response.ok){
-    try{
-      ctx.waitUntil(cache.put(key,proxied.clone()))
-    }catch{
-      // Non bloccare la risposta se la cache non è disponibile.
-    }
+  if(response.ok)cachePut(request,origin,proxied,ctx);
+  return proxied
+}
+
+async function worldLatest(request,env,ctx,origin,cors,pollutant,maxAgeHours){
+  if(!['pm25','pm10'].includes(pollutant.key)){
+    return badRequest('La mappa mondiale supporta per ora PM2.5 e PM10 in µg/m³',cors)
   }
 
-  return proxied
+  const hit=await cacheMatch(request,origin);
+  if(hit){
+    const response=new Response(hit.body,hit);
+    response.headers.set('X-Proxy-Cache','HIT');
+    return response
+  }
+
+  const datetimeMin=new Date(Date.now()-maxAgeHours*3600_000).toISOString();
+  const locationEndpoint=page=>{
+    const params=new URLSearchParams({
+      parameters_id:String(pollutant.id),
+      monitor:'true',
+      mobile:'false',
+      limit:String(PAGE_LIMIT),
+      page:String(page)
+    });
+    return `/locations?${params}`
+  };
+  const latestEndpoint=page=>{
+    const params=new URLSearchParams({
+      limit:String(PAGE_LIMIT),
+      page:String(page),
+      datetime_min:datetimeMin
+    });
+    return `/parameters/${pollutant.id}/latest?${params}`
+  };
+
+  let locationPages,latestPages;
+  try{
+    [locationPages,latestPages]=await Promise.all([
+      openAqPages(env,locationEndpoint),
+      openAqPages(env,latestEndpoint)
+    ])
+  }catch(err){
+    return json({
+      error:`OpenAQ upstream: ${err.message||err}`,
+      upstreamStatus:err.status||null
+    },502,{...cors,'Cache-Control':'no-store'})
+  }
+
+  const locations=new Map();
+  for(const location of locationPages.rows){
+    if(!location?.isMonitor||location?.isMobile)continue;
+    locations.set(Number(location.id),location)
+  }
+
+  const latestByLocation=new Map();
+  for(const measurement of latestPages.rows){
+    const locationId=Number(measurement?.locationsId);
+    const location=locations.get(locationId);
+    if(!location)continue;
+
+    const value=Number(measurement?.value);
+    if(!Number.isFinite(value)||value<0)continue;
+
+    const current=latestByLocation.get(locationId);
+    const nextTime=Date.parse(measurement?.datetime?.utc||'')||0;
+    const currentTime=Date.parse(current?.datetime?.utc||'')||0;
+    if(!current||nextTime>currentTime)latestByLocation.set(locationId,measurement)
+  }
+
+  const results=[];
+  for(const [locationId,measurement] of latestByLocation){
+    const location=locations.get(locationId);
+    const coordinates=measurement?.coordinates||location?.coordinates||{};
+    const latitude=Number(coordinates.latitude);
+    const longitude=Number(coordinates.longitude);
+    if(!Number.isFinite(latitude)||!Number.isFinite(longitude))continue;
+
+    results.push({
+      locationId,
+      sensorId:Number(measurement.sensorsId),
+      name:location.name||location.locality||`OpenAQ ${locationId}`,
+      locality:location.locality||'',
+      countryCode:location.country?.code||'',
+      countryName:location.country?.name||'',
+      providerName:location.provider?.name||'',
+      latitude,
+      longitude,
+      value:Number(measurement.value),
+      datetimeUtc:measurement.datetime?.utc||'',
+      datetimeLocal:measurement.datetime?.local||'',
+      isMonitor:true
+    })
+  }
+
+  results.sort((a,b)=>{
+    const country=String(a.countryCode).localeCompare(String(b.countryCode));
+    return country||String(a.name).localeCompare(String(b.name))
+  });
+
+  const payload={
+    meta:{
+      pollutant:{
+        key:pollutant.key,
+        id:pollutant.id,
+        label:pollutant.label,
+        units:pollutant.units
+      },
+      maxAgeHours,
+      generatedAt:new Date().toISOString(),
+      locationsFound:locationPages.found,
+      latestFound:latestPages.found,
+      locationPages:locationPages.pages,
+      latestPages:latestPages.pages,
+      locationsTruncated:locationPages.truncated,
+      latestTruncated:latestPages.truncated,
+      count:results.length
+    },
+    results
+  };
+
+  const ttl=cacheTtl('world_latest');
+  const response=json(payload,200,{
+    ...cors,
+    'Cache-Control':`public, max-age=${ttl}`,
+    'X-Qualita-Aria-Proxy':'OpenAQ',
+    'X-OpenAQ-Endpoint':`world/latest/${pollutant.key}`,
+    'X-Proxy-Cache':'MISS'
+  });
+  cachePut(request,origin,response,ctx);
+  return response
 }
 
 function badRequest(message,cors={}){
@@ -212,9 +403,10 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-openaq-proxy',
-        version:'0.1.0',
+        version:'0.2.0',
         openaqConfigured:Boolean(env.OPENAQ_API_KEY),
-        upstream:'OpenAQ API v3'
+        upstream:'OpenAQ API v3',
+        worldLatest:true
       },200,{
         ...cors,
         'Cache-Control':'no-store'
@@ -228,11 +420,20 @@ export default{
     }
 
     const pollutant=pollutantParam(url.searchParams.get('pollutant'));
-    const page=intParam(url.searchParams.get('page'),{min:1,max:10,defaultValue:1});
+    const page=intParam(url.searchParams.get('page'),{min:1,max:20,defaultValue:1});
+
+    if(url.pathname==='/v1/world/latest'){
+      if(!pollutant)return badRequest('Inquinante non supportato',cors);
+      const maxAgeHours=intParam(url.searchParams.get('max_age_hours'),{
+        min:1,max:168,defaultValue:72
+      });
+      if(maxAgeHours===null)return badRequest('max_age_hours deve essere compreso tra 1 e 168',cors);
+      return worldLatest(request,env,ctx,origin,cors,pollutant,maxAgeHours)
+    }
 
     if(url.pathname==='/v1/locations'){
       if(!pollutant)return badRequest('Inquinante non supportato',cors);
-      if(page===null)return badRequest('Pagina non valida: consentiti valori da 1 a 10',cors);
+      if(page===null)return badRequest('Pagina non valida: consentiti valori da 1 a 20',cors);
 
       const iso=validIso(url.searchParams.get('iso'));
       const bbox=validBbox(url.searchParams.get('bbox'));
@@ -244,7 +445,7 @@ export default{
         parameters_id:String(pollutant.id),
         monitor:'true',
         mobile:'false',
-        limit:'1000',
+        limit:String(PAGE_LIMIT),
         page:String(page)
       });
 
@@ -260,13 +461,13 @@ export default{
 
     if(url.pathname==='/v1/latest'){
       if(!pollutant)return badRequest('Inquinante non supportato',cors);
-      if(page===null)return badRequest('Pagina non valida: consentiti valori da 1 a 10',cors);
+      if(page===null)return badRequest('Pagina non valida: consentiti valori da 1 a 20',cors);
 
       const datetimeMin=validDate(url.searchParams.get('datetime_min'));
       if(datetimeMin===null)return badRequest('datetime_min non valido',cors);
 
       const params=new URLSearchParams({
-        limit:'1000',
+        limit:String(PAGE_LIMIT),
         page:String(page)
       });
 
@@ -305,7 +506,7 @@ export default{
       const params=new URLSearchParams({
         date_from:`${year}-01-01`,
         date_to:`${year}-12-31`,
-        limit:'1000',
+        limit:'100',
         page:'1'
       });
 
@@ -313,7 +514,38 @@ export default{
         request,env,ctx,origin,
         route:'yearly',
         year,
-        endpoint:`/sensors/${sensor}/days/yearly?${params}`
+        endpoint:`/sensors/${sensor}/years?${params}`
+      })
+    }
+
+    if(url.pathname==='/v1/years'){
+      const sensor=intParam(url.searchParams.get('sensor'),{min:1,max:100000000});
+      const currentYear=new Date().getUTCFullYear();
+      const fromYear=intParam(url.searchParams.get('from_year'),{
+        min:1900,max:currentYear,defaultValue:2000
+      });
+      const toYear=intParam(url.searchParams.get('to_year'),{
+        min:1900,max:currentYear,defaultValue:currentYear
+      });
+
+      if(sensor===null)return badRequest('ID sensor non valido',cors);
+      if(fromYear===null||toYear===null||fromYear>toYear){
+        return badRequest('Intervallo anni non valido',cors)
+      }
+      if(toYear-fromYear>80)return badRequest('Intervallo anni troppo ampio',cors);
+
+      const params=new URLSearchParams({
+        date_from:`${fromYear}-01-01`,
+        date_to:`${toYear}-12-31`,
+        limit:'100',
+        page:'1'
+      });
+
+      return cachedOpenAQ({
+        request,env,ctx,origin,
+        route:'years',
+        year:toYear,
+        endpoint:`/sensors/${sensor}/years?${params}`
       })
     }
 
@@ -321,10 +553,12 @@ export default{
       error:'Endpoint non trovato',
       available:[
         '/health',
+        '/v1/world/latest?pollutant=pm25&max_age_hours=72',
         '/v1/locations?pollutant=pm25&page=1',
         '/v1/latest?pollutant=pm25&page=1',
         '/v1/location?id=2178',
-        '/v1/yearly?sensor=3920&year=2025'
+        '/v1/yearly?sensor=3920&year=2025',
+        '/v1/years?sensor=3920&from_year=2020&to_year=2025'
       ]
     },404,cors)
   }

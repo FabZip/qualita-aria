@@ -1,0 +1,16 @@
+/* v0.2.4 — fonte OpenAQ mondiale */
+.tab:disabled{
+  opacity:.38;
+  cursor:not-allowed;
+  filter:saturate(.45);
+}
+
+.source-description strong{
+  font-weight:900;
+}
+
+@media(max-width:599px){
+  #sourceSelect option[value="openaq"]{
+    font-weight:700;
+  }
+}

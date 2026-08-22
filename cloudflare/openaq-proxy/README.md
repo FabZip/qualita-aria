@@ -7,10 +7,12 @@ Questo Worker protegge `OPENAQ_API_KEY`: la chiave resta come Secret Cloudflare 
 Il Worker non è un proxy generico. Espone solo le operazioni OpenAQ necessarie al progetto:
 
 - `GET /health`
+- `GET /v1/world/latest?pollutant=pm25&max_age_hours=72`
 - `GET /v1/locations?pollutant=pm25&page=1`
 - `GET /v1/latest?pollutant=pm25&page=1`
 - `GET /v1/location?id=2178`
 - `GET /v1/yearly?sensor=3920&year=2025`
+- `GET /v1/years?sensor=3920&from_year=2020&to_year=2025`
 
 Gli endpoint `locations` forzano `monitor=true`, `mobile=false` e `limit=1000`, quindi la base per l'app mondiale è costituita dai monitor di riferimento/stazionari.
 
@@ -78,6 +80,8 @@ La risposta `/health` deve contenere:
 - aggregato `yearly`: 6 ore per l'anno corrente, 7 giorni per gli anni conclusi
 
 Il Worker aggiunge `X-Proxy-Cache: HIT` o `MISS` alle risposte.
+
+`/v1/world/latest` unisce lato Worker l’anagrafica dei monitor reference-grade con l’ultimo dato del parametro, così la API key resta segreta e la PWA riceve già un dataset mondiale compatto. La vista mondiale usa per ora PM2.5 e PM10 in µg/m³.
 
 ## Sicurezza
 

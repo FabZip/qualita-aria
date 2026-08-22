@@ -4,6 +4,7 @@
   "main": "src/index.js",
   "compatibility_date": "2026-08-22",
   "workers_dev": true,
+  "preview_urls": false,
   "secrets": {
     "required": [
       "OPENAQ_API_KEY"

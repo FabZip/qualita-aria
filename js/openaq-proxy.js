@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const CONFIG_URL='data/openaq-proxy.json?v=0.2.3';
+  const CONFIG_URL='data/openaq-proxy.json?v=0.2.4';
   let configPromise=null;
 
   function normalizeBaseUrl(value){
@@ -107,6 +107,16 @@
       })
     },
 
+    worldLatest({
+      pollutant='pm25',
+      maxAgeHours=72
+    }={}){
+      return request('/v1/world/latest',{
+        pollutant,
+        max_age_hours:maxAgeHours
+      })
+    },
+
     location(id){
       return request('/v1/location',{id})
     },
@@ -116,6 +126,18 @@
       year
     }={}){
       return request('/v1/yearly',{sensor,year})
+    },
+
+    years({
+      sensor,
+      fromYear=2000,
+      toYear=new Date().getUTCFullYear()
+    }={}){
+      return request('/v1/years',{
+        sensor,
+        from_year:fromYear,
+        to_year:toYear
+      })
     }
   }
 })();
