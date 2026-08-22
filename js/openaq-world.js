@@ -3,7 +3,7 @@
 
   const MAX_AGE_HOURS=72;
   const WORLD_CENTER=[0,20];
-  const WORLD_ZOOM=1.15;
+  const WORLD_ZOOM=1.55;
   const OPENAQ_POLLUTANTS={
     'PM2.5':{proxy:'pm25',label:'PM2.5'},
     'PM10':{proxy:'pm10',label:'PM10'}
@@ -30,6 +30,38 @@
 
   function openAqPollutant(){
     return OPENAQ_POLLUTANTS[$('pollutantSelect').value]||null
+  }
+
+  /*
+   * I layer della qualità dell'aria vengono creati dopo lo stile base e,
+   * senza un riordino, finiscono sopra le etichette geografiche.
+   * Troviamo il primo layer simbolo appartenente alla mappa base e spostiamo
+   * heatmap/marker sotto di esso. Le etichette di città, Paesi e strade
+   * rimangono così leggibili anche quando la mappa dell'inquinamento è densa.
+   */
+  function firstBaseSymbolLayerId(map){
+    const layers=map?.getStyle?.()?.layers||[];
+    return layers.find(layer=>
+      layer.type==='symbol' &&
+      !/^(?:air|before|after|diff)-/.test(String(layer.id||''))
+    )?.id||null
+  }
+
+  function keepGeographicLabelsVisible(map,prefix='air'){
+    if(!map)return;
+    const beforeId=firstBaseSymbolLayerId(map);
+    if(!beforeId)return;
+
+    [
+      `${prefix}-boundary-fill`,
+      `${prefix}-boundary-line`,
+      `${prefix}-heat`,
+      `${prefix}-points`
+    ].forEach(id=>{
+      if(!map.getLayer(id))return;
+      try{map.moveLayer(id,beforeId)}
+      catch(err){console.debug(`Impossibile riordinare il layer ${id}`,err)}
+    })
   }
 
   function setModeLock(locked){
@@ -198,6 +230,7 @@
   fitCurrentScope=function(map,rows){
     if(isOpenAQ()){
       map?.jumpTo({center:WORLD_CENTER,zoom:WORLD_ZOOM,bearing:0,pitch:0});
+      keepGeographicLabelsVisible(map,'air');
       return
     }
     return baseFitCurrentScope(map,rows)
@@ -217,6 +250,10 @@
   render=async function(){
     await baseRender();
     if(!isOpenAQ()||state.mode!=='map')return;
+
+    // baseRender aggiorna i dati; dopo l'aggiornamento riportiamo il contesto
+    // geografico sopra heatmap e marker.
+    keepGeographicLabelsVisible(state.map,'air');
 
     const pollutant=openAqPollutant();
     if(pollutant){
