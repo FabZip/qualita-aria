@@ -1,10 +1,10 @@
-const CACHE='qualita-aria-v0.2.5';
+const CACHE='qualita-aria-v0.2.6';
 const CORE=[
   './','./index.html',
   './css/app.css?v=0.2.0','./js/app.js?v=0.2.0',
   './css/station-list.css?v=0.2.2','./css/openaq-world.css?v=0.2.4','./js/station-list.js?v=0.2.2',
-  './js/openaq-proxy.js?v=0.2.4','./js/openaq-world.js?v=0.2.4',
-  './manifest.json?v=0.2.0','./version.json?v=0.2.5','./data/version.json?v=0.2.0',
+  './js/openaq-proxy.js?v=0.2.6','./js/openaq-world.js?v=0.2.6',
+  './manifest.json?v=0.2.0','./version.json?v=0.2.6','./data/version.json?v=0.2.0',
   './assets/icons/icon.svg','./assets/icons/icon-192.png','./assets/icons/icon-512.png'
 ];
 
@@ -26,15 +26,14 @@ self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET')return;
   const url=new URL(event.request.url);
 
-  // Real external data: always network. OpenAQ itself is reached only by the
-  // Cloudflare Worker; *.workers.dev must not be duplicated in the PWA cache.
   if(
     url.hostname==='discodata.eea.europa.eu' ||
     url.hostname==='dati.lazio.it' ||
     url.hostname==='www.arpalazio.it' ||
     url.hostname==='raw.githubusercontent.com' ||
     url.hostname.endsWith('.workers.dev') ||
-    url.pathname.endsWith('/js/openaq-world.js')
+    url.pathname.endsWith('/js/openaq-world.js') ||
+    url.pathname.endsWith('/js/openaq-proxy.js')
   ){
     event.respondWith(fetch(event.request,{cache:'no-store'}));
     return

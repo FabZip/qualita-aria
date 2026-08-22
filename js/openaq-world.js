@@ -1,21 +1,23 @@
 (() => {
   'use strict';
 
-  const MAX_AGE_HOURS=72;
-  const WORLD_CENTER=[0,20];
-  const WORLD_ZOOM=1.55;
+  const OPENAQ_MIN_ZOOM=5;
+  const DEFAULT_MAX_AGE_DAYS=30;
   const OPENAQ_POLLUTANTS={
     'PM2.5':{proxy:'pm25',label:'PM2.5'},
     'PM10':{proxy:'pm10',label:'PM10'}
   };
 
   state.openaqCache=state.openaqCache||new Map();
+  state.openaqSuppressMove=false;
+  state.openaqLastViewportKey='';
+  state.openaqMoveTimer=null;
 
   SOURCE_INFO.openaq={
     name:'OpenAQ',
     years:['latest'],
-    description:'<strong>OpenAQ:</strong> ultimi dati disponibili dei monitor di riferimento fissi nel mondo. OpenAQ aggrega dati di molte reti e provider; in questa vista non vengono mescolati sensori mobili o non-reference.',
-    hint:`OpenAQ mostra l’ultimo dato disponibile entro ${MAX_AGE_HOURS} ore per ciascuna stazione reference-grade. I punti non sono medie annuali e possono riferirsi a orari diversi.`
+    description:'<strong>OpenAQ:</strong> monitor di riferimento fissi nell’area attualmente visibile. La mappa carica solo la zona inquadrata e impedisce di allontanarsi fino alla vista mondiale.',
+    hint:'Sposta o ingrandisci la mappa per aggiornare le stazioni OpenAQ. Se una zona contiene troppe stazioni, aumenta lo zoom: il proxy non restituisce risultati parziali.'
   };
 
   const baseFillYears=fillYears;
@@ -25,6 +27,7 @@
   const baseSetLoading=setLoading;
   const baseSourceNotice=sourceNotice;
   const baseRender=render;
+  const baseInitMaps=initMaps;
 
   function isOpenAQ(){return source()==='openaq'}
 
@@ -32,13 +35,59 @@
     return OPENAQ_POLLUTANTS[$('pollutantSelect').value]||null
   }
 
-  /*
-   * I layer della qualità dell'aria vengono creati dopo lo stile base e,
-   * senza un riordino, finiscono sopra le etichette geografiche.
-   * Troviamo il primo layer simbolo appartenente alla mappa base e spostiamo
-   * heatmap/marker sotto di esso. Le etichette di città, Paesi e strade
-   * rimangono così leggibili anche quando la mappa dell'inquinamento è densa.
-   */
+  function maxAgeDays(){
+    const value=Number($('monthSelect')?.value);
+    return [7,15,30].includes(value)?value:DEFAULT_MAX_AGE_DAYS
+  }
+
+  function setMonthFieldLabel(text){
+    const field=$('monthField');
+    if(!field)return;
+
+    let label=field.querySelector('[data-period-label]');
+    if(!label){
+      const first=[...field.childNodes].find(node=>node.nodeType===Node.TEXT_NODE);
+      if(first){
+        label=document.createElement('span');
+        label.dataset.periodLabel='true';
+        label.textContent=text;
+        first.replaceWith(label)
+      }
+    }
+
+    if(label)label.textContent=text
+  }
+
+  function configureRecencyControl(){
+    const field=$('monthField');
+    const select=$('monthSelect');
+    if(!field||!select)return;
+
+    field.classList.remove('hidden');
+    setMonthFieldLabel('Recenza');
+
+    const previous=Number(select.value);
+    select.innerHTML=[
+      '<option value="7">Ultimi 7 giorni</option>',
+      '<option value="15">Ultimi 15 giorni</option>',
+      '<option value="30">Ultimi 30 giorni</option>'
+    ].join('');
+    select.value=[7,15,30].includes(previous)?String(previous):String(DEFAULT_MAX_AGE_DAYS);
+    select.disabled=false;
+    select.title='Intervallo massimo entro cui cercare l’ultimo dato disponibile della stazione.'
+  }
+
+  function hideUnavailableMonthlyControl(){
+    const field=$('monthField');
+    const select=$('monthSelect');
+    if(!field||!select)return;
+
+    setMonthFieldLabel('Mese');
+    field.classList.add('hidden');
+    select.disabled=true;
+    select.title='La vista attuale usa statistiche annuali. L’aggregazione mensile richiede un flusso dati dedicato.'
+  }
+
   function firstBaseSymbolLayerId(map){
     const layers=map?.getStyle?.()?.layers||[];
     return layers.find(layer=>
@@ -70,7 +119,7 @@
       button.disabled=locked&&!isMap;
       button.setAttribute('aria-disabled',String(locked&&!isMap));
       if(locked&&!isMap){
-        button.title='Confronto e Differenza mondiali richiedono snapshot storici globali e non sono ancora attivi per OpenAQ.'
+        button.title='Il confronto OpenAQ sarà basato su periodi storici omogenei; la vista “ultimo dato” non è confrontabile direttamente.'
       }else{
         button.removeAttribute('title')
       }
@@ -96,8 +145,70 @@
     }
 
     select.title=active
-      ?'OpenAQ Mondo usa per ora PM2.5 e PM10 in µg/m³, per mantenere unità confrontabili con la mappa.'
+      ?'OpenAQ usa per ora PM2.5 e PM10 in µg/m³, per mantenere unità omogenee.'
       :''
+  }
+
+  function applyOpenAqMapConstraints(active){
+    const map=state.map;
+    if(!map)return;
+
+    try{map.setMinZoom(active?OPENAQ_MIN_ZOOM:0)}catch{}
+
+    if(typeof map.setRenderWorldCopies==='function'){
+      try{map.setRenderWorldCopies(!active)}catch{}
+    }
+
+    if(active&&map.getZoom()<OPENAQ_MIN_ZOOM){
+      state.openaqSuppressMove=true;
+      map.jumpTo({zoom:OPENAQ_MIN_ZOOM});
+      setTimeout(()=>{state.openaqSuppressMove=false},80)
+    }
+  }
+
+  function currentViewportBbox(){
+    const map=state.map;
+    if(!map)throw new Error('Mappa OpenAQ non inizializzata.');
+
+    const bounds=map.getBounds();
+    let west=Number(bounds.getWest());
+    let east=Number(bounds.getEast());
+    let south=Number(bounds.getSouth());
+    let north=Number(bounds.getNorth());
+
+    west=Math.max(-180,Math.min(180,west));
+    east=Math.max(-180,Math.min(180,east));
+    south=Math.max(-85,Math.min(85,south));
+    north=Math.max(-85,Math.min(85,north));
+
+    if(!(west<east&&south<north)){
+      throw new Error('Area visibile non valida. Sposta leggermente la mappa e riprova.')
+    }
+
+    return[west,south,east,north]
+      .map(value=>Number(value.toFixed(4)))
+      .join(',')
+  }
+
+  function viewportKey(){
+    if(!state.map)return'';
+    try{
+      const bbox=currentViewportBbox()
+        .split(',')
+        .map(value=>Number(value).toFixed(2))
+        .join(',');
+      return `${openAqPollutant()?.proxy||'none'}:${maxAgeDays()}:${bbox}`
+    }catch{
+      return''
+    }
+  }
+
+  function rememberCache(key,value){
+    state.openaqCache.set(key,value);
+    while(state.openaqCache.size>24){
+      const first=state.openaqCache.keys().next().value;
+      state.openaqCache.delete(first)
+    }
   }
 
   fillYears=function(){
@@ -115,32 +226,34 @@
     if(!isOpenAQ()){
       setModeLock(false);
       setOpenAqPollutantAvailability(false);
+      applyOpenAqMapConstraints(false);
       if($('yearFieldLabel'))$('yearFieldLabel').textContent='Anno';
-      $('monthField')?.classList.remove('hidden');
-      return baseConfigureSourceUI()
+
+      const result=baseConfigureSourceUI();
+      hideUnavailableMonthlyControl();
+      return result
     }
 
     const info=SOURCE_INFO.openaq;
     $('sourceDescription').innerHTML=info.description;
     $('eeaScopeField').classList.add('hidden');
-    $('monthField')?.classList.add('hidden');
     if($('yearFieldLabel'))$('yearFieldLabel').textContent='Periodo';
 
-    $('monthSelect').disabled=true;
-    $('monthSelect').title='OpenAQ Mondo mostra l’ultimo dato disponibile, non una media annuale.';
+    configureRecencyControl();
 
     $('avgLabel').textContent='Media ultimi dati';
     $('countLabel').textContent='Stazioni';
     $('countUnit').textContent='reference-grade';
-    $('listTitle').textContent='Stazioni OpenAQ visualizzate';
+    $('listTitle').textContent='Stazioni OpenAQ nell’area visibile';
 
     setOpenAqPollutantAvailability(true);
-    setModeLock(true)
+    setModeLock(true);
+    applyOpenAqMapConstraints(true)
   };
 
   function parseOpenAQRows(payload){
     const expected=openAqPollutant();
-    if(!expected)throw new Error('OpenAQ Mondo supporta per ora PM2.5 e PM10.');
+    if(!expected)throw new Error('OpenAQ supporta per ora PM2.5 e PM10.');
 
     const meta=payload?.meta||{};
     const unit=String(meta?.pollutant?.units||'');
@@ -169,6 +282,7 @@
         kind:'station',
         provider:`OpenAQ${item.providerName?` · ${item.providerName}`:''}`,
         latestAt:String(item.datetimeUtc||''),
+        ageHours:Number.isFinite(Number(item.ageHours))?Number(item.ageHours):null,
         unit:unit||'µg/m³'
       }
     }).filter(Boolean).sort((a,b)=>{
@@ -177,40 +291,49 @@
     })
   }
 
-  async function fetchOpenAQWorldRows(){
+  async function fetchOpenAQViewportRows(){
     const pollutant=openAqPollutant();
-    if(!pollutant)throw new Error('OpenAQ Mondo supporta per ora PM2.5 e PM10.');
+    if(!pollutant)throw new Error('OpenAQ supporta per ora PM2.5 e PM10.');
     if(!globalThis.QualitaAriaOpenAQProxy){
       throw new Error('Client proxy OpenAQ non disponibile.')
     }
+    if(!state.map)throw new Error('Mappa OpenAQ non disponibile.');
+    if(state.map.getZoom()<OPENAQ_MIN_ZOOM){
+      throw new Error(`Aumenta lo zoom almeno a ${OPENAQ_MIN_ZOOM} per caricare OpenAQ.`)
+    }
 
-    const cacheKey=`${pollutant.proxy}:${MAX_AGE_HOURS}`;
+    const bbox=currentViewportBbox();
+    const days=maxAgeDays();
+    const cacheKey=`${pollutant.proxy}:${days}:${bbox}`;
+
     if(state.openaqCache.has(cacheKey)){
       const cached=state.openaqCache.get(cacheKey);
       diagnostics({...cached.diagnostic,cache:'memory'});
       return cached.rows
     }
 
-    const response=await QualitaAriaOpenAQProxy.worldLatest({
+    const response=await QualitaAriaOpenAQProxy.viewportLatest({
       pollutant:pollutant.proxy,
-      maxAgeHours:MAX_AGE_HOURS
+      bbox,
+      maxAgeDays:days
     });
 
     const rows=parseOpenAQRows(response.data);
     const meta=response.data?.meta||{};
     const diagnostic={
       source:'OpenAQ API v3 · Cloudflare proxy',
-      scope:'Mondo',
+      scope:'Area visibile',
+      bbox,
+      zoom:Number(state.map.getZoom().toFixed(2)),
       pollutant:pollutant.label,
       unit:meta?.pollutant?.units||'µg/m³',
-      mode:'latest reference monitors',
-      maxAgeHours:meta.maxAgeHours||MAX_AGE_HOURS,
-      locationsFound:meta.locationsFound??null,
-      latestFound:meta.latestFound??null,
-      locationPages:meta.locationPages??null,
-      latestPages:meta.latestPages??null,
-      locationsTruncated:Boolean(meta.locationsTruncated),
-      latestTruncated:Boolean(meta.latestTruncated),
+      mode:'latest reference monitors in viewport',
+      maxAgeDays:meta.maxAgeDays||days,
+      locationsDiscovered:meta.locationsDiscovered??null,
+      recentCandidates:meta.recentCandidates??null,
+      staleLocationsSkipped:meta.staleLocationsSkipped??null,
+      discoveryQueries:meta.discoveryQueries??null,
+      splitApplied:Boolean(meta.splitApplied),
       rowsReceived:rows.length,
       generatedAt:meta.generatedAt||null,
       workerCache:response.cache,
@@ -218,18 +341,18 @@
     };
 
     diagnostics(diagnostic);
-    state.openaqCache.set(cacheKey,{rows,diagnostic});
+    rememberCache(cacheKey,{rows,diagnostic});
+    state.openaqLastViewportKey=viewportKey();
     return rows
   }
 
   rowsFor=async function(year){
-    if(isOpenAQ())return fetchOpenAQWorldRows();
+    if(isOpenAQ())return fetchOpenAQViewportRows();
     return baseRowsFor(year)
   };
 
   fitCurrentScope=function(map,rows){
     if(isOpenAQ()){
-      map?.jumpTo({center:WORLD_CENTER,zoom:WORLD_ZOOM,bearing:0,pitch:0});
       keepGeographicLabelsVisible(map,'air');
       return
     }
@@ -239,33 +362,65 @@
   setLoading=function(on){
     if(!isOpenAQ())return baseSetLoading(on);
     $('loadingOverlay').classList.toggle('hidden',!on);
-    $('loadingText').textContent='Caricamento OpenAQ · Mondo…'
+    $('loadingText').textContent='Caricamento OpenAQ · area visibile…'
   };
 
   sourceNotice=function(rows){
     if(!isOpenAQ())return baseSourceNotice(rows);
-    return `OpenAQ · Mondo · reference monitor · ultimo dato ≤ ${MAX_AGE_HOURS}h`
+    return `OpenAQ · area visibile · reference monitor · ultimo dato ≤ ${maxAgeDays()}gg`
   };
 
   render=async function(){
     await baseRender();
     if(!isOpenAQ()||state.mode!=='map')return;
 
-    // baseRender aggiorna i dati; dopo l'aggiornamento riportiamo il contesto
-    // geografico sopra heatmap e marker.
     keepGeographicLabelsVisible(state.map,'air');
 
     const pollutant=openAqPollutant();
     if(pollutant){
-      $('mapBadge').textContent=`${pollutant.label} · ultimo dato ≤ ${MAX_AGE_HOURS}h`
+      $('mapBadge').textContent=`${pollutant.label} · ultimo dato ≤ ${maxAgeDays()}gg`
     }
+
     $('avgLabel').textContent='Media ultimi dati';
-    $('periodValue').textContent=`≤ ${MAX_AGE_HOURS}h`;
-    $('sourceValue').textContent='OpenAQ · Mondo'
+    $('periodValue').textContent=`≤ ${maxAgeDays()}gg`;
+    $('sourceValue').textContent='OpenAQ · area visibile';
+    $('mapHint').textContent=`${SOURCE_INFO.openaq.hint} Sono accettati dati fino a ${maxAgeDays()} giorni fa.`;
+    state.openaqLastViewportKey=viewportKey()
   };
 
-  // Initial source is EEA, but normalize controls after the base application
-  // has installed its listeners so future source changes use the overrides.
+  function bindViewportRefresh(){
+    const map=state.map;
+    if(!map||map.__qaOpenAqViewportBound)return;
+    map.__qaOpenAqViewportBound=true;
+
+    map.on('moveend',()=>{
+      if(!isOpenAQ()||state.openaqSuppressMove)return;
+
+      clearTimeout(state.openaqMoveTimer);
+      state.openaqMoveTimer=setTimeout(()=>{
+        const key=viewportKey();
+        if(!key||key===state.openaqLastViewportKey)return;
+        state.openaqLastViewportKey=key;
+        render()
+      },220)
+    })
+  }
+
+  initMaps=function(){
+    baseInitMaps();
+    bindViewportRefresh()
+  };
+
+  $('monthSelect')?.addEventListener('change',()=>{
+    if(!isOpenAQ())return;
+    state.openaqCache.clear();
+    state.openaqLastViewportKey='';
+    render()
+  });
+
+  const option=$('sourceSelect')?.querySelector('option[value="openaq"]');
+  if(option)option.textContent='OpenAQ · area visibile';
+
   setModeLock(false);
   setOpenAqPollutantAvailability(false)
 })();

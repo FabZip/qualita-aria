@@ -59,7 +59,11 @@
 
     if(!response.ok){
       const detail=payload?.error||payload?.detail||`HTTP ${response.status}`;
-      throw new Error(`Proxy OpenAQ: ${detail}`)
+      const error=new Error(`Proxy OpenAQ: ${detail}`);
+      error.status=response.status;
+      error.code=String(payload?.code||'');
+      error.payload=payload;
+      throw error
     }
 
     return{
@@ -114,6 +118,18 @@
       return request('/v1/world/latest',{
         pollutant,
         max_age_hours:maxAgeHours
+      })
+    },
+
+    viewportLatest({
+      pollutant='pm25',
+      bbox='',
+      maxAgeDays=30
+    }={}){
+      return request('/v1/viewport/latest',{
+        pollutant,
+        bbox,
+        max_age_days:maxAgeDays
       })
     },
 
