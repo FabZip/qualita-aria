@@ -1,0 +1,5 @@
+{
+  "enabled": false,
+  "base_url": "",
+  "note": "Inserire qui l'URL pubblico del Cloudflare Worker, senza slash finale. Non inserire mai la API key OpenAQ in questo file."
+}

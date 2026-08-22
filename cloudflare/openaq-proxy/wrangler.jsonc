@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "qualita-aria-openaq",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-22",
+  "workers_dev": true,
+  "secrets": {
+    "required": [
+      "OPENAQ_API_KEY"
+    ]
+  }
+}
