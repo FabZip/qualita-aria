@@ -93,7 +93,7 @@ EEA e ARPA sono attualmente collegati a dataset annuali, quindi il selettore men
 
 L'aggregazione mensile potrà essere aggiunta usando flussi dati dedicati. Questo sarà anche uno dei presupposti per un confronto OpenAQ temporalmente omogeneo.
 
-Per OpenAQ il controllo temporale indica invece la recenza massima accettata per l'ultimo dato disponibile:
+OpenAQ non mostra un selettore anno/periodo, perché la vista rappresenta sempre l'ultimo dato disponibile. Mostra invece soltanto la **recenza massima** accettata:
 
 - 7 giorni
 - 15 giorni

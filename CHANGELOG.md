@@ -2,6 +2,26 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.2.10] - 2026-08-22
+
+### EEA
+
+- Corretta la selezione delle città quando la query EEA restituisce zero stazioni.
+- La mappa viene centrata immediatamente sulla città selezionata, prima del completamento della query.
+- Un risultato EEA con zero righe viene ora trattato come risultato valido e non come errore applicativo.
+- Se non esistono statistiche annuali P1Y per la selezione, la UI mostra `—` come media e un messaggio esplicito invece di `0,0 µg/m³`.
+
+### OpenAQ
+
+- Nascosto il selettore ridondante `Periodo / Ultimo dato disponibile`.
+- Rimane visibile soltanto il controllo `Recenza` con 7, 15 e 30 giorni.
+
+### Versioning
+
+- Aggiornata l'app a `0.2.10` build `28`.
+- Aggiornati service worker e riferimenti cache-busting.
+- Aggiornato il README con il comportamento temporale OpenAQ.
+
 ## [0.2.9] - 2026-08-22
 
 ### EEA · selezione geografica Italia

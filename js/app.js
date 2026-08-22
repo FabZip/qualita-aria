@@ -154,7 +154,7 @@ async function loadEeaCities(){
   let cities=fallback;
 
   try{
-    const response=await fetch('data/italian-capitals.json?v=0.2.9',{cache:'no-store'});
+    const response=await fetch('data/italian-capitals.json?v=0.2.10',{cache:'no-store'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
     const payload=await response.json();
     if(Array.isArray(payload?.cities)&&payload.cities.length){
@@ -410,10 +410,6 @@ async function fetchEeaRows(year,pollutant){
 
   diagnostics(diagnostic);
   state.eeaCache.set(cacheKey,{rows,diagnostic});
-
-  if(!rows.length){
-    throw new Error(`EEA: nessuna stazione utilizzabile per ${scope.label}, ${pollutant}, ${year}.`)
-  }
 
   if(paged.truncated){
     showToast(`EEA: raggiunto il limite di ${paged.pages*1000} record. Restringi l’area per un risultato completo.`)
@@ -1730,6 +1726,17 @@ function fitCurrentScope(map,rows){
   else fitEeaScope(map)
 }
 
+function focusSelectedEeaScope(){
+  if(source()!=='eea')return;
+
+  if(state.mode==='compare'){
+    fitEeaScope(state.mapBefore);
+    fitEeaScope(state.mapAfter)
+  }else{
+    fitEeaScope(state.map)
+  }
+}
+
 function setLoading(on){
   $('loadingOverlay').classList.toggle('hidden',!on);
   $('loadingText').textContent=source()==='eea'
@@ -1739,8 +1746,9 @@ function setLoading(on){
 
 function sourceNotice(rows){
   if(source()==='arpa')return'ARPA Lazio · Standard comunali';
-  const unverified=rows.some(r=>normalizeText(r.verification).includes('unverified'));
   const scope=currentEeaScope().label;
+  if(!rows.length)return`EEA · ${scope} · nessuna statistica annuale P1Y per questa selezione`;
+  const unverified=rows.some(r=>normalizeText(r.verification).includes('unverified'));
   return unverified?`EEA · ${scope} · presenti dati non verificati`:`EEA · ${scope} · statistiche annuali P1Y`
 }
 
@@ -1803,7 +1811,7 @@ async function render(){
       $('avgLabel').textContent=source()==='arpa'
         ?`MED ${$('compareYearB').value}`
         :`Media stazioni ${$('compareYearB').value}`;
-      $('avgValue').textContent=fmt(avg(pair.b));
+      $('avgValue').textContent=pair.b.length?fmt(avg(pair.b)):'—';
       $('periodValue').textContent=`${$('compareYearA').value}↔${$('compareYearB').value}`;
       requestAnimationFrame(()=>{
         state.mapBefore.resize();
@@ -1818,7 +1826,7 @@ async function render(){
       renderList(rows);
       $('mapBadge').textContent=`${POLLUTANTS[$('pollutantSelect').value].label} · ${$('yearSelect').value}`;
       $('avgLabel').textContent=source()==='arpa'?'Valore MED':'Media stazioni';
-      $('avgValue').textContent=fmt(avg(rows));
+      $('avgValue').textContent=rows.length?fmt(avg(rows)):'—';
       $('periodValue').textContent=$('yearSelect').value;
     }
 
@@ -1959,17 +1967,21 @@ function bind(){
   $('sourceSelect').addEventListener('change',()=>{
     fillYears();
     configureSourceUI();
+    if(source()==='eea')focusSelectedEeaScope();
     render()
   });
 
   $('eeaScopeSelect').addEventListener('change',()=>{
     if(source()!=='eea')return;
     configureSourceUI();
+    focusSelectedEeaScope();
     render()
   });
 
   $('eeaCitySelect')?.addEventListener('change',()=>{
-    if(source()==='eea'&&eeaScope()==='italy')render()
+    if(source()!=='eea'||eeaScope()!=='italy')return;
+    focusSelectedEeaScope();
+    render()
   });
 
   ['pollutantSelect','yearSelect','compareYearA','compareYearB']
@@ -1986,8 +1998,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.2.9',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.2.9',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.2.10',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.2.10',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -2002,7 +2014,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.2.9')
+    navigator.serviceWorker.register('./service-worker.js?v=0.2.10')
       .then(reg=>reg.update())
       .catch(console.error)
   }

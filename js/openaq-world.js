@@ -290,7 +290,7 @@
     const info=SOURCE_INFO.openaq;
     $('sourceDescription').innerHTML=info.description;
     $('eeaScopeField').classList.add('hidden');
-    if($('yearFieldLabel'))$('yearFieldLabel').textContent='Periodo';
+    $('singleYearField')?.classList.add('hidden');
 
     configureRecencyControl();
 
@@ -434,6 +434,11 @@
 
     await baseRender();
     if(!isOpenAQ()||state.mode!=='map')return;
+
+    // baseRender mostra il campo anno in modalità Mappa: OpenAQ non ha un
+    // periodo selezionabile, quindi lo nascondiamo nuovamente. Resta soltanto
+    // il controllo Recenza (7/15/30 giorni).
+    $('singleYearField')?.classList.add('hidden');
 
     restoreOpenAqCamera(state.map,preserveCamera);
     keepGeographicLabelsVisible(state.map,'air');
