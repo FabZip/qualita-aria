@@ -12,9 +12,10 @@ La fonte EEA utilizza le statistiche annuali delle stazioni ufficialmente riport
 
 Aree disponibili:
 
-- Roma
-- Italia
-- Europa
+- **Italia** — mostra una seconda selezione **Città** con i capoluoghi e co-capoluoghi italiani; **Roma** è selezionata di default.
+- **Europa**
+
+Quando l'area è **Italia**, la query EEA viene limitata a una finestra geografica attorno al capoluogo selezionato. La finestra serve a selezionare le stazioni vicine alla città e non rappresenta il confine amministrativo del comune o della provincia.
 
 Inquinanti attivi:
 
@@ -127,6 +128,7 @@ Frontend:
 Dati e servizi:
 
 - EEA Discodata
+- elenco locale dei capoluoghi italiani per delimitare le query EEA
 - file ufficiali ARPA Lazio
 - OpenAQ API v3
 - Cloudflare Worker per proteggere la API key OpenAQ e applicare cache, filtri e limiti geografici

@@ -4,6 +4,7 @@ const state={
   deferredPrompt:null,swipe:50,syncing:false,
   toastTimer:null,renderToken:0,
   eeaCache:new Map(),arpaCache:new Map(),
+  eeaCities:new Map(),
   romeBoundary:null,
   diagnostics:{}
 };
@@ -11,13 +12,13 @@ const state={
 const $=id=>document.getElementById(id);
 const MAP_STYLE='https://tiles.openfreemap.org/styles/positron';
 const ROME={center:[12.4964,41.9028],zoom:10.2,bbox:[12.15,41.65,12.85,42.15]};
-const ITALY={center:[12.5,42.3],zoom:5.2,bbox:[6.3,35.4,19.0,47.6]};
 const EUROPE={center:[10.0,50.0],zoom:3.15,bbox:[-25.0,27.0,45.0,72.0]};
+const EEA_CITY_RADIUS_KM=40;
+const EEA_DEFAULT_CITY='roma';
 
 const EEA_SCOPES={
-  rome:{label:'Roma',bbox:ROME.bbox,center:ROME.center,zoom:ROME.zoom,country:'IT'},
-  italy:{label:'Italia',bbox:ITALY.bbox,center:ITALY.center,zoom:ITALY.zoom,country:'IT'},
-  europe:{label:'Europa',bbox:EUROPE.bbox,center:EUROPE.center,zoom:EUROPE.zoom,country:null}
+  italy:{label:'Italia',country:'IT',kind:'country-city'},
+  europe:{label:'Europa',bbox:EUROPE.bbox,center:EUROPE.center,zoom:EUROPE.zoom,country:null,kind:'region'}
 };
 
 /*
@@ -70,7 +71,7 @@ const SOURCE_INFO={
   eea:{
     name:'EEA',
     years:EEA_YEARS,
-    description:'<strong>EEA:</strong> statistiche annuali delle stazioni ufficialmente riportate dai Paesi europei.',
+    description:'<strong>EEA:</strong> statistiche annuali delle stazioni ufficialmente riportate dai Paesi europei. Per l’Italia puoi scegliere il capoluogo da visualizzare.',
     hint:"EEA mostra stazioni reali sull’area selezionata. La sfumatura è solo una visualizzazione attorno alle stazioni, non una superficie modellata continua."
   },
   arpa:{
@@ -82,8 +83,45 @@ const SOURCE_INFO={
 };
 
 function source(){return $('sourceSelect').value}
-function eeaScope(){return $('eeaScopeSelect')?.value||'rome'}
-function currentEeaScope(){return EEA_SCOPES[eeaScope()]||EEA_SCOPES.rome}
+function eeaScope(){return $('eeaScopeSelect')?.value||'italy'}
+function eeaCity(){return $('eeaCitySelect')?.value||EEA_DEFAULT_CITY}
+function eeaScopeKey(){
+  return eeaScope()==='italy'
+    ?`italy:${eeaCity()}`
+    :'europe'
+}
+function eeaCityScope(city){
+  const lat=Number(city?.lat??ROME.center[1]);
+  const lon=Number(city?.lon??ROME.center[0]);
+  const latDelta=EEA_CITY_RADIUS_KM/111.32;
+  const cosLat=Math.max(.25,Math.cos(lat*Math.PI/180));
+  const lonDelta=EEA_CITY_RADIUS_KM/(111.32*cosLat);
+  const name=String(city?.name||'Roma');
+
+  return{
+    key:`italy:${String(city?.id||EEA_DEFAULT_CITY)}`,
+    label:`Italia · ${name}`,
+    areaLabel:'Italia',
+    cityLabel:name,
+    bbox:[
+      +(lon-lonDelta).toFixed(4),
+      +(lat-latDelta).toFixed(4),
+      +(lon+lonDelta).toFixed(4),
+      +(lat+latDelta).toFixed(4)
+    ],
+    center:[lon,lat],
+    zoom:9.2,
+    country:'IT',
+    kind:'city'
+  }
+}
+function currentEeaScope(){
+  if(eeaScope()==='europe')return EEA_SCOPES.europe;
+  const city=state.eeaCities.get(eeaCity())
+    ||state.eeaCities.get(EEA_DEFAULT_CITY)
+    ||{id:'roma',name:'Roma',lat:ROME.center[1],lon:ROME.center[0]};
+  return eeaCityScope(city)
+}
 function currentYears(){return SOURCE_INFO[source()].years}
 function normalizeText(v){return String(v??'').toLowerCase().replace(/\s+/g,' ').trim()}
 function fmt(v){return Number(v).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})}
@@ -111,6 +149,38 @@ function diagnostics(payload){
   }
 }
 
+async function loadEeaCities(){
+  const fallback=[{id:'roma',name:'Roma',lat:ROME.center[1],lon:ROME.center[0]}];
+  let cities=fallback;
+
+  try{
+    const response=await fetch('data/italian-capitals.json?v=0.2.9',{cache:'no-store'});
+    if(!response.ok)throw new Error(`HTTP ${response.status}`);
+    const payload=await response.json();
+    if(Array.isArray(payload?.cities)&&payload.cities.length){
+      cities=payload.cities
+    }
+  }catch(err){
+    console.warn('Elenco capoluoghi non disponibile, uso Roma come fallback.',err)
+  }
+
+  state.eeaCities=new Map(cities.map(city=>[String(city.id),city]));
+
+  const select=$('eeaCitySelect');
+  if(!select)return;
+
+  const old=select.value||EEA_DEFAULT_CITY;
+  select.replaceChildren(...cities.map(city=>{
+    const option=document.createElement('option');
+    option.value=String(city.id);
+    option.textContent=String(city.name);
+    return option
+  }));
+
+  select.value=state.eeaCities.has(old)?old:EEA_DEFAULT_CITY;
+  if(!select.value&&select.options.length)select.selectedIndex=0
+}
+
 function fillYears(){
   const years=currentYears();
   const latest=years[0];
@@ -129,11 +199,15 @@ function fillYears(){
 
 function configureSourceUI(){
   const info=SOURCE_INFO[source()];
+  const isEea=source()==='eea';
+  const isItaly=isEea&&eeaScope()==='italy';
+
   $('sourceDescription').innerHTML=info.description;
-  $('eeaScopeField').classList.toggle('hidden',source()!=='eea');
+  $('eeaScopeField').classList.toggle('hidden',!isEea);
+  $('eeaCityField')?.classList.toggle('hidden',!isItaly);
   $('monthSelect').disabled=true;
   $('monthSelect').title='Le fonti reali attive in questa versione espongono statistiche annuali.';
-  if(source()==='eea'){
+  if(isEea){
     $('avgLabel').textContent='Media stazioni';
     $('countLabel').textContent='Stazioni';
     $('countUnit').textContent='visualizzate';
@@ -243,7 +317,7 @@ function eeaRecordScore(r){
 
 async function fetchEeaRows(year,pollutant){
   const scope=currentEeaScope();
-  const cacheKey=`${eeaScope()}:${year}:${pollutant}`;
+  const cacheKey=`${eeaScopeKey()}:${year}:${pollutant}`;
 
   if(state.eeaCache.has(cacheKey)){
     const cached=state.eeaCache.get(cacheKey);
@@ -1645,7 +1719,7 @@ function fitEeaScope(map){
   const scope=currentEeaScope();
   const [minLon,minLat,maxLon,maxLat]=scope.bbox;
   map.fitBounds([[minLon,minLat],[maxLon,maxLat]],{
-    padding:scope===EEA_SCOPES.rome?34:22,
+    padding:scope.kind==='city'?30:22,
     duration:0,
     maxZoom:scope.zoom
   })
@@ -1889,7 +1963,13 @@ function bind(){
   });
 
   $('eeaScopeSelect').addEventListener('change',()=>{
-    if(source()==='eea')render()
+    if(source()!=='eea')return;
+    configureSourceUI();
+    render()
+  });
+
+  $('eeaCitySelect')?.addEventListener('change',()=>{
+    if(source()==='eea'&&eeaScope()==='italy')render()
   });
 
   ['pollutantSelect','yearSelect','compareYearA','compareYearB']
@@ -1906,14 +1986,15 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.2.0',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.2.0',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.2.9',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.2.9',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
 }
 
 async function boot(){
+  await loadEeaCities();
   fillYears();
   configureSourceUI();
   bind();
@@ -1921,7 +2002,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.2.0')
+    navigator.serviceWorker.register('./service-worker.js?v=0.2.9')
       .then(reg=>reg.update())
       .catch(console.error)
   }

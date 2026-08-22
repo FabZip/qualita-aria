@@ -2,6 +2,25 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.2.9] - 2026-08-22
+
+### EEA · selezione geografica Italia
+
+- La select `Area EEA` contiene ora solo `Italia` ed `Europa`.
+- `Italia` è l'area predefinita.
+- Quando si seleziona `Italia` compare una seconda select `Città`.
+- `Roma` è la città selezionata di default.
+- Aggiunto l'elenco locale dei capoluoghi e co-capoluoghi italiani.
+- La query Discodata viene limitata a una finestra geografica di circa 40 km attorno alla città selezionata.
+- La cache EEA distingue ora anche la città, evitando di riutilizzare risultati di un altro capoluogo.
+- Se si seleziona `Europa`, la select `Città` viene nascosta.
+
+### Versioning
+
+- Aggiornata l'app a `0.2.9` build `27`.
+- Aggiornati i riferimenti cache-busting di `app.js`, `openaq-world.js`, `version.json` e service worker.
+- La patch incorpora anche la correzione `0.2.8` sulla conservazione della posizione della mappa OpenAQ, perché il branch `main` risultava ancora alla `0.2.7`.
+
 ## [0.2.8] - 2026-08-22
 
 ### OpenAQ
