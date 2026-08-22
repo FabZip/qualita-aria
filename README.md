@@ -15,7 +15,7 @@ Aree disponibili:
 - **Italia** — mostra una seconda selezione **Città** con i capoluoghi e co-capoluoghi italiani; **Roma** è selezionata di default.
 - **Europa**
 
-Quando l'area è **Italia**, la query EEA viene limitata a una finestra geografica attorno al capoluogo selezionato. La finestra serve a selezionare le stazioni vicine alla città e non rappresenta il confine amministrativo del comune o della provincia.
+Quando l'area è **Italia**, il capoluogo selezionato determina la posizione iniziale della mappa. Se l'utente sposta o ingrandisce la mappa, dopo **2 secondi senza ulteriori movimenti** la query EEA viene aggiornata usando la bounding box effettivamente visibile. La finestra geografica non rappresenta il confine amministrativo del comune o della provincia.
 
 Inquinanti attivi:
 
@@ -56,7 +56,7 @@ Per evitare richieste mondiali troppo grandi, i dati vengono caricati solo per l
 Caratteristiche:
 
 - zoom-out limitato per impedire una vista dell'intero pianeta;
-- caricamento dopo `moveend`, quindi solo quando l'utente termina uno spostamento o uno zoom;
+- caricamento con debounce condiviso: dopo `moveend` l'app attende 2 secondi senza altri movimenti prima di aggiornare i dati;
 - monitor fissi classificati come reference monitor;
 - esclusione dei sensori mobili;
 - recenza selezionabile: 7, 15 o 30 giorni;
@@ -78,6 +78,8 @@ NO₂ non è ancora attivo nella vista OpenAQ perché i dati possono essere espr
 Mostra i dati della fonte, dell'inquinante e del periodo selezionati.
 
 Le stazioni sono ricercabili e l'elenco è paginato. Selezionando una stazione dall'elenco, la mappa viene centrata sulla relativa posizione.
+
+Gli aggiornamenti provocati da pan e zoom sono centralizzati: l'app aspetta **2 secondi dopo l'ultimo movimento** prima di ricaricare. Questo evita richieste ripetute mentre l'utente sta ancora esplorando la mappa. Per EEA e OpenAQ la nuova richiesta usa l'area visibile; ARPA Lazio mantiene invece il proprio ambito comunale perché la fonte attuale riguarda Roma.
 
 ### Confronto
 
@@ -126,6 +128,7 @@ Frontend:
 
 - HTML, CSS e JavaScript
 - MapLibre GL JS
+- hyparquet per la lettura browser dei file EEA UTD in formato Parquet
 - SheetJS per i file XLSX ARPA
 - GitHub Pages
 

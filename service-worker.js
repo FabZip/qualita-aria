@@ -1,10 +1,10 @@
-const CACHE='qualita-aria-v0.2.11';
+const CACHE='qualita-aria-v0.2.12';
 const CORE=[
   './','./index.html',
-  './css/app.css?v=0.2.0','./js/app.js?v=0.2.11','./js/eea-utd.js?v=0.2.11',
+  './css/app.css?v=0.2.0','./js/app.js?v=0.2.12','./js/eea-utd.js?v=0.2.12',
   './css/station-list.css?v=0.2.2','./css/openaq-world.css?v=0.2.4','./js/station-list.js?v=0.2.11',
-  './js/openaq-proxy.js?v=0.2.11','./js/openaq-world.js?v=0.2.10',
-  './manifest.json?v=0.2.0','./version.json?v=0.2.11','./data/version.json?v=0.2.11','./data/italian-capitals.json?v=0.2.11',
+  './js/openaq-proxy.js?v=0.2.11','./js/openaq-world.js?v=0.2.12',
+  './manifest.json?v=0.2.0','./version.json?v=0.2.12','./data/version.json?v=0.2.12','./data/italian-capitals.json?v=0.2.12',
   './assets/icons/icon.svg','./assets/icons/icon-192.png','./assets/icons/icon-512.png'
 ];
 

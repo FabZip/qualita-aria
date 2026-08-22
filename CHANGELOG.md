@@ -2,6 +2,33 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.2.12] - 2026-08-22
+
+### EEA · area visibile
+
+- Il capoluogo selezionato resta il punto di partenza della vista EEA.
+- Dopo uno spostamento o uno zoom manuale, EEA ricalcola la query usando la bounding box realmente visibile.
+- Il refresh parte solo dopo 2 secondi senza ulteriori movimenti.
+- La cache EEA distingue le diverse bounding box visualizzate.
+- Cambiando esplicitamente area o città viene azzerato il viewport dinamico e la mappa torna al capoluogo scelto.
+- Il fallback preliminare UTD viene filtrato sulla bounding box visibile e non viene attribuito a zone che non contengono più il capoluogo selezionato.
+
+### Refresh mappa
+
+- Introdotto un unico debounce di 2 secondi per pan/zoom su tutte le mappe.
+- Rimosso il vecchio refresh OpenAQ a 220 ms, evitando richieste duplicate.
+- I movimenti programmati dall'app, come il centraggio su un capoluogo, non generano un secondo download.
+- I rendering avviati da uno spostamento manuale non ricentrano automaticamente la mappa.
+
+### EEA UTD / Parquet
+
+- Corretto il caricamento di `hyparquet`: la versione `1.26.0` viene ora importata tramite l'entry ESM jsDelivr `+esm`.
+- Migliorata la diagnostica quando la libreria Parquet non può essere caricata.
+
+### Versioning
+
+- Aggiornata l'app a `0.2.12` build `30`.
+
 ## [0.2.11] - 2026-08-22
 
 ### EEA · dati preliminari UTD

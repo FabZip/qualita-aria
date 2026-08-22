@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const HYPARQUET_URL='https://cdn.jsdelivr.net/npm/hyparquet@1.26.0/src/hyparquet.min.js';
+  const HYPARQUET_URL='https://cdn.jsdelivr.net/npm/hyparquet@1.26.0/+esm';
   const HYPARQUET_COMPRESSORS_URL='https://cdn.jsdelivr.net/npm/hyparquet-compressors@1.1.1/+esm';
   const UTD_MIN_YEAR=2025;
   const UTD_MIN_COVERAGE=75;
@@ -15,19 +15,36 @@
   const baseSourceNotice=sourceNotice;
 
   function isEeaCityScope(){
-    return source()==='eea'&&eeaScope()==='italy'
+    if(source()!=='eea'||eeaScope()!=='italy')return false;
+
+    const scope=currentEeaScope();
+
+    // Il servizio UTD viene interrogato per città. Dopo un pan lo usiamo
+    // soltanto finché il capoluogo selezionato resta dentro il viewport;
+    // fuori da quell'area evitiamo di attribuire dati UTD della città sbagliata.
+    return scope.kind!=='viewport'||scope.selectedCityInsideViewport===true
   }
 
   async function loadHyparquet(){
-    if(!hyparquetPromise)hyparquetPromise=import(HYPARQUET_URL);
-    if(!compressorsPromise)compressorsPromise=import(HYPARQUET_COMPRESSORS_URL);
+    try{
+      if(!hyparquetPromise)hyparquetPromise=import(HYPARQUET_URL);
+      if(!compressorsPromise)compressorsPromise=import(HYPARQUET_COMPRESSORS_URL);
 
-    const[parquet,compressorModule]=await Promise.all([
-      hyparquetPromise,
-      compressorsPromise
-    ]);
+      const[parquet,compressorModule]=await Promise.all([
+        hyparquetPromise,
+        compressorsPromise
+      ]);
 
-    return{parquet,compressors:compressorModule.compressors}
+      if(typeof parquet?.parquetReadObjects!=='function'){
+        throw new Error('parquetReadObjects non esportata dal modulo hyparquet')
+      }
+
+      return{parquet,compressors:compressorModule.compressors}
+    }catch(err){
+      hyparquetPromise=null;
+      compressorsPromise=null;
+      throw new Error(`Libreria Parquet non disponibile: ${err.message||err}`)
+    }
   }
 
   function normalizeId(value){
@@ -443,7 +460,13 @@ WHERE CountryCode='IT'
       }
     }
 
-    const rows=[...bestStation.values()].sort((a,b)=>a.name.localeCompare(b.name,'it'));
+    const[minLon,minLat,maxLon,maxLat]=scope.bbox;
+    const rows=[...bestStation.values()]
+      .filter(row=>
+        row.lon>=minLon&&row.lon<=maxLon&&
+        row.lat>=minLat&&row.lat<=maxLat
+      )
+      .sort((a,b)=>a.name.localeCompare(b.name,'it'));
 
     const diagnostic={
       source:'EEA Air Quality Download Service',
@@ -473,6 +496,10 @@ WHERE CountryCode='IT'
 
     diagnostics(diagnostic);
     state.eeaUtdCache.set(cacheKey,{rows,diagnostic});
+    while(state.eeaUtdCache.size>40){
+      const first=state.eeaUtdCache.keys().next().value;
+      state.eeaUtdCache.delete(first)
+    }
     return rows
   }
 
@@ -529,7 +556,7 @@ WHERE CountryCode='IT'
     return baseSourceNotice(rows)
   };
 
-  SOURCE_INFO.eea.hint='EEA usa prima le statistiche annuali validate E1a. Per l’anno più recente, quando il dato validato manca in una città italiana, prova automaticamente il flusso preliminare E2a/UTD e lo segnala esplicitamente come non definitivo.';
+  SOURCE_INFO.eea.hint='EEA usa prima le statistiche annuali validate E1a. Per l’anno più recente, quando il dato validato manca, può usare il flusso preliminare E2a/UTD nell’area del capoluogo selezionato. Dopo uno spostamento della mappa il refresh parte dopo 2 secondi e i risultati vengono filtrati sulla zona visibile.';
 
   globalThis.QualitaAriaEEAUTD={
     fetchUtdRows,

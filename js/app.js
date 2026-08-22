@@ -5,6 +5,11 @@ const state={
   toastTimer:null,renderToken:0,
   eeaCache:new Map(),arpaCache:new Map(),
   eeaCities:new Map(),
+  eeaViewportBbox:null,
+  mapRefreshTimer:null,
+  mapRefreshSuppressCount:0,
+  viewportRefreshDepth:0,
+  lastMapViewportKey:'',
   romeBoundary:null,
   diagnostics:{}
 };
@@ -15,6 +20,7 @@ const ROME={center:[12.4964,41.9028],zoom:10.2,bbox:[12.15,41.65,12.85,42.15]};
 const EUROPE={center:[10.0,50.0],zoom:3.15,bbox:[-25.0,27.0,45.0,72.0]};
 const EEA_CITY_RADIUS_KM=40;
 const EEA_DEFAULT_CITY='roma';
+const MAP_REFRESH_DELAY_MS=2000;
 
 const EEA_SCOPES={
   italy:{label:'Italia',country:'IT',kind:'country-city'},
@@ -71,8 +77,8 @@ const SOURCE_INFO={
   eea:{
     name:'EEA',
     years:EEA_YEARS,
-    description:'<strong>EEA:</strong> statistiche annuali delle stazioni ufficialmente riportate dai Paesi europei. Per l’Italia puoi scegliere il capoluogo da visualizzare.',
-    hint:"EEA mostra stazioni reali sull’area selezionata. La sfumatura è solo una visualizzazione attorno alle stazioni, non una superficie modellata continua."
+    description:'<strong>EEA:</strong> statistiche annuali delle stazioni ufficialmente riportate dai Paesi europei. Il capoluogo serve come punto di partenza; spostando la mappa i dati vengono ricaricati per l’area visibile dopo 2 secondi di inattività.',
+    hint:"EEA mostra stazioni reali nell’area selezionata o nella zona visibile dopo uno spostamento della mappa. Il refresh parte 2 secondi dopo l’ultimo movimento. La sfumatura è solo una visualizzazione attorno alle stazioni, non una superficie modellata continua."
   },
   arpa:{
     name:'ARPA Lazio',
@@ -85,11 +91,30 @@ const SOURCE_INFO={
 function source(){return $('sourceSelect').value}
 function eeaScope(){return $('eeaScopeSelect')?.value||'italy'}
 function eeaCity(){return $('eeaCitySelect')?.value||EEA_DEFAULT_CITY}
+
+function eeaSelectedScope(){
+  if(eeaScope()==='europe')return EEA_SCOPES.europe;
+
+  const city=state.eeaCities.get(eeaCity())
+    ||state.eeaCities.get(EEA_DEFAULT_CITY)
+    ||{id:'roma',name:'Roma',lat:ROME.center[1],lon:ROME.center[0]};
+
+  return eeaCityScope(city)
+}
+
 function eeaScopeKey(){
+  if(state.eeaViewportBbox){
+    const bbox=state.eeaViewportBbox
+      .map(value=>Number(value).toFixed(4))
+      .join(',');
+    return`${eeaScope()}:viewport:${bbox}`
+  }
+
   return eeaScope()==='italy'
     ?`italy:${eeaCity()}`
     :'europe'
 }
+
 function eeaCityScope(city){
   const lat=Number(city?.lat??ROME.center[1]);
   const lon=Number(city?.lon??ROME.center[0]);
@@ -112,16 +137,46 @@ function eeaCityScope(city){
     center:[lon,lat],
     zoom:9.2,
     country:'IT',
-    kind:'city'
+    kind:'city',
+    selectedCityInsideViewport:true
   }
 }
-function currentEeaScope(){
-  if(eeaScope()==='europe')return EEA_SCOPES.europe;
-  const city=state.eeaCities.get(eeaCity())
-    ||state.eeaCities.get(EEA_DEFAULT_CITY)
-    ||{id:'roma',name:'Roma',lat:ROME.center[1],lon:ROME.center[0]};
-  return eeaCityScope(city)
+
+function pointInsideBbox(point,bbox){
+  if(!point||!bbox)return false;
+  const[lon,lat]=point;
+  const[minLon,minLat,maxLon,maxLat]=bbox;
+  return lon>=minLon&&lon<=maxLon&&lat>=minLat&&lat<=maxLat
 }
+
+function currentEeaScope(){
+  const selected=eeaSelectedScope();
+  if(!state.eeaViewportBbox)return selected;
+
+  const bbox=[...state.eeaViewportBbox];
+  const center=[
+    (bbox[0]+bbox[2])/2,
+    (bbox[1]+bbox[3])/2
+  ];
+
+  return{
+    ...selected,
+    key:`${eeaScope()}:viewport:${bbox.join(',')}`,
+    label:eeaScope()==='italy'
+      ?'Italia · area visibile'
+      :'Europa · area visibile',
+    bbox,
+    center,
+    zoom:state.mode==='compare'
+      ?Number(state.mapBefore?.getZoom?.()??selected.zoom)
+      :Number(state.map?.getZoom?.()??selected.zoom),
+    kind:'viewport',
+    selectedCityInsideViewport:selected.kind==='city'
+      ?pointInsideBbox(selected.center,bbox)
+      :false
+  }
+}
+
 function currentYears(){return SOURCE_INFO[source()].years}
 function normalizeText(v){return String(v??'').toLowerCase().replace(/\s+/g,' ').trim()}
 function fmt(v){return Number(v).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})}
@@ -154,7 +209,7 @@ async function loadEeaCities(){
   let cities=fallback;
 
   try{
-    const response=await fetch('data/italian-capitals.json?v=0.2.11',{cache:'no-store'});
+    const response=await fetch('data/italian-capitals.json?v=0.2.12',{cache:'no-store'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
     const payload=await response.json();
     if(Array.isArray(payload?.cities)&&payload.cities.length){
@@ -410,6 +465,10 @@ async function fetchEeaRows(year,pollutant){
 
   diagnostics(diagnostic);
   state.eeaCache.set(cacheKey,{rows,diagnostic});
+  while(state.eeaCache.size>80){
+    const first=state.eeaCache.keys().next().value;
+    state.eeaCache.delete(first)
+  }
 
   if(paged.truncated){
     showToast(`EEA: raggiunto il limite di ${paged.pages*1000} record. Restringi l’area per un risultato completo.`)
@@ -1718,9 +1777,63 @@ function updateArpaHistoryVisibility(){
   panel.classList.toggle('hidden',!visible)
 }
 
+function visibleMapBbox(map){
+  if(!map)return null;
+  const bounds=map.getBounds?.();
+  if(!bounds)return null;
+
+  let west=Number(bounds.getWest());
+  let east=Number(bounds.getEast());
+  let south=Number(bounds.getSouth());
+  let north=Number(bounds.getNorth());
+
+  west=Math.max(-180,Math.min(180,west));
+  east=Math.max(-180,Math.min(180,east));
+  south=Math.max(-85,Math.min(85,south));
+  north=Math.max(-85,Math.min(85,north));
+
+  if(!(west<east&&south<north))return null;
+
+  return[west,south,east,north]
+    .map(value=>Number(value.toFixed(4)))
+}
+
+function viewportRefreshKey(map){
+  const bbox=visibleMapBbox(map);
+  if(!bbox)return'';
+  return`${source()}:${state.mode}:${bbox.map(value=>value.toFixed(4)).join(',')}`
+}
+
+function clearScheduledMapRefresh(){
+  clearTimeout(state.mapRefreshTimer);
+  state.mapRefreshTimer=null
+}
+
+function withMapRefreshSuppressed(callback){
+  state.mapRefreshSuppressCount++;
+  try{
+    return callback()
+  }finally{
+    setTimeout(()=>{
+      state.mapRefreshSuppressCount=Math.max(0,state.mapRefreshSuppressCount-1)
+    },120)
+  }
+}
+
+function resetEeaViewport(){
+  state.eeaViewportBbox=null;
+  state.lastMapViewportKey='';
+  clearScheduledMapRefresh()
+}
+
 function fitEeaScope(map){
   if(!map||source()!=='eea')return;
   const scope=currentEeaScope();
+
+  // Una volta che l'utente ha spostato la mappa, la camera non deve tornare
+  // al capoluogo: il viewport è ormai il nuovo ambito della query.
+  if(scope.kind==='viewport')return;
+
   const [minLon,minLat,maxLon,maxLat]=scope.bbox;
   map.fitBounds([[minLon,minLat],[maxLon,maxLat]],{
     padding:scope.kind==='city'?30:22,
@@ -1730,19 +1843,86 @@ function fitEeaScope(map){
 }
 
 function fitCurrentScope(map,rows){
-  if(source()==='arpa')fitArpaScope(map,rows);
-  else fitEeaScope(map)
+  if(state.viewportRefreshDepth>0)return;
+
+  withMapRefreshSuppressed(()=>{
+    if(source()==='arpa')fitArpaScope(map,rows);
+    else fitEeaScope(map)
+  })
 }
 
 function focusSelectedEeaScope(){
   if(source()!=='eea')return;
 
-  if(state.mode==='compare'){
-    fitEeaScope(state.mapBefore);
-    fitEeaScope(state.mapAfter)
-  }else{
-    fitEeaScope(state.map)
+  withMapRefreshSuppressed(()=>{
+    if(state.mode==='compare'){
+      fitEeaScope(state.mapBefore);
+      fitEeaScope(state.mapAfter)
+    }else{
+      fitEeaScope(state.map)
+    }
+  })
+}
+
+function activeViewportMap(){
+  return state.mode==='compare'
+    ?state.mapBefore
+    :state.map
+}
+
+function rememberViewportBaseline(){
+  const map=activeViewportMap();
+  if(!map)return;
+  state.lastMapViewportKey=viewportRefreshKey(map)
+}
+
+async function refreshForVisibleMap(map){
+  if(!map||state.mapRefreshSuppressCount>0||state.openaqSuppressMove)return;
+
+  const key=viewportRefreshKey(map);
+  if(!key||key===state.lastMapViewportKey)return;
+
+  state.lastMapViewportKey=key;
+
+  if(source()==='eea'){
+    const bbox=visibleMapBbox(map);
+    if(!bbox)return;
+    state.eeaViewportBbox=bbox
   }
+
+  state.viewportRefreshDepth++;
+  try{
+    await render()
+  }finally{
+    state.viewportRefreshDepth=Math.max(0,state.viewportRefreshDepth-1)
+  }
+}
+
+function scheduleMapRefresh(map){
+  if(!map||state.mapRefreshSuppressCount>0||state.openaqSuppressMove)return;
+
+  clearScheduledMapRefresh();
+  state.mapRefreshTimer=setTimeout(()=>{
+    state.mapRefreshTimer=null;
+    refreshForVisibleMap(map).catch(err=>{
+      console.error('Aggiornamento dati dopo spostamento mappa',err);
+      showToast(err.message||'Errore nell’aggiornamento dell’area visibile')
+    })
+  },MAP_REFRESH_DELAY_MS)
+}
+
+function bindMapRefresh(map){
+  if(!map||map.__qaViewportRefreshBound)return;
+  map.__qaViewportRefreshBound=true;
+
+  map.on('movestart',()=>{
+    if(state.mapRefreshSuppressCount>0||state.openaqSuppressMove)return;
+    clearScheduledMapRefresh()
+  });
+
+  map.on('moveend',()=>{
+    scheduleMapRefresh(map)
+  })
 }
 
 function setLoading(on){
@@ -1842,6 +2022,7 @@ async function render(){
     $('sourceValue').textContent=source()==='eea'?`EEA · ${currentEeaScope().label}`:SOURCE_INFO[source()].name;
     $('dataNotice').textContent=sourceNotice(rows);
     $('mapHint').textContent=SOURCE_INFO[source()].hint;
+    rememberViewportBaseline();
   }catch(err){
     console.error(err);
     if(token!==state.renderToken)return;
@@ -1936,7 +2117,12 @@ function initMaps(){
   };
 
   state.mapBefore.on('move',()=>sync(state.mapBefore,state.mapAfter));
-  state.mapAfter.on('move',()=>sync(state.mapAfter,state.mapBefore))
+  state.mapAfter.on('move',()=>sync(state.mapAfter,state.mapBefore));
+
+  // Un solo debounce da 2 secondi per tutte le mappe/fonti.
+  bindMapRefresh(state.map);
+  bindMapRefresh(state.mapBefore);
+  bindMapRefresh(state.mapAfter)
 }
 
 function showToast(text){
@@ -1973,6 +2159,7 @@ function bind(){
   }));
 
   $('sourceSelect').addEventListener('change',()=>{
+    resetEeaViewport();
     fillYears();
     configureSourceUI();
     if(source()==='eea')focusSelectedEeaScope();
@@ -1981,6 +2168,7 @@ function bind(){
 
   $('eeaScopeSelect').addEventListener('change',()=>{
     if(source()!=='eea')return;
+    resetEeaViewport();
     configureSourceUI();
     focusSelectedEeaScope();
     render()
@@ -1988,6 +2176,7 @@ function bind(){
 
   $('eeaCitySelect')?.addEventListener('change',()=>{
     if(source()!=='eea'||eeaScope()!=='italy')return;
+    resetEeaViewport();
     focusSelectedEeaScope();
     render()
   });
@@ -2006,8 +2195,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.2.11',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.2.11',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.2.12',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.2.12',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -2022,7 +2211,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.2.11')
+    navigator.serviceWorker.register('./service-worker.js?v=0.2.12')
       .then(reg=>reg.update())
       .catch(console.error)
   }

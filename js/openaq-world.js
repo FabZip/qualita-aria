@@ -455,27 +455,13 @@
     state.openaqLastViewportKey=viewportKey()
   };
 
-  function bindViewportRefresh(){
-    const map=state.map;
-    if(!map||map.__qaOpenAqViewportBound)return;
-    map.__qaOpenAqViewportBound=true;
-
-    map.on('moveend',()=>{
-      if(!isOpenAQ()||state.openaqSuppressMove)return;
-
-      clearTimeout(state.openaqMoveTimer);
-      state.openaqMoveTimer=setTimeout(()=>{
-        const key=viewportKey();
-        if(!key||key===state.openaqLastViewportKey)return;
-        state.openaqLastViewportKey=key;
-        render()
-      },220)
-    })
-  }
-
+  /*
+   * Il refresh dopo pan/zoom è gestito dal listener condiviso in app.js.
+   * Tutte le fonti usano lo stesso debounce di 2 secondi; qui evitiamo un
+   * secondo listener OpenAQ che produrrebbe chiamate duplicate.
+   */
   initMaps=function(){
-    baseInitMaps();
-    bindViewportRefresh()
+    baseInitMaps()
   };
 
   $('monthSelect')?.addEventListener('change',()=>{
