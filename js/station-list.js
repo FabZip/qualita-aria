@@ -206,7 +206,99 @@
     ).join('')
   }
 
-  function normalRowHtml(row){
+  function coordinatesForRow(row){
+    const directLat=Number(row?.lat);
+    const directLon=Number(row?.lon);
+
+    if(Number.isFinite(directLat)&&Number.isFinite(directLon)){
+      return{lat:directLat,lon:directLon}
+    }
+
+    /*
+     * In EEA comparison mode mergeComparisonRows() keeps the station id but
+     * not its coordinates. The two original annual datasets are already in
+     * state.eeaCache, so recover the same station from there without another
+     * network request.
+     */
+    const id=String(row?.id||'').trim();
+    if(!id)return null;
+
+    try{
+      for(const cached of state?.eeaCache?.values?.()||[]){
+        const match=(cached?.rows||[]).find(item=>String(item.id||'').trim()===id);
+        if(!match)continue;
+
+        const lat=Number(match.lat);
+        const lon=Number(match.lon);
+        if(Number.isFinite(lat)&&Number.isFinite(lon)){
+          return{lat,lon}
+        }
+      }
+    }catch{
+      // If the main application state is unavailable, leave the row non-clickable.
+    }
+
+    return null
+  }
+
+  function stationRowAttributes(row,index){
+    const coordinates=coordinatesForRow(row);
+    if(!coordinates)return '';
+
+    const name=escapeHtml(row.name||row.id||'stazione');
+    return ` data-station-index="${index}" role="button" tabindex="0" aria-label="Centra la mappa sulla stazione ${name}"`
+  }
+
+  function focusStation(row){
+    const coordinates=coordinatesForRow(row);
+    if(!coordinates)return;
+
+    const map=listState.mode==='compare'
+      ?state?.mapBefore
+      :state?.map;
+
+    if(!map)return;
+
+    /*
+     * In comparison mode app.js already synchronizes mapBefore and mapAfter,
+     * therefore moving mapBefore moves both maps to the same station.
+     */
+    const currentZoom=Number(map.getZoom?.()??0);
+    const targetZoom=Math.max(currentZoom,11.5);
+
+    map.easeTo({
+      center:[coordinates.lon,coordinates.lat],
+      zoom:targetZoom,
+      duration:650,
+      essential:true
+    });
+
+    const mapCard=document.querySelector('.map-card');
+    if(mapCard){
+      mapCard.scrollIntoView({behavior:'smooth',block:'center'})
+    }
+  }
+
+  function bindStationRows(pageRows){
+    const stations=$('stations');
+    if(!stations)return;
+
+    stations.querySelectorAll('[data-station-index]').forEach(element=>{
+      const index=Number(element.dataset.stationIndex);
+      const row=pageRows[index];
+      if(!row)return;
+
+      element.addEventListener('click',()=>focusStation(row));
+      element.addEventListener('keydown',event=>{
+        if(event.key==='Enter'||event.key===' '){
+          event.preventDefault();
+          focusStation(row)
+        }
+      })
+    })
+  }
+
+  function normalRowHtml(row,index){
     const isDiff = listState.isDiff;
 
     const range = (!isDiff && row.kind === 'municipal' && row.min !== null && row.max !== null)
@@ -223,14 +315,16 @@
 
     const value = `${isDiff && Number(row.value) > 0?'+':''}${fmtValue(row.value)}`;
 
-    return `<div class="station-row">
+    const clickable=coordinatesForRow(row)?' station-row-clickable':'';
+
+    return `<div class="station-row${clickable}"${stationRowAttributes(row,index)}>
       <i style="background:${dotColor}"></i>
       <div><strong>${escapeHtml(row.name)}</strong><small>${detail}</small>${range}</div>
       <b>${value}</b>
     </div>`
   }
 
-  function comparisonRowHtml(row){
+  function comparisonRowHtml(row,index){
     const left = row.valueA === null || row.valueA === undefined ? '—' : fmtValue(row.valueA);
     const right = row.valueB === null || row.valueB === undefined ? '—' : fmtValue(row.valueB);
 
@@ -249,7 +343,9 @@
 
     const detail = `${row.country?`${escapeHtml(row.country)} · `:''}${escapeHtml(row.id || '')}`;
 
-    return `<div class="station-row">
+    const clickable=coordinatesForRow(row)?' station-row-clickable':'';
+
+    return `<div class="station-row${clickable}"${stationRowAttributes(row,index)}>
       <i style="background:linear-gradient(90deg,${leftColor} 0 50%,${rightColor} 50% 100%)"></i>
       <div><strong>${escapeHtml(row.name)}</strong><small>${detail}</small></div>
       <b class="comparison-values" aria-label="Valori a confronto: ${left} e ${right}${trend?`. ${trend.label}`:''}">${left}&nbsp;↔&nbsp;${right}${trendHtml}</b>
@@ -282,11 +378,12 @@
     if(!filtered.length){
       stations.innerHTML = '<div class="empty-state">Nessuna stazione corrisponde alla ricerca.</div>'
     }else{
-      stations.innerHTML = pageRows.map(row=>
+      stations.innerHTML = pageRows.map((row,index)=>
         listState.mode === 'compare'
-          ? comparisonRowHtml(row)
-          : normalRowHtml(row)
-      ).join('')
+          ? comparisonRowHtml(row,index)
+          : normalRowHtml(row,index)
+      ).join('');
+      bindStationRows(pageRows)
     }
 
     const controlsNeeded = listState.rows.length > listState.pageSize || Boolean(normalize(listState.query));
