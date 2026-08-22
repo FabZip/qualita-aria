@@ -149,9 +149,52 @@
       :''
   }
 
+  function cameraSnapshot(map){
+    if(!map)return null;
+    const center=map.getCenter?.();
+    if(!center)return null;
+
+    return{
+      center:[Number(center.lng),Number(center.lat)],
+      zoom:Number(map.getZoom?.()),
+      bearing:Number(map.getBearing?.()||0),
+      pitch:Number(map.getPitch?.()||0)
+    }
+  }
+
+  function sameCamera(map,camera){
+    if(!map||!camera)return true;
+    const center=map.getCenter?.();
+    if(!center)return true;
+
+    return(
+      Math.abs(Number(center.lng)-camera.center[0])<1e-7 &&
+      Math.abs(Number(center.lat)-camera.center[1])<1e-7 &&
+      Math.abs(Number(map.getZoom?.())-camera.zoom)<1e-7 &&
+      Math.abs(Number(map.getBearing?.()||0)-camera.bearing)<1e-7 &&
+      Math.abs(Number(map.getPitch?.()||0)-camera.pitch)<1e-7
+    )
+  }
+
+  function restoreOpenAqCamera(map,camera){
+    if(!map||!camera||sameCamera(map,camera))return;
+
+    state.openaqSuppressMove=true;
+    map.jumpTo(camera);
+
+    /*
+     * jumpTo emette gli eventi di movimento in modo sincrono, ma teniamo la
+     * soppressione fino al prossimo task per evitare che un eventuale moveend
+     * generato dal browser faccia partire una seconda chiamata OpenAQ.
+     */
+    setTimeout(()=>{state.openaqSuppressMove=false},0)
+  }
+
   function applyOpenAqMapConstraints(active){
     const map=state.map;
     if(!map)return;
+
+    const before=cameraSnapshot(map);
 
     try{map.setMinZoom(active?OPENAQ_MIN_ZOOM:0)}catch{}
 
@@ -159,10 +202,20 @@
       try{map.setRenderWorldCopies(!active)}catch{}
     }
 
-    if(active&&map.getZoom()<OPENAQ_MIN_ZOOM){
+    /*
+     * Se la vista corrente è già abbastanza vicina, non tocchiamo mai la
+     * camera. Se invece si entra in OpenAQ da uno zoom più lontano del limite,
+     * manteniamo lo stesso centro e applichiamo soltanto il minZoom richiesto.
+     */
+    if(active&&before&&before.zoom<OPENAQ_MIN_ZOOM){
       state.openaqSuppressMove=true;
-      map.jumpTo({zoom:OPENAQ_MIN_ZOOM});
-      setTimeout(()=>{state.openaqSuppressMove=false},80)
+      map.jumpTo({
+        center:before.center,
+        zoom:OPENAQ_MIN_ZOOM,
+        bearing:before.bearing,
+        pitch:before.pitch
+      });
+      setTimeout(()=>{state.openaqSuppressMove=false},0)
     }
   }
 
@@ -371,9 +424,18 @@
   };
 
   render=async function(){
+    /*
+     * In OpenAQ la camera appartiene all'utente: cambiare inquinante, recenza
+     * o ricaricare i dati non deve rifare fit/jump sulla mappa.
+     */
+    const preserveCamera=isOpenAQ()&&state.mode==='map'
+      ?cameraSnapshot(state.map)
+      :null;
+
     await baseRender();
     if(!isOpenAQ()||state.mode!=='map')return;
 
+    restoreOpenAqCamera(state.map,preserveCamera);
     keepGeographicLabelsVisible(state.map,'air');
 
     const pollutant=openAqPollutant();

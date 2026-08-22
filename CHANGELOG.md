@@ -2,6 +2,15 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.2.8] - 2026-08-22
+
+### OpenAQ
+
+- La mappa mantiene centro, zoom, rotazione e inclinazione quando si cambia inquinante o recenza.
+- Entrando in OpenAQ da una vista già sufficientemente ravvicinata, la camera non viene modificata.
+- Se lo zoom corrente è inferiore al limite OpenAQ, viene aumentato solo fino al `minZoom` mantenendo invariato il centro.
+- Il ripristino della camera sopprime il relativo `moveend`, evitando una seconda chiamata API non necessaria.
+
 ## [0.2.7] - 2026-08-22
 
 ### Documentazione e versioning
