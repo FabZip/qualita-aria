@@ -1,10 +1,10 @@
-const CACHE='qualita-aria-v0.2.13';
+const CACHE='qualita-aria-v0.2.14';
 const CORE=[
   './','./index.html',
-  './css/app.css?v=0.2.0','./js/app.js?v=0.2.13','./js/eea-utd.js?v=0.2.13',
+  './css/app.css?v=0.2.0','./js/app.js?v=0.2.14','./js/eea-utd.js?v=0.2.14',
   './css/station-list.css?v=0.2.2','./css/openaq-world.css?v=0.2.4','./js/station-list.js?v=0.2.11',
-  './js/openaq-proxy.js?v=0.2.11','./js/openaq-world.js?v=0.2.12',
-  './manifest.json?v=0.2.0','./version.json?v=0.2.13','./data/version.json?v=0.2.13','./data/italian-capitals.json?v=0.2.13',
+  './js/openaq-proxy.js?v=0.2.11','./js/eea-proxy.js?v=0.2.14','./data/eea-proxy.json?v=0.2.14','./js/openaq-world.js?v=0.2.12',
+  './manifest.json?v=0.2.0','./version.json?v=0.2.14','./data/version.json?v=0.2.14','./data/italian-capitals.json?v=0.2.14',
   './assets/icons/icon.svg','./assets/icons/icon-192.png','./assets/icons/icon-512.png'
 ];
 
@@ -34,7 +34,9 @@ self.addEventListener('fetch',event=>{
     url.hostname.endsWith('.workers.dev') ||
     url.pathname.endsWith('/js/openaq-world.js') ||
     url.pathname.endsWith('/js/eea-utd.js') ||
-    url.pathname.endsWith('/js/openaq-proxy.js')
+    url.pathname.endsWith('/js/openaq-proxy.js') ||
+    url.pathname.endsWith('/js/eea-proxy.js') ||
+    url.pathname.endsWith('/data/eea-proxy.json')
   ){
     event.respondWith(fetch(event.request,{cache:'no-store'}));
     return

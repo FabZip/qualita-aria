@@ -78,7 +78,7 @@ const SOURCE_INFO={
   eea:{
     name:'EEA',
     years:EEA_YEARS,
-    description:'<strong>EEA:</strong> statistiche annuali delle stazioni ufficialmente riportate dai Paesi europei. Il capoluogo serve come punto di partenza; spostando la mappa i dati vengono ricaricati per l’area visibile dopo 2 secondi di inattività.',
+    description:'<strong>EEA:</strong> statistiche annuali delle stazioni ufficialmente riportate dai Paesi europei. Le richieste passano da un proxy Cloudflare con cache condivisa; il capoluogo serve come punto di partenza e, spostando la mappa, i dati vengono aggiornati per l’area visibile dopo 2 secondi.',
     hint:"EEA mostra stazioni reali nell’area selezionata o nella zona visibile dopo uno spostamento della mappa. Il refresh parte 2 secondi dopo l’ultimo movimento. La sfumatura è solo una visualizzazione attorno alle stazioni, non una superficie modellata continua."
   },
   arpa:{
@@ -210,7 +210,7 @@ async function loadEeaCities(){
   let cities=fallback;
 
   try{
-    const response=await fetch('data/italian-capitals.json?v=0.2.13',{cache:'no-store'});
+    const response=await fetch('data/italian-capitals.json?v=0.2.14',{cache:'no-store'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
     const payload=await response.json();
     if(Array.isArray(payload?.cities)&&payload.cities.length){
@@ -445,21 +445,79 @@ async function fetchEeaRows(year,pollutant){
     )
   }
 
-  /*
-   * Due render concorrenti della stessa regione (per esempio subito dopo un
-   * cambio filtro + moveend) condividono la stessa Promise invece di lanciare
-   * due query identiche verso Discodata.
-   */
   if(state.eeaValidatedInflight.has(regionKey)){
     const pending=await state.eeaValidatedInflight.get(regionKey);
     return rowsForViewport(
       pending.allRows,
       pending.diagnostic,
-      'inflight-shared'
+      pending.cacheLabel||'inflight-shared'
     )
   }
 
   const promise=(async()=>{
+    /*
+     * Via preferita: Worker EEA. La Cache API Cloudflare è condivisa tra
+     * sessioni/browser e restituisce già righe normalizzate.
+     */
+    if(globalThis.QualitaAriaEEAProxy?.annual){
+      try{
+        const proxied=await QualitaAriaEEAProxy.annual({
+          year,
+          pollutant,
+          country:scope.country||'',
+          bbox:queryBbox
+        });
+
+        const allRows=Array.isArray(proxied.data?.results)
+          ?proxied.data.results
+          :[];
+
+        const meta=proxied.data?.meta||{};
+        const diagnostic={
+          source:'EEA / edge proxy',
+          table:'AirQualityDataFlows.latest.AirQualityStatistics',
+          flow:'E1a',
+          year,pollutant,
+          component_code:POLLUTANTS[pollutant].eeaCode,
+          aggregation:'P1Y annual mean',
+          pages:meta.pages??1,
+          truncated:Boolean(meta.truncated),
+          rowsReceived:Number(meta.rowsReceived??allRows.length),
+          stationsInCachedRegion:allRows.length,
+          countries:[...new Set(allRows.map(r=>r.country).filter(Boolean))].sort(),
+          spatialGridDegrees:eeaSpatialGridStep(visibleBbox),
+          edgeCache:proxied.cache,
+          proxyDurationMs:proxied.durationMs,
+          upstreamMs:Number(meta.upstreamMs||0),
+          generatedAt:meta.generatedAt||null,
+          sample:allRows[0]||null
+        };
+
+        const entry={
+          allRows,
+          diagnostic,
+          cacheLabel:`edge-${String(proxied.cache||'unknown').toLowerCase()}`
+        };
+
+        state.eeaCache.set(regionKey,entry);
+        while(state.eeaCache.size>60){
+          const first=state.eeaCache.keys().next().value;
+          state.eeaCache.delete(first)
+        }
+
+        return entry
+      }catch(err){
+        console.warn(
+          'Proxy EEA non disponibile, fallback diretto a Discodata.',
+          err
+        )
+      }
+    }
+
+    /*
+     * Fallback di resilienza: mantiene l'app utilizzabile anche se il Worker
+     * EEA non è ancora stato distribuito o è temporaneamente irraggiungibile.
+     */
     const sql=eeaSql(year,pollutant,{
       bbox:queryBbox,
       country:scope.country
@@ -470,7 +528,7 @@ async function fetchEeaRows(year,pollutant){
       paged=await fetchDiscodataPages(sql)
     }catch(err){
       diagnostics({
-        source:'EEA / Discodata',
+        source:'EEA / Discodata diretto',
         scope:scope.label,
         boundingBox:visibleBbox,
         queryBoundingBox:queryBbox,
@@ -493,6 +551,7 @@ async function fetchEeaRows(year,pollutant){
         r.AQStationName||
         ''
       ).trim();
+
       const value=parseNumber(r.AirPollutionLevel);
       const lat=parseNumber(r.Latitude);
       const lon=parseNumber(r.Longitude);
@@ -504,44 +563,27 @@ async function fetchEeaRows(year,pollutant){
       }
     }
 
-    const allRows=[...best.entries()].map(([id,{raw:r}])=>{
-      const coverage=parseNumber(
-        r.DataCoverage??r.Timecoverage??r.DataCapture
-      );
-
-      return{
-        id,
-        name:String(r.AQStationName||r.AirQualityStation||id),
-        country:String(r.CountryCode||''),
-        lat:parseNumber(r.Latitude),
-        lon:parseNumber(r.Longitude),
-        value:parseNumber(r.AirPollutionLevel),
-        coverage,
-        verification:String(r.Verification||''),
-        accepted:String(r.AcceptedforProducts??''),
-        area:String(r.AirQualityStationArea||''),
-        stationType:String(r.AirQualityStationType||''),
-        kind:'station',
-        provider:'EEA'
-      }
-    }).sort((a,b)=>{
+    const allRows=[...best.entries()].map(([id,{raw:r}])=>({
+      id,
+      name:String(r.AQStationName||r.AirQualityStation||id),
+      country:String(r.CountryCode||''),
+      lat:parseNumber(r.Latitude),
+      lon:parseNumber(r.Longitude),
+      value:parseNumber(r.AirPollutionLevel),
+      coverage:parseNumber(r.DataCoverage??r.Timecoverage??r.DataCapture),
+      verification:String(r.Verification||''),
+      accepted:String(r.AcceptedforProducts??''),
+      area:String(r.AirQualityStationArea||''),
+      stationType:String(r.AirQualityStationType||''),
+      kind:'station',
+      provider:'EEA'
+    })).sort((a,b)=>{
       const countryCmp=a.country.localeCompare(b.country);
       return countryCmp||a.name.localeCompare(b.name,'it')
     });
 
-    const sample=raw[0]?{
-      CountryCode:raw[0].CountryCode,
-      AQStationName:raw[0].AQStationName,
-      AirQualityStationEoICode:raw[0].AirQualityStationEoICode,
-      AirPollutionLevel:raw[0].AirPollutionLevel,
-      DataCoverage:raw[0].DataCoverage,
-      Verification:raw[0].Verification,
-      Latitude:raw[0].Latitude,
-      Longitude:raw[0].Longitude
-    }:null;
-
     const diagnostic={
-      source:'EEA / Discodata',
+      source:'EEA / Discodata diretto',
       table:'AirQualityDataFlows.latest.AirQualityStatistics',
       year,pollutant,
       component_code:POLLUTANTS[pollutant].eeaCode,
@@ -552,19 +594,20 @@ async function fetchEeaRows(year,pollutant){
       stationsInCachedRegion:allRows.length,
       countries:[...new Set(allRows.map(r=>r.country).filter(Boolean))].sort(),
       spatialGridDegrees:eeaSpatialGridStep(visibleBbox),
-      sample
+      edgeCache:'BYPASS',
+      sample:raw[0]||null
     };
 
-    const entry={allRows,diagnostic};
-    state.eeaCache.set(regionKey,entry);
+    const entry={
+      allRows,
+      diagnostic,
+      cacheLabel:'network-direct'
+    };
 
+    state.eeaCache.set(regionKey,entry);
     while(state.eeaCache.size>60){
       const first=state.eeaCache.keys().next().value;
       state.eeaCache.delete(first)
-    }
-
-    if(paged.truncated){
-      showToast(`EEA: raggiunto il limite di ${paged.pages*1000} record. Restringi l’area per un risultato completo.`)
     }
 
     return entry
@@ -577,7 +620,7 @@ async function fetchEeaRows(year,pollutant){
     return rowsForViewport(
       entry.allRows,
       entry.diagnostic,
-      'network'
+      entry.cacheLabel||'network'
     )
   }finally{
     state.eeaValidatedInflight.delete(regionKey)
@@ -725,10 +768,10 @@ function fetchWithTimeout(url,options={},timeoutMs=16000){
 
 function csvDelimiter(text){
   const sample=text.split(/\r?\n/).slice(0,15).join('\n');
-  const candidates=[',',';','\t'];
+  const candidates=[',','','\t'];
   return candidates
     .map(d=>({d,count:sample.split(d).length-1}))
-    .sort((a,b)=>b.count-a.count)[0]?.d||';'
+    .sort((a,b)=>b.count-a.count)[0]?.d||''
 }
 
 function parseDelimitedRows(text,delimiter){
@@ -2302,8 +2345,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.2.13',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.2.13',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.2.14',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.2.14',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -2318,7 +2361,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.2.13')
+    navigator.serviceWorker.register('./service-worker.js?v=0.2.14')
       .then(reg=>reg.update())
       .catch(console.error)
   }

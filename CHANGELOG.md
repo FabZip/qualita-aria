@@ -2,6 +2,31 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.2.14] - 2026-08-23
+
+### Proxy EEA e prestazioni
+
+- Aggiunto un Worker Cloudflare dedicato `qualita-aria-eea`.
+- Le statistiche annuali E1a non vengono più richieste direttamente a Discodata quando il proxy è disponibile.
+- Il Worker normalizza le stazioni e memorizza la risposta nella Cache API Cloudflare.
+- TTL E1a: 6 ore per l'anno più recente, 30 giorni per gli anni consolidati.
+- Anche i risultati vuoti vengono memorizzati, evitando di ripetere query lente prima del fallback UTD.
+- Aggiunto endpoint proxy per i metadati `Measurements`, con cache di 24 ore.
+- Elenco file E2a/UTD memorizzato per 6 ore.
+- File Parquet E2a/UTD memorizzati come binari nella Cache API per 6 ore.
+- Il frontend conserva il fallback diretto a Discodata se il nuovo Worker non è raggiungibile.
+- La diagnostica EEA espone `edgeCache`, `proxyDurationMs` e `upstreamMs`.
+
+### Correzioni UTD
+
+- Corretto un errore della 0.2.13 nella diagnostica della cache UTD: `fromEntry()` usava una variabile `allRows` non definita.
+- Il fallback UTD preferisce il nuovo proxy EEA e mantiene temporaneamente compatibilità con le vecchie route EEA presenti nel Worker OpenAQ.
+- I metadati UTD vengono recuperati dal proxy EEA quando disponibile.
+
+### Versioning
+
+- Aggiornata l'app a `0.2.14` build `32`.
+
 ## [0.2.13] - 2026-08-23
 
 ### Prestazioni EEA

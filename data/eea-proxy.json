@@ -1,0 +1,5 @@
+{
+  "enabled": true,
+  "base_url": "https://qualita-aria-eea.fabzip.workers.dev",
+  "note": "Proxy EEA dedicato: cache condivisa per E1a, metadata e file UTD."
+}

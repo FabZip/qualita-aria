@@ -208,14 +208,45 @@ WHERE CountryCode='IT'
       return state.eeaUtdMetadataCache.get(key)
     }
 
-    const paged=await fetchDiscodataPages(
-      metadataSql(year,pollutant,cityScope),
-      {pageSize:1000,maxPages:5}
-    );
+    let filtered=[];
+    let pages=1;
+    let truncated=false;
+    let edgeCache='BYPASS';
+    let upstreamMs=0;
 
-    const filtered=paged.rows.filter(
-      row=>pollutantMatchesMetadata(row,pollutant)
-    );
+    if(globalThis.QualitaAriaEEAProxy?.metadata){
+      try{
+        const proxied=await QualitaAriaEEAProxy.metadata({
+          year,
+          pollutant,
+          country:'IT',
+          bbox:cityScope.bbox
+        });
+
+        filtered=Array.isArray(proxied.data?.results)
+          ?proxied.data.results
+          :[];
+        pages=Number(proxied.data?.meta?.pages||1);
+        truncated=Boolean(proxied.data?.meta?.truncated);
+        edgeCache=proxied.cache;
+        upstreamMs=Number(proxied.data?.meta?.upstreamMs||0)
+      }catch(err){
+        console.warn('Proxy metadata EEA non disponibile, uso Discodata diretto.',err)
+      }
+    }
+
+    if(!filtered.length&&edgeCache==='BYPASS'){
+      const paged=await fetchDiscodataPages(
+        metadataSql(year,pollutant,cityScope),
+        {pageSize:1000,maxPages:5}
+      );
+
+      filtered=paged.rows.filter(
+        row=>pollutantMatchesMetadata(row,pollutant)
+      );
+      pages=paged.pages;
+      truncated=paged.truncated
+    }
     const bySample=new Map();
 
     // Prefer metadata from the requested year when duplicated.
@@ -232,9 +263,11 @@ WHERE CountryCode='IT'
     const result={
       bySample,
       rows:filtered,
-      pages:paged.pages,
-      truncated:paged.truncated,
-      cityScope
+      pages,
+      truncated,
+      cityScope,
+      edgeCache,
+      upstreamMs
     };
 
     state.eeaUtdMetadataCache.set(key,result);
@@ -371,6 +404,26 @@ WHERE CountryCode='IT'
     return`${eeaCity()}:${year}:${pollutant}:utd-city`
   }
 
+  function utdTransport(){
+    if(globalThis.QualitaAriaEEAProxy?.utdFiles){
+      return{
+        name:'EEA edge proxy',
+        files:args=>QualitaAriaEEAProxy.utdFiles(args),
+        file:args=>QualitaAriaEEAProxy.utdFile(args)
+      }
+    }
+
+    if(globalThis.QualitaAriaOpenAQProxy?.eeaUtdFiles){
+      return{
+        name:'OpenAQ Worker legacy route',
+        files:args=>QualitaAriaOpenAQProxy.eeaUtdFiles(args),
+        file:args=>QualitaAriaOpenAQProxy.eeaUtdFile(args)
+      }
+    }
+
+    return null
+  }
+
   async function fetchUtdRows(year,pollutant){
     const started=performance.now();
     const scope=currentEeaScope();
@@ -383,7 +436,7 @@ WHERE CountryCode='IT'
         ...entry.diagnostic,
         scope:scope.label,
         boundingBox:scope.bbox,
-        stationsInCityCache:allRows.length,
+        stationsInCityCache:entry.allRows.length,
         cache,
         durationMs:Math.round(performance.now()-started)
       });
@@ -402,14 +455,15 @@ WHERE CountryCode='IT'
       return fromEntry(entry,'inflight-shared')
     }
 
-    if(!globalThis.QualitaAriaOpenAQProxy?.eeaUtdFiles){
+    const transport=utdTransport();
+    if(!transport){
       throw new Error('Client proxy EEA UTD non disponibile.')
     }
 
     const promise=(async()=>{
     const city=cityScope.cityLabel;
     const[fileResponse,metadata,parquetTools]=await Promise.all([
-      QualitaAriaOpenAQProxy.eeaUtdFiles({
+      transport.files({
         country:'IT',
         city,
         pollutant
@@ -444,7 +498,7 @@ WHERE CountryCode='IT'
 
     await mapLimit(files,3,async file=>{
       try{
-        const response=await QualitaAriaOpenAQProxy.eeaUtdFile({
+        const response=await transport.file({
           country:'IT',
           city,
           pollutant,
@@ -536,6 +590,10 @@ WHERE CountryCode='IT'
       datasetId:1,
       parquetFilesReturned:fileResponse.data?.meta?.count??files.length,
       parquetFilesProcessed:files.length,
+      parquetListEdgeCache:fileResponse.cache||fileResponse.data?.meta?.cache||'UNKNOWN',
+      transport:transport.name,
+      metadataEdgeCache:metadata.edgeCache||'UNKNOWN',
+      metadataUpstreamMs:metadata.upstreamMs||0,
       parquetFilesLimited:(fileResponse.data?.meta?.count??0)>files.length,
       parquetRows,
       acceptedObservationRows:acceptedRows,
@@ -623,7 +681,7 @@ WHERE CountryCode='IT'
     return baseSourceNotice(rows)
   };
 
-  SOURCE_INFO.eea.hint='EEA usa prima le statistiche annuali validate E1a. Le query validate vengono memorizzate per celle geografiche e filtrate sulla viewport; per l’anno più recente i file preliminari E2a/UTD vengono scaricati una sola volta per città, anno e inquinante e poi filtrati localmente. Dopo un pan/zoom il refresh parte dopo 2 secondi.';
+  SOURCE_INFO.eea.hint='EEA usa un proxy Cloudflare dedicato con cache condivisa. I dati validati E1a vengono memorizzati all’edge; per gli UTD anche elenco e file Parquet sono memorizzati dal Worker. Nel browser resta una seconda cache per città/anno/inquinante. Dopo un pan/zoom il refresh parte dopo 2 secondi.';
 
   globalThis.QualitaAriaEEAUTD={
     fetchUtdRows,
