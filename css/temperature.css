@@ -39,3 +39,26 @@
   font-size:.62rem;
   line-height:1.4
 }
+
+.temperature-overlay-legend{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  color:var(--muted);
+  font-size:.68rem;
+  margin-left:auto
+}
+.temperature-overlay-dot{
+  display:grid;
+  place-items:center;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  background:#5fd19b;
+  border:2px solid #fff;
+  color:#07111d;
+  font-style:normal;
+  font-weight:800;
+  font-size:.68rem;
+  box-shadow:0 1px 5px rgba(0,0,0,.24)
+}

@@ -3,6 +3,7 @@ const OPEN_METEO_ARCHIVE='https://archive-api.open-meteo.com/v1/archive';
 const PROD_ORIGIN='https://fabzip.github.io';
 const NATIVE_RESOLUTION_DEG=0.1;
 const MAX_GRID_POINTS=25;
+const MAX_POINT_REQUESTS=40;
 const MAX_BBOX_WIDTH=8;
 const MAX_BBOX_HEIGHT=6;
 const CACHE_TTL=2592000;
@@ -65,6 +66,45 @@ function bboxNumbers(value){
     minLon>=maxLon||minLat>=maxLat
   )return null;
   return parts.map(v=>Number(v.toFixed(4)))
+}
+
+
+function pointList(value){
+  const raw=String(value||'').trim();
+  if(!raw)return null;
+
+  const points=raw.split(';').map(item=>{
+    const parts=item.split(',').map(Number);
+    if(parts.length!==2||parts.some(v=>!Number.isFinite(v)))return null;
+
+    const[lat,lon]=parts;
+    if(lat<-85||lat>85||lon<-180||lon>180)return null;
+
+    return{
+      latitude:Number(lat.toFixed(4)),
+      longitude:Number(lon.toFixed(4))
+    }
+  });
+
+  if(
+    !points.length||
+    points.length>MAX_POINT_REQUESTS||
+    points.some(point=>point===null)
+  )return null;
+
+  return points
+}
+
+function pointCacheRequest(year,points){
+  const url=new URL('https://qualita-aria-temperature-cache.invalid/points');
+  url.searchParams.set('year',String(year));
+  url.searchParams.set(
+    'points',
+    points
+      .map(point=>`${point.latitude.toFixed(4)},${point.longitude.toFixed(4)}`)
+      .join(';')
+  );
+  return new Request(url.toString(),{method:'GET'})
 }
 
 function roundTo(value,step){
@@ -175,6 +215,162 @@ function annualStats(daily){
   }
 }
 
+
+function annualArchiveUrl(points,year){
+  const{start,end}=annualDates(year);
+  const url=new URL(OPEN_METEO_ARCHIVE);
+
+  url.searchParams.set(
+    'latitude',
+    points.map(point=>point.latitude).join(',')
+  );
+  url.searchParams.set(
+    'longitude',
+    points.map(point=>point.longitude).join(',')
+  );
+  url.searchParams.set('start_date',start);
+  url.searchParams.set('end_date',end);
+  url.searchParams.set(
+    'daily',
+    'temperature_2m_mean,temperature_2m_min,temperature_2m_max'
+  );
+  url.searchParams.set('models','era5_land');
+  url.searchParams.set('timezone','GMT');
+  url.searchParams.set('temperature_unit','celsius');
+  url.searchParams.set('cell_selection','nearest');
+
+  return{url,start,end}
+}
+
+function normalizeAnnualLocations(payload,requested,{dedupeCells=false}={}){
+  const locations=Array.isArray(payload)?payload:[payload];
+  const seen=new Set();
+  const results=[];
+
+  locations.forEach((location,index)=>{
+    const latitude=Number(location?.latitude);
+    const longitude=Number(location?.longitude);
+    const summary=annualStats(location?.daily);
+
+    if(
+      !Number.isFinite(latitude)||
+      !Number.isFinite(longitude)||
+      !summary
+    )return;
+
+    const cellKey=`${latitude.toFixed(3)},${longitude.toFixed(3)}`;
+    if(dedupeCells&&seen.has(cellKey))return;
+    seen.add(cellKey);
+
+    results.push({
+      id:`era5-land:${cellKey}:${index}`,
+      latitude,
+      longitude,
+      elevation:Number.isFinite(Number(location?.elevation))
+        ?Number(location.elevation)
+        :null,
+      ...summary,
+      unit:'°C',
+      requested:requested[index]||null,
+      requestIndex:index
+    })
+  });
+
+  return results
+}
+
+async function fetchAnnualBatch(points,year){
+  const{url,start,end}=annualArchiveUrl(points,year);
+  const started=Date.now();
+
+  const upstream=await fetch(url.toString(),{
+    headers:{Accept:'application/json'}
+  });
+
+  const payload=await upstream.json().catch(()=>null);
+  if(!upstream.ok){
+    const error=new Error(
+      `Open-Meteo archive HTTP ${upstream.status}: `+
+      String(payload?.reason||payload?.error||'errore upstream')
+    );
+    error.status=upstream.status;
+    throw error
+  }
+
+  return{
+    payload,
+    start,
+    end,
+    upstreamMs:Date.now()-started
+  }
+}
+
+async function temperaturePointsResponse(ctx,cors,{points,year}){
+  const cacheRequest=pointCacheRequest(year,points);
+  const cached=await cacheGet(cacheRequest);
+
+  if(cached){
+    const body=await cached.arrayBuffer();
+    const headers=new Headers(cached.headers);
+    Object.entries(cors).forEach(([key,value])=>headers.set(key,value));
+    headers.set('X-Proxy-Cache','HIT');
+
+    return new Response(body,{status:200,headers})
+  }
+
+  try{
+    const batch=await fetchAnnualBatch(points,year);
+    const results=normalizeAnnualLocations(
+      batch.payload,
+      points,
+      {dedupeCells:false}
+    );
+
+    const responsePayload={
+      meta:{
+        source:'Copernicus ERA5-Land via Open-Meteo',
+        model:'ERA5-Land',
+        variable:'temperature_2m',
+        aggregation:'annual min / mean / max from daily aggregates',
+        mode:'requested-points',
+        requestedPoints:points.length,
+        returnedPoints:results.length,
+        year,
+        startDate:batch.start,
+        endDate:batch.end,
+        upstreamMs:batch.upstreamMs,
+        generatedAt:new Date().toISOString()
+      },
+      results
+    };
+
+    const serialized=JSON.stringify(responsePayload);
+    const cacheHeaders={
+      'Content-Type':'application/json; charset=utf-8',
+      'Cache-Control':`public, max-age=${CACHE_TTL}`,
+      'X-Content-Type-Options':'nosniff',
+      'X-Proxy-Cache':'MISS',
+      'X-Qualita-Aria-Proxy':'Temperature'
+    };
+
+    cachePut(
+      cacheRequest,
+      new Response(serialized,{status:200,headers:cacheHeaders}),
+      ctx
+    );
+
+    return new Response(serialized,{
+      status:200,
+      headers:{...cacheHeaders,...cors}
+    })
+  }catch(err){
+    return json({
+      error:String(err.message||err),
+      upstreamStatus:err.status||null
+    },502,{...cors,'Cache-Control':'no-store'})
+  }
+}
+
 async function temperatureResponse(ctx,cors,{bbox,year}){
   const width=bbox[2]-bbox[0];
   const height=bbox[3]-bbox[1];
@@ -205,69 +401,27 @@ async function temperatureResponse(ctx,cors,{bbox,year}){
     })
   }
 
-  const{start,end}=annualDates(year);
-  const latitude=grid.points.map(point=>point.latitude).join(',');
-  const longitude=grid.points.map(point=>point.longitude).join(',');
-
-  const upstreamUrl=new URL(OPEN_METEO_ARCHIVE);
-  upstreamUrl.searchParams.set('latitude',latitude);
-  upstreamUrl.searchParams.set('longitude',longitude);
-  upstreamUrl.searchParams.set('start_date',start);
-  upstreamUrl.searchParams.set('end_date',end);
-  upstreamUrl.searchParams.set(
-    'daily',
-    'temperature_2m_mean,temperature_2m_min,temperature_2m_max'
-  );
-  upstreamUrl.searchParams.set('models','era5_land');
-  upstreamUrl.searchParams.set('timezone','GMT');
-  upstreamUrl.searchParams.set('temperature_unit','celsius');
-  upstreamUrl.searchParams.set('cell_selection','nearest');
-
-  const started=Date.now();
-  const upstream=await fetch(upstreamUrl.toString(),{
-    headers:{Accept:'application/json'}
-  });
-
-  const payload=await upstream.json().catch(()=>null);
-  if(!upstream.ok){
+  let batch;
+  try{
+    batch=await fetchAnnualBatch(grid.points,year)
+  }catch(err){
     return json({
-      error:`Open-Meteo archive HTTP ${upstream.status}`,
-      detail:payload?.reason||payload?.error||null
+      error:String(err.message||err),
+      upstreamStatus:err.status||null
     },502,{...cors,'Cache-Control':'no-store'})
   }
 
-  const locations=Array.isArray(payload)?payload:[payload];
-  const seen=new Set();
-  const results=[];
+  const results=normalizeAnnualLocations(
+    batch.payload,
+    grid.points,
+    {dedupeCells:true}
+  ).map(result=>({
+    ...result,
+    name:`Cella ${result.latitude.toFixed(2)}, ${result.longitude.toFixed(2)}`
+  }));
 
-  locations.forEach((location,index)=>{
-    const latitude=Number(location?.latitude);
-    const longitude=Number(location?.longitude);
-    const summary=annualStats(location?.daily);
-
-    if(
-      !Number.isFinite(latitude)||
-      !Number.isFinite(longitude)||
-      !summary
-    )return;
-
-    const key=`${latitude.toFixed(3)},${longitude.toFixed(3)}`;
-    if(seen.has(key))return;
-    seen.add(key);
-
-    results.push({
-      id:`era5-land:${key}`,
-      name:`Cella ${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
-      latitude,
-      longitude,
-      elevation:Number.isFinite(Number(location?.elevation))
-        ?Number(location.elevation)
-        :null,
-      ...summary,
-      unit:'°C',
-      requested:grid.points[index]||null
-    })
-  });
+  const start=batch.start;
+  const end=batch.end;
 
   const responsePayload={
     meta:{
@@ -285,7 +439,7 @@ async function temperatureResponse(ctx,cors,{bbox,year}){
       year,
       startDate:start,
       endDate:end,
-      upstreamMs:Date.now()-started,
+      upstreamMs:batch.upstreamMs,
       generatedAt:new Date().toISOString()
     },
     results
@@ -340,17 +494,39 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.2.0',
+        version:'0.3.0',
         source:'ERA5-Land via Open-Meteo',
         temperature2m:true,
         aggregation:'annual min / mean / max',
         historicalFrom:1950,
         maxGridPoints:MAX_GRID_POINTS,
+        maxPointRequests:MAX_POINT_REQUESTS,
+        stationOverlay:true,
         cacheSeconds:CACHE_TTL
       },200,{
         ...cors,
         'Cache-Control':'no-store'
       })
+    }
+
+    if(url.pathname==='/v1/temperature/points'){
+      const points=pointList(url.searchParams.get('points'));
+      const year=yearParam(url.searchParams.get('year'));
+
+      if(!points){
+        return badRequest(
+          `Punti temperatura non validi: massimo ${MAX_POINT_REQUESTS}.`,
+          cors
+        )
+      }
+      if(year===null){
+        return badRequest(
+          'Anno non valido: sono ammessi anni completi dal 1950.',
+          cors
+        )
+      }
+
+      return temperaturePointsResponse(ctx,cors,{points,year})
     }
 
     if(url.pathname==='/v1/temperature'){
@@ -372,7 +548,8 @@ export default{
       error:'Endpoint non trovato',
       endpoints:[
         '/health',
-        '/v1/temperature?bbox=12.2,41.7,12.8,42.1&year=2025'
+        '/v1/temperature?bbox=12.2,41.7,12.8,42.1&year=2025',
+        '/v1/temperature/points?year=2025&points=41.90,12.48;41.91,12.50'
       ]
     },404,cors)
   }

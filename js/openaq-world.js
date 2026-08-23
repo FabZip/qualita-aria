@@ -451,7 +451,7 @@
     $('avgLabel').textContent='Media ultimi dati';
     $('periodValue').textContent=`≤ ${maxAgeDays()}gg`;
     $('sourceValue').textContent='OpenAQ · area visibile';
-    $('mapHint').textContent=`${SOURCE_INFO.openaq.hint} Sono accettati dati fino a ${maxAgeDays()} giorni fa.`;
+    $('mapHint').textContent=`${SOURCE_INFO.openaq.hint} Sono accettati dati fino a ${maxAgeDays()} giorni fa. Pallini: temperatura media dell’ultimo anno completo; click per MIN / MED / MAX.`;
     state.openaqLastViewportKey=viewportKey()
   };
 

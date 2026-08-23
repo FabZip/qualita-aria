@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const CONFIG_URL='data/temperature-proxy.json?v=0.3.3';
+  const CONFIG_URL='data/temperature-proxy.json?v=0.3.4';
   const OPEN_METEO_ARCHIVE='https://archive-api.open-meteo.com/v1/archive';
   const NATIVE_RESOLUTION_DEG=.1;
   const MAX_GRID_POINTS=25;
@@ -295,6 +295,171 @@
     }
   }
 
+
+  function normalizeRequestedPoints(points){
+    if(!Array.isArray(points)||!points.length){
+      throw new Error('Nessun punto temperatura richiesto.')
+    }
+
+    const normalized=points.map(point=>{
+      const latitude=Number(point?.latitude??point?.lat);
+      const longitude=Number(point?.longitude??point?.lon);
+
+      if(
+        !Number.isFinite(latitude)||
+        !Number.isFinite(longitude)||
+        latitude<-85||latitude>85||
+        longitude<-180||longitude>180
+      ){
+        throw new Error('Coordinate temperatura non valide.')
+      }
+
+      return{
+        latitude:Number(latitude.toFixed(4)),
+        longitude:Number(longitude.toFixed(4))
+      }
+    });
+
+    if(normalized.length>40){
+      throw new Error('Massimo 40 punti temperatura per richiesta.')
+    }
+
+    return normalized
+  }
+
+  function pointParam(points){
+    return points
+      .map(point=>`${point.latitude},${point.longitude}`)
+      .join(';')
+  }
+
+  async function directPoints({points,year},fallbackReason=''){
+    const requested=normalizeRequestedPoints(points);
+    const start=`${year}-01-01`;
+    const end=`${year}-12-31`;
+
+    const url=new URL(OPEN_METEO_ARCHIVE);
+    url.searchParams.set(
+      'latitude',
+      requested.map(point=>point.latitude).join(',')
+    );
+    url.searchParams.set(
+      'longitude',
+      requested.map(point=>point.longitude).join(',')
+    );
+    url.searchParams.set('start_date',start);
+    url.searchParams.set('end_date',end);
+    url.searchParams.set(
+      'daily',
+      'temperature_2m_mean,temperature_2m_min,temperature_2m_max'
+    );
+    url.searchParams.set('models','era5_land');
+    url.searchParams.set('timezone','GMT');
+    url.searchParams.set('temperature_unit','celsius');
+    url.searchParams.set('cell_selection','nearest');
+
+    const started=performance.now();
+    const response=await fetch(url.toString(),{
+      mode:'cors',
+      cache:'default',
+      headers:{Accept:'application/json'}
+    });
+
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok){
+      const error=new Error(
+        payload?.reason||
+        payload?.error||
+        `Open-Meteo HTTP ${response.status}`
+      );
+      error.status=response.status;
+      error.payload=payload;
+      throw error
+    }
+
+    const locations=Array.isArray(payload)?payload:[payload];
+    const results=[];
+
+    locations.forEach((location,index)=>{
+      const latitude=Number(location?.latitude);
+      const longitude=Number(location?.longitude);
+      const summary=annualStats(location?.daily);
+
+      if(
+        !Number.isFinite(latitude)||
+        !Number.isFinite(longitude)||
+        !summary
+      )return;
+
+      results.push({
+        id:`era5-land-point:${index}`,
+        latitude,
+        longitude,
+        elevation:Number.isFinite(Number(location?.elevation))
+          ?Number(location.elevation)
+          :null,
+        ...summary,
+        unit:'°C',
+        requested:requested[index]||null,
+        requestIndex:index
+      })
+    });
+
+    return{
+      data:{
+        meta:{
+          source:'Copernicus ERA5-Land via Open-Meteo',
+          mode:'requested-points',
+          requestedPoints:requested.length,
+          returnedPoints:results.length,
+          year:Number(year),
+          startDate:start,
+          endDate:end,
+          upstreamMs:Math.round(performance.now()-started),
+          generatedAt:new Date().toISOString(),
+          fallbackReason
+        },
+        results
+      },
+      cache:'DIRECT',
+      durationMs:Math.round(performance.now()-started),
+      status:response.status,
+      transport:'direct-open-meteo-fallback'
+    }
+  }
+
+  async function points({points,year}={}){
+    const requested=normalizeRequestedPoints(points);
+    const params={
+      points:pointParam(requested),
+      year
+    };
+
+    try{
+      const proxied=await request('/v1/temperature/points',params);
+      const results=Array.isArray(proxied.data?.results)
+        ?proxied.data.results
+        :[];
+
+      if(results.length)return proxied;
+
+      return directPoints(
+        {points:requested,year},
+        'Proxy puntuale raggiungibile ma risposta senza valori'
+      )
+    }catch(err){
+      console.warn(
+        'Proxy temperatura puntuale non disponibile, uso Open-Meteo diretto.',
+        err
+      );
+
+      return directPoints(
+        {points:requested,year},
+        String(err.message||err)
+      )
+    }
+  }
+
   async function viewport({bbox,year}={}){
     const params={
       bbox:Array.isArray(bbox)?bbox.join(','):bbox,
@@ -342,6 +507,7 @@
       return data
     },
 
-    viewport
+    viewport,
+    points
   }
 })();

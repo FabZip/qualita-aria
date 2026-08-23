@@ -2,6 +2,45 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.3.4] - 2026-08-23
+
+### Temperatura sovrapposta agli inquinanti
+
+- Corretto il ruolo dei pallini nelle mappe EEA, ARPA Lazio e OpenAQ.
+- La superficie/sfumatura continua a rappresentare l'inquinante.
+- I pallini numerici mostrano ora la temperatura media annua in °C.
+- I valori numerici dell'inquinante non vengono più duplicati nei pallini; restano nella superficie e nell'elenco dati.
+- Click sul pallino temperatura: MIN, MED e MAX annuali.
+- EEA e ARPA usano lo stesso anno selezionato per l'inquinante.
+- OpenAQ usa l'ultimo anno completo perché la fonte corrente non espone un anno storico selezionabile.
+- Aggiunta legenda esplicita `Pallini: temperatura media annua`.
+
+### Temperature puntuali
+
+- Aggiunto endpoint Worker `/v1/temperature/points`.
+- Il nuovo endpoint accetta fino a 40 coordinate in un'unica richiesta batch.
+- Le temperature vengono richieste sulle coordinate delle stazioni/valutazioni visualizzate.
+- Il pallino resta geograficamente sulla stazione, mentre Open-Meteo seleziona la cella ERA5-Land più vicina.
+- Cache Cloudflare di 30 giorni anche per i batch puntuali.
+- Aggiunto fallback diretto Open-Meteo anche per le richieste puntuali.
+
+### Fonte Temperatura
+
+- Rimosso il selettore Metrica MIN/MED/MAX.
+- La mappa dedicata mostra sempre la temperatura media annua, coerentemente con i pallini sovrapposti agli inquinanti.
+- MIN e MAX restano disponibili nel popup e nell'elenco.
+- Layout uniformato alle mappe inquinanti: superficie sfumata + pallini numerici.
+- Nessuna griglia quadrata visibile.
+
+### Worker
+
+- Aggiornato `qualita-aria-temperature` alla versione `0.3.0`.
+- Health check espone `stationOverlay: true` e `maxPointRequests: 40`.
+
+### Versioning
+
+- Aggiornata l'app a `0.3.4` build `37`.
+
 ## [0.3.3] - 2026-08-23
 
 ### Temperatura · mappa

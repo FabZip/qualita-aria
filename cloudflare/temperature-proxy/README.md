@@ -4,20 +4,23 @@ Worker Cloudflare per il modulo temperatura della PWA Qualità aria.
 
 Fonte: Open-Meteo Historical Weather API, modello `ERA5-Land`.
 
-Il Worker riceve bounding box e anno, genera fino a 25 punti sulla zona
-visibile ed effettua una singola richiesta batch a Open-Meteo usando:
+Il Worker espone due modalità:
 
-- `temperature_2m_mean`
-- `temperature_2m_min`
-- `temperature_2m_max`
+- `/v1/temperature`: griglia della zona visibile per la fonte dedicata Temperatura;
+- `/v1/temperature/points`: temperature annuali sulle coordinate richieste,
+  usate per sovrapporre i pallini temperatura alle mappe degli inquinanti.
 
-Per ogni cella restituisce:
+Per ogni punto/cella restituisce:
 
-- **MED**: media annua;
-- **MIN**: minimo annuale;
-- **MAX**: massimo annuale.
+- **MED**: temperatura media annua;
+- **MIN**: temperatura minima assoluta dell'anno;
+- **MAX**: temperatura massima assoluta dell'anno.
 
-La risposta aggregata viene conservata nella Cache API Cloudflare per 30 giorni.
+Le tre metriche derivano dalle aggregazioni giornaliere Open-Meteo
+`temperature_2m_mean`, `temperature_2m_min` e `temperature_2m_max`.
+
+Il batch puntuale accetta fino a 40 coordinate per richiesta. Le risposte
+storiche sono conservate nella Cache API Cloudflare per 30 giorni.
 
 ## Deploy
 

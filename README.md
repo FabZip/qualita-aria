@@ -123,48 +123,62 @@ CO₂ non è incluso: è un gas serra e richiede fonti dedicate diverse dai data
 
 ## Temperatura · ERA5-Land
 
-La serie `0.3.x` introduce un modulo separato per la **temperatura dell'aria a 2 metri**.
+La serie `0.3.x` integra la **temperatura dell'aria a 2 metri** usando
+Copernicus ERA5-Land tramite Open-Meteo.
 
-Fonte:
+### Temperatura sovrapposta agli inquinanti
 
-- Copernicus **ERA5-Land**
-- accesso tramite Open-Meteo Historical Weather API
-- copertura usata dall'app: anni completi dal 1950 all'anno precedente
-- risoluzione nativa: `0,1°`, circa 9–11 km
-- attribuzione dati: Open-Meteo / Copernicus Climate Change Service
+Nelle fonti EEA, ARPA Lazio e OpenAQ la superficie della mappa continua a
+rappresentare l'inquinante selezionato. I pallini numerici non rappresentano
+più la concentrazione: mostrano la **temperatura media annua**.
 
-La vista temperatura usa un solo **anno** e tre metriche:
+Cliccando un pallino vengono mostrati:
 
-- **MED** — media annua della temperatura dell'aria a 2 m;
 - **MIN** — temperatura minima assoluta dell'anno;
+- **MED** — temperatura media annua;
 - **MAX** — temperatura massima assoluta dell'anno.
 
-Il Worker usa le aggregazioni giornaliere Open-Meteo `temperature_2m_mean`,
-`temperature_2m_min` e `temperature_2m_max`. Cambiare tra MED, MIN e MAX non
-richiede un nuovo download perché le tre statistiche sono nello stesso payload.
+Per EEA e ARPA la temperatura usa lo stesso anno selezionato per
+l'inquinante. OpenAQ non ha un anno storico selezionabile, quindi il suo
+overlay usa l'**ultimo anno completo** e lo dichiara nell'interfaccia.
 
-Dopo pan/zoom il modulo aggiorna la zona visibile con un debounce di **2 secondi**.
-La temperatura usa una chiave di viewport dedicata: quando cambia la bounding box
-ERA5-Land viene richiesta la nuova zona, indipendentemente dallo stato usato da
-EEA o OpenAQ.
+Il Worker richiede ERA5-Land direttamente sulle coordinate delle stazioni
+visualizzate, con un massimo di 40 punti per batch. Le coordinate del pallino
+restano quelle della stazione; Open-Meteo associa la coordinata alla cella
+ERA5-Land più vicina.
 
-La griglia ERA5-Land non viene più disegnata come una scacchiera di quadrati.
-I centri delle celle restano i punti dati effettivi, mentre la mappa mostra una
-**superficie termica sfumata**. La sfumatura è soltanto una resa visuale: lista,
-popup e KPI continuano a usare i valori reali delle celle del modello.
+Il valore dell'inquinante rimane disponibile nella sfumatura della mappa e
+nell'elenco delle stazioni/valutazioni sotto la mappa.
 
-### Interpretazione
+### Fonte dedicata Temperatura
 
-ERA5-Land è un **modello di rianalisi**, non una rete di termometri urbani.
-La griglia è adatta a confronti climatici e territoriali ma non permette di
-attribuire con affidabilità differenze di temperatura a una singola strada,
-parco, albero o edificio.
+La fonte `Temperatura · ERA5-Land` usa lo stesso linguaggio grafico delle
+fonti inquinanti:
 
-### Resilienza e proxy
+- superficie termica sfumata;
+- pallini numerici con la **MED annua**;
+- click sul pallino per MIN / MED / MAX;
+- anno selezionabile.
 
-La via primaria è il Worker `qualita-aria-temperature`, con cache Cloudflare
-di 30 giorni. Se il Worker è temporaneamente non disponibile o restituisce zero
-celle, il frontend prova direttamente Open-Meteo con la stessa aggregazione.
+Non viene mostrata una griglia a scacchiera. I punti sottostanti derivano
+comunque dalla griglia ERA5-Land a `0,1°` (circa 9–11 km); la superficie
+sfumata è una rappresentazione visuale e non aumenta la risoluzione reale
+del modello.
+
+### Fonte e calcolo
+
+Il Worker usa le aggregazioni giornaliere Open-Meteo:
+
+- `temperature_2m_mean`
+- `temperature_2m_min`
+- `temperature_2m_max`
+
+MED è la media delle medie giornaliere dell'anno; MIN è il minimo delle
+minime giornaliere; MAX è il massimo delle massime giornaliere.
+
+Le richieste storiche vengono conservate nella Cache API Cloudflare per
+30 giorni. Se il Worker non è disponibile, il client mantiene il fallback
+diretto a Open-Meteo.
 
 ## PWA
 
