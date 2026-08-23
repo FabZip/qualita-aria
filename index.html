@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="css/app.css?v=0.2.0">
   <link rel="stylesheet" href="css/station-list.css?v=0.2.2">
   <link rel="stylesheet" href="css/openaq-world.css?v=0.2.4">
-  <link rel="stylesheet" href="css/temperature.css?v=0.3.4">
+  <link rel="stylesheet" href="css/temperature.css?v=0.3.5">
   <title>Qualità dell'aria</title>
 </head>
 <body>
@@ -27,12 +27,11 @@
     </header>
 
     <section class="toolbar" aria-label="Filtri">
-      <label>Fonte
+      <label id="pollutantSourceField">Fonte inquinante
         <select id="sourceSelect">
           <option value="eea" selected>EEA · stazioni</option>
           <option value="arpa">ARPA Lazio · comune</option>
-          <option value="openaq">OpenAQ · area visibile</option>
-          <option value="temperature">Temperatura · ERA5-Land</option>
+          <option value="openaq">Globale · OpenAQ</option>
         </select>
       </label>
 
@@ -58,6 +57,14 @@
         </select>
       </label>
 
+      <label id="temperatureMetricField" class="hidden">Valore temperatura
+        <select id="temperatureMetricSelect">
+          <option value="min">MIN · minima media annuale</option>
+          <option value="mean" selected>MEDIA · temperatura media annuale</option>
+          <option value="max">MAX · massima media annuale</option>
+        </select>
+      </label>
+
       <label id="singleYearField"><span id="yearFieldLabel">Anno</span><select id="yearSelect"></select></label>
 
       <label id="monthField">Periodo
@@ -74,6 +81,7 @@
       <button class="tab active" data-mode="map" type="button">Mappa</button>
       <button class="tab" data-mode="compare" type="button">Confronto</button>
       <button class="tab" data-mode="difference" type="button">Differenza</button>
+      <button class="tab" data-mode="temperature" type="button">Temperatura</button>
     </nav>
 
     <section id="comparePanel" class="compare-panel hidden">
@@ -89,8 +97,8 @@
         <span>Migliora</span><i class="diff-gradient"></i><span>Peggiora</span>
       </div>
       <div id="temperatureOverlayLegend" class="temperature-overlay-legend hidden">
-        <i class="temperature-overlay-dot">°</i>
-        <span id="temperatureOverlayLegendText">Pallini: temperatura media annua</span>
+        <i id="temperatureOverlayLegendIcon" class="temperature-overlay-dot">🌡</i>
+        <span id="temperatureOverlayLegendText">Temperatura · MIN / MEDIA / MAX</span>
       </div>
     </section>
 
@@ -177,7 +185,7 @@
 
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
     <footer class="app-footer">
-      v<span id="appVersion">0.3.4</span> · dataset <span id="dataVersion">9</span>
+      v<span id="appVersion">0.3.5</span> · dataset <span id="dataVersion">9</span>
     </footer>
   </main>
 
@@ -185,10 +193,11 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="js/openaq-proxy.js?v=0.2.11" defer></script>
   <script src="js/eea-proxy.js?v=0.2.14" defer></script>
-  <script src="js/temperature-proxy.js?v=0.3.4" defer></script>
-  <script src="js/app.js?v=0.3.4" defer></script>
+  <script src="js/temperature-proxy.js?v=0.3.5" defer></script>
+  <script src="js/app.js?v=0.3.5" defer></script>
   <script src="js/eea-utd.js?v=0.2.14" defer></script>
-  <script src="js/openaq-world.js?v=0.3.4" defer></script>
+  <script src="js/openaq-world.js?v=0.3.5" defer></script>
+  <script src="js/temperature-overlay.js?v=0.3.5" defer></script>
   <script src="js/station-list.js?v=0.2.11" defer></script>
 </body>
 </html>

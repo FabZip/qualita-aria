@@ -121,64 +121,82 @@ La heatmap serve esclusivamente a facilitare la lettura spaziale dei punti e non
 CO₂ non è incluso: è un gas serra e richiede fonti dedicate diverse dai dataset di qualità dell'aria usati nell'app. CO e CO₂ sono sostanze differenti.
 
 
-## Temperatura · ERA5-Land
+## Temperatura · fonti indipendenti
 
-La serie `0.3.x` integra la **temperatura dell'aria a 2 metri** usando
-Copernicus ERA5-Land tramite Open-Meteo.
+Il selettore `Fonte inquinante` continua a scegliere esclusivamente il backend
+della qualità dell'aria. La temperatura viene caricata separatamente.
 
-### Temperatura sovrapposta agli inquinanti
+| Fonte inquinante | Visualizzazione inquinante | Fonte temperatura nelle viste inquinante |
+| --- | --- | --- |
+| ARPA Lazio | visualizzazione ARPA esistente | rete micro-meteorologica fisica ARPA Lazio |
+| EEA | visualizzazione EEA esistente | ARPA Lazio nel Lazio, poi stazioni fisiche NOAA/NCEI GHCN-Daily |
+| Globale · OpenAQ | visualizzazione OpenAQ esistente | celle Copernicus ERA5-Land |
 
-Nelle fonti EEA, ARPA Lazio e OpenAQ la superficie della mappa continua a
-rappresentare l'inquinante selezionato. I pallini numerici non rappresentano
-più la concentrazione: mostrano la **temperatura media annua**.
+Il recupero degli inquinanti resta separato dal recupero delle temperature:
+`fetchEeaRows`, `fetchArpaRows` e il client OpenAQ non vengono usati per
+calcolare o localizzare la temperatura.
 
-Cliccando un pallino vengono mostrati:
+### ARPA Lazio
 
-- **MIN** — temperatura minima assoluta dell'anno;
-- **MED** — temperatura media annua;
-- **MAX** — temperatura massima assoluta dell'anno.
+Nelle viste ARPA la temperatura usa esclusivamente la rete micro-meteorologica
+fisica ARPA Lazio.
 
-Per EEA e ARPA la temperatura usa lo stesso anno selezionato per
-l'inquinante. OpenAQ non ha un anno storico selezionabile, quindi il suo
-overlay usa l'**ultimo anno completo** e lo dichiara nell'interfaccia.
+I marker:
 
-Il Worker richiede ERA5-Land direttamente sulle coordinate delle stazioni
-visualizzate, con un massimo di 40 punti per batch. Le coordinate del pallino
-restano quelle della stazione; Open-Meteo associa la coordinata alla cella
-ERA5-Land più vicina.
+- sono `🌡`;
+- hanno dimensione fissa durante lo zoom;
+- sono collocati alle coordinate pubblicate della stazione;
+- mostrano nell'ordine `MIN · MEDIA · MAX`;
+- non generano aree circolari o superfici termiche.
 
-Il valore dell'inquinante rimane disponibile nella sfumatura della mappa e
-nell'elenco delle stazioni/valutazioni sotto la mappa.
+Il Worker legge i file annuali pubblicati da ARPA Lazio e usa soltanto serie
+con almeno il 75% dei giorni validi.
 
-### Fonte dedicata Temperatura
+### EEA
 
-La fonte `Temperatura · ERA5-Land` usa lo stesso linguaggio grafico delle
-fonti inquinanti:
+La temperatura non proviene dal dataset EEA.
 
-- superficie termica sfumata;
-- pallini numerici con la **MED annua**;
-- click sul pallino per MIN / MED / MAX;
-- anno selezionabile.
+Nel Lazio viene data priorità alla rete micro-meteorologica ARPA Lazio. Negli
+altri territori vengono cercate stazioni meteorologiche fisiche nel dataset
+osservazionale NOAA/NCEI GHCN-Daily.
 
-Non viene mostrata una griglia a scacchiera. I punti sottostanti derivano
-comunque dalla griglia ERA5-Land a `0,1°` (circa 9–11 km); la superficie
-sfumata è una rappresentazione visuale e non aumenta la risoluzione reale
-del modello.
+SCIA/ISPRA resta una priorità per l'Italia, ma questa release non effettua
+richieste automatiche verso SCIA perché non è stato integrato un endpoint
+machine-to-machine con condizioni di riuso adatte alla PWA. Non viene
+sostituito con ERA5-Land: se non ci sono stazioni fisiche con dati annuali
+sufficienti, l'overlay può risultare vuoto.
 
-### Fonte e calcolo
+### Globale · OpenAQ
 
-Il Worker usa le aggregazioni giornaliere Open-Meteo:
+La visualizzazione dell'inquinante OpenAQ resta invariata.
 
-- `temperature_2m_mean`
-- `temperature_2m_min`
-- `temperature_2m_max`
+La temperatura usa ERA5-Land. Nelle viste dedicate agli inquinanti non viene
+aggiunta una seconda heatmap: ERA5-Land compare soltanto tramite marker `▦`
+associati alle celle climatiche.
 
-MED è la media delle medie giornaliere dell'anno; MIN è il minimo delle
-minime giornaliere; MAX è il massimo delle massime giornaliere.
+Il popup dichiara esplicitamente:
 
-Le richieste storiche vengono conservate nella Cache API Cloudflare per
-30 giorni. Se il Worker non è disponibile, il client mantiene il fallback
-diretto a Open-Meteo.
+- `Cella ERA5-Land`;
+- `Tipo: Rielaborazione climatica`;
+- risoluzione circa 9 km;
+- fonte temperatura Copernicus ERA5-Land.
+
+Il confronto OpenAQ resta disabilitato perché gli ultimi dati hanno timestamp
+eterogenei; la logica dell'inquinante non viene modificata.
+
+### Modalità Temperatura
+
+`Temperatura` è una modalità indipendente accanto a `Mappa`, `Confronto` e
+`Differenza`: non è più una voce del selettore delle fonti inquinanti.
+
+La modalità usa ERA5-Land e permette di scegliere quale statistica colora la
+mappa:
+
+- **MIN** — media annuale delle temperature minime giornaliere;
+- **MEDIA** — media annuale delle temperature medie giornaliere;
+- **MAX** — media annuale delle temperature massime giornaliere.
+
+Cliccando una cella vengono mostrati tutti e tre i valori.
 
 ## PWA
 

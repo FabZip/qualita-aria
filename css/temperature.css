@@ -62,3 +62,45 @@
   font-size:.68rem;
   box-shadow:0 1px 5px rgba(0,0,0,.24)
 }
+
+.qa-temperature-marker{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  height:26px;
+  padding:2px 6px 2px 4px;
+  border:1.5px solid rgba(255,255,255,.95);
+  border-radius:7px;
+  background:rgba(8,18,31,.92);
+  color:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.34);
+  font:700 10px/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  white-space:nowrap;
+  cursor:pointer;
+  user-select:none
+}
+.qa-temperature-marker:hover{
+  transform:translateY(-1px)
+}
+.qa-temperature-marker__icon{
+  display:grid;
+  place-items:center;
+  flex:0 0 18px;
+  width:18px;
+  height:18px;
+  font-size:15px;
+  line-height:1
+}
+.qa-temperature-marker__values{
+  letter-spacing:-.1px
+}
+.qa-temperature-marker--era-cell{
+  border-radius:4px;
+  background:rgba(21,30,43,.94)
+}
+.qa-temperature-marker--era-cell .qa-temperature-marker__icon{
+  font-size:17px
+}
+.temperature-overlay-dot--cell{
+  border-radius:4px
+}

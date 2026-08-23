@@ -2,6 +2,71 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.3.5] - 2026-08-23
+
+### Separazione fonti inquinante / temperatura
+
+- Il selettore `Fonte inquinante` contiene soltanto EEA, ARPA Lazio e Globale · OpenAQ.
+- `Temperatura` è diventata una modalità separata.
+- I dati temperatura non vengono cercati nei dataset degli inquinanti.
+- Ripristinati i layer e i valori degli inquinanti che la 0.3.4 aveva nascosto per sostituirli con i pallini temperatura.
+- Le funzioni di recupero/calcolo EEA, ARPA Lazio e OpenAQ non sono state modificate per produrre dati temperatura.
+- L'orchestrazione della mappa emette un contesto verso un nuovo renderer temperatura indipendente.
+
+### ARPA Lazio · temperatura misurata
+
+- Fonte temperatura esclusivamente dalla rete micro-meteorologica fisica ARPA Lazio.
+- Inserite le nove coordinate pubblicate delle postazioni AL001–AL009.
+- Il Worker legge i CSV annuali ufficiali ARPA Lazio 2013–2025.
+- MIN, MEDIA e MAX sono le medie annuali rispettivamente delle minime, medie e massime giornaliere.
+- Sono accettate soltanto serie con copertura di almeno il 75% dei giorni.
+- Marker `🌡` fisso alle coordinate reali della stazione.
+- Nessuna cella ERA5-Land e nessuna heatmap temperatura nelle viste ARPA.
+
+### EEA · temperatura misurata
+
+- La temperatura non viene ricavata da EEA.
+- Nel Lazio viene data priorità alle stazioni ARPA Lazio.
+- Fuori dalla copertura ARPA vengono cercate stazioni fisiche NOAA/NCEI GHCN-Daily con TMIN/TAVG/TMAX e copertura annuale sufficiente.
+- Marker `🌡`, coordinate della stazione e popup `Tipo: Misurato`.
+- Nessun fallback ERA5-Land nel ramo EEA.
+- SCIA/ISPRA resta priorità architetturale per una successiva integrazione italiana, ma non viene interrogata automaticamente in questa release.
+
+### Globale · OpenAQ
+
+- Il recupero e la superficie dell'inquinante OpenAQ restano invariati.
+- La temperatura usa ERA5-Land.
+- Nelle viste inquinante ERA5-Land viene mostrato soltanto tramite marker `▦`, non tramite una seconda heatmap.
+- Popup `Cella ERA5-Land`, `Tipo: Rielaborazione climatica`, risoluzione circa 9 km.
+- Il confronto OpenAQ resta disabilitato: non viene modificata la regola esistente sugli ultimi dati con timestamp eterogenei.
+
+### Modalità Temperatura
+
+- Aggiunta tab `Temperatura`.
+- Rimosso `Temperatura · ERA5-Land` dal selettore delle fonti inquinanti.
+- Reintrodotta la scelta MIN / MEDIA / MAX come valore che colora la superficie ERA5-Land.
+- MIN e MAX non sono estremi assoluti: sono le medie annuali delle minime e massime giornaliere.
+- Click sulla cella mostra MIN, MEDIA e MAX.
+
+### Marker
+
+- Nuovo renderer `js/temperature-overlay.js`.
+- Marker HTML a dimensione fissa durante lo zoom.
+- `🌡` per stazioni fisiche; `▦` per celle ERA5-Land.
+- Ordine valori sempre MIN / MEDIA / MAX.
+- Nessun cerchio geografico di copertura, nessuna coordinata inventata e nessun ricentramento sul centro città.
+
+### Worker
+
+- `qualita-aria-temperature` aggiornato alla versione `0.4.0`.
+- Nuovo endpoint `/v1/observed`.
+- Backend osservazionali: ARPA Lazio e NOAA/NCEI GHCN-Daily.
+- ERA5-Land resta confinato alla fonte globale e alla modalità Temperatura.
+
+### Versioning
+
+- Aggiornata l'app a `0.3.5` build `38`.
+
 ## [0.3.4] - 2026-08-23
 
 ### Temperatura sovrapposta agli inquinanti

@@ -115,20 +115,31 @@
 
   function setModeLock(locked){
     document.querySelectorAll('.tab').forEach(button=>{
-      const isMap=button.dataset.mode==='map';
-      button.disabled=locked&&!isMap;
-      button.setAttribute('aria-disabled',String(locked&&!isMap));
-      if(locked&&!isMap){
-        button.title='Il confronto OpenAQ sarà basato su periodi storici omogenei; la vista “ultimo dato” non è confrontabile direttamente.'
+      const lockable=['compare','difference'].includes(button.dataset.mode);
+      button.disabled=locked&&lockable;
+      button.setAttribute(
+        'aria-disabled',
+        String(locked&&lockable)
+      );
+
+      if(locked&&lockable){
+        button.title='Il confronto OpenAQ resta disabilitato perché gli ultimi dati hanno timestamp eterogenei.'
       }else{
         button.removeAttribute('title')
       }
     });
 
-    if(locked&&state.mode!=='map'){
+    if(
+      locked&&
+      ['compare','difference'].includes(state.mode)
+    ){
       state.mode='map';
+
       document.querySelectorAll('.tab').forEach(button=>{
-        button.classList.toggle('active',button.dataset.mode==='map')
+        button.classList.toggle(
+          'active',
+          button.dataset.mode==='map'
+        )
       })
     }
   }
@@ -265,7 +276,7 @@
   }
 
   fillYears=function(){
-    if(!isOpenAQ())return baseFillYears();
+    if(!isOpenAQ()||isTemperature())return baseFillYears();
 
     for(const id of ['yearSelect','compareYearA','compareYearB']){
       const select=$(id);
@@ -276,14 +287,14 @@
   };
 
   configureSourceUI=function(){
-    if(!isOpenAQ()){
+    if(!isOpenAQ()||isTemperature()){
       setModeLock(false);
       setOpenAqPollutantAvailability(false);
       applyOpenAqMapConstraints(false);
       if($('yearFieldLabel'))$('yearFieldLabel').textContent='Anno';
 
       const result=baseConfigureSourceUI();
-      if(source()!=='temperature')hideUnavailableMonthlyControl();
+      if(!isTemperature())hideUnavailableMonthlyControl();
       return result
     }
 
@@ -451,7 +462,7 @@
     $('avgLabel').textContent='Media ultimi dati';
     $('periodValue').textContent=`≤ ${maxAgeDays()}gg`;
     $('sourceValue').textContent='OpenAQ · area visibile';
-    $('mapHint').textContent=`${SOURCE_INFO.openaq.hint} Sono accettati dati fino a ${maxAgeDays()} giorni fa. Pallini: temperatura media dell’ultimo anno completo; click per MIN / MED / MAX.`;
+    $('mapHint').textContent=`${SOURCE_INFO.openaq.hint} Sono accettati dati fino a ${maxAgeDays()} giorni fa.`;
     state.openaqLastViewportKey=viewportKey()
   };
 

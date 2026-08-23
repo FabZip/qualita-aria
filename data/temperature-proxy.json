@@ -1,5 +1,5 @@
 {
   "enabled": true,
   "base_url": "https://qualita-aria-temperature.fabzip.workers.dev",
-  "note": "ERA5-Land via Open-Meteo: temperatura media annua sulla mappa; MIN/MED/MAX nei popup e overlay puntuale sulle fonti inquinanti."
+  "note": "Temperatura indipendente: ARPA Lazio fisica per ARPA; ARPA/NCEI fisiche per EEA; ERA5-Land per Globale e modalità Temperatura."
 }
