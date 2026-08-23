@@ -2,6 +2,24 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.3.1] - 2026-08-23
+
+### Correzioni mappa
+
+- Corretta un'espressione MapLibre non valida nel layer `air-points`: `zoom` era annidato dentro `case`, mentre MapLibre lo consente solo come input diretto di `interpolate` o `step`.
+- Corretta la stessa struttura nei layer `air-labels`, `diff-points` e `diff-labels`.
+- Il caricamento della mappa non si interrompe più durante `addAirLayers()`, permettendo l'inizializzazione dei layer temperatura.
+
+### Correzioni temperatura
+
+- Inizializzate correttamente `temperatureCache` e `temperatureInflight` nello stato applicativo.
+- Gli errori del modulo temperatura aggiornano ora la diagnostica corrente invece di lasciare visibile l'ultima diagnostica EEA.
+- In caso di errore temperatura vengono nascosti i layer temperatura e mostrato uno stato vuoto coerente.
+
+### Versioning
+
+- Aggiornata l'app a `0.3.1` build `34`.
+
 ## [0.3.0] - 2026-08-23
 
 ### Temperatura

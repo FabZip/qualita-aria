@@ -5,6 +5,8 @@ const state={
   toastTimer:null,renderToken:0,
   eeaCache:new Map(),arpaCache:new Map(),
   eeaCities:new Map(),
+  temperatureCache:new Map(),
+  temperatureInflight:new Map(),
   eeaValidatedInflight:new Map(),
   eeaViewportBbox:null,
   mapRefreshTimer:null,
@@ -232,7 +234,7 @@ async function loadEeaCities(){
   let cities=fallback;
 
   try{
-    const response=await fetch('data/italian-capitals.json?v=0.3.0',{cache:'no-store'});
+    const response=await fetch('data/italian-capitals.json?v=0.3.1',{cache:'no-store'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
     const payload=await response.json();
     if(Array.isArray(payload?.cities)&&payload.cities.length){
@@ -1745,9 +1747,12 @@ function addAirLayers(map,prefix='air'){
   map.addLayer({
     id:`${prefix}-points`,type:'circle',source:`${prefix}-source`,
     paint:{
-      'circle-radius':['case',
-        ['==',['get','kind'],'municipal'],13,
-        ['interpolate',['linear'],['zoom'],3,2.5,5,4,8,8,10,11,13,14]
+      'circle-radius':['interpolate',['linear'],['zoom'],
+        3,['case',['==',['get','kind'],'municipal'],13,2.5],
+        5,['case',['==',['get','kind'],'municipal'],13,4],
+        8,['case',['==',['get','kind'],'municipal'],13,8],
+        10,['case',['==',['get','kind'],'municipal'],13,11],
+        13,['case',['==',['get','kind'],'municipal'],13,14]
       ],
       'circle-color':['step',['get','value'],'#35d07f',10,'#e6cf43',20,'#ff914d',30,'#ff5864'],
       'circle-stroke-width':2,
@@ -1761,9 +1766,10 @@ function addAirLayers(map,prefix='air'){
     minzoom:6,
     layout:{
       'text-field':['get','label'],
-      'text-size':['case',
-        ['==',['get','kind'],'municipal'],11,
-        ['interpolate',['linear'],['zoom'],8,8,10,9,13,11]
+      'text-size':['interpolate',['linear'],['zoom'],
+        8,['case',['==',['get','kind'],'municipal'],11,8],
+        10,['case',['==',['get','kind'],'municipal'],11,9],
+        13,['case',['==',['get','kind'],'municipal'],11,11]
       ],
       'text-allow-overlap':true,
       'text-ignore-placement':true
@@ -2037,8 +2043,10 @@ function addDifferenceLayers(map){
   map.addLayer({
     id:'diff-points',type:'circle',source:'diff-source',
     paint:{
-      'circle-radius':['case',['==',['get','kind'],'municipal'],13,
-        ['interpolate',['linear'],['zoom'],8,8,10,11,13,14]],
+      'circle-radius':['interpolate',['linear'],['zoom'],
+        8,['case',['==',['get','kind'],'municipal'],13,8],
+        10,['case',['==',['get','kind'],'municipal'],13,11],
+        13,['case',['==',['get','kind'],'municipal'],13,14]],
       'circle-color':['case',['<=',['get','delta'],0],'#21b866','#ef4f4f'],
       'circle-stroke-width':2,'circle-stroke-color':'#fff'
     }
@@ -2048,8 +2056,10 @@ function addDifferenceLayers(map){
     id:'diff-labels',type:'symbol',source:'diff-source',
     layout:{
       'text-field':['get','label'],
-      'text-size':['case',['==',['get','kind'],'municipal'],10,
-        ['interpolate',['linear'],['zoom'],8,7,10,9,13,10]],
+      'text-size':['interpolate',['linear'],['zoom'],
+        8,['case',['==',['get','kind'],'municipal'],10,7],
+        10,['case',['==',['get','kind'],'municipal'],10,9],
+        13,['case',['==',['get','kind'],'municipal'],10,10]],
       'text-allow-overlap':true,'text-ignore-placement':true
     },
     paint:{
@@ -2701,8 +2711,28 @@ async function render(){
     console.error(err);
     if(token!==state.renderToken)return;
 
-    showAirOnSingle([]);
-    renderList([]);
+    diagnostics({
+      source:isTemperature()
+        ?'Temperatura · ERA5-Land / Open-Meteo'
+        :SOURCE_INFO[source()]?.name||source(),
+      mode:state.mode,
+      year:$('yearSelect')?.value||null,
+      month:isTemperature()?temperatureMonth():null,
+      metric:isTemperature()?temperatureMetric():null,
+      error:String(err.message||err),
+      errorCode:String(err.code||''),
+      status:Number.isFinite(Number(err.status))?Number(err.status):null,
+      payload:err.payload||null
+    });
+
+    if(isTemperature()){
+      setTemperatureVisibility(false);
+      renderTemperatureList([]);
+    }else{
+      showAirOnSingle([]);
+      renderList([]);
+    }
+
     $('stationCount').textContent='—';
     $('avgValue').textContent='—';
     $('dataNotice').textContent='Dati non disponibili';
@@ -2876,8 +2906,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.3.0',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.3.0',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.3.1',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.3.1',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -2892,7 +2922,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.3.0')
+    navigator.serviceWorker.register('./service-worker.js?v=0.3.1')
       .then(reg=>reg.update())
       .catch(console.error)
   }

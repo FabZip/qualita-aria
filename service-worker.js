@@ -1,10 +1,10 @@
-const CACHE='qualita-aria-v0.3.0';
+const CACHE='qualita-aria-v0.3.1';
 const CORE=[
   './','./index.html',
-  './css/app.css?v=0.2.0','./js/app.js?v=0.3.0','./js/eea-utd.js?v=0.2.14',
+  './css/app.css?v=0.2.0','./js/app.js?v=0.3.1','./js/eea-utd.js?v=0.2.14',
   './css/station-list.css?v=0.2.2','./css/openaq-world.css?v=0.2.4','./js/station-list.js?v=0.2.11',
-  './js/openaq-proxy.js?v=0.2.11','./js/eea-proxy.js?v=0.2.14','./data/eea-proxy.json?v=0.2.14','./js/temperature-proxy.js?v=0.3.0','./data/temperature-proxy.json?v=0.3.0','./css/temperature.css?v=0.3.0','./js/openaq-world.js?v=0.3.0',
-  './manifest.json?v=0.2.0','./version.json?v=0.3.0','./data/version.json?v=0.3.0','./data/italian-capitals.json?v=0.3.0',
+  './js/openaq-proxy.js?v=0.2.11','./js/eea-proxy.js?v=0.2.14','./data/eea-proxy.json?v=0.2.14','./js/temperature-proxy.js?v=0.3.1','./data/temperature-proxy.json?v=0.3.1','./css/temperature.css?v=0.3.1','./js/openaq-world.js?v=0.3.1',
+  './manifest.json?v=0.2.0','./version.json?v=0.3.1','./data/version.json?v=0.3.1','./data/italian-capitals.json?v=0.3.1',
   './assets/icons/icon.svg','./assets/icons/icon-192.png','./assets/icons/icon-512.png'
 ];
 

@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const CONFIG_URL='data/temperature-proxy.json?v=0.3.0';
+  const CONFIG_URL='data/temperature-proxy.json?v=0.3.1';
   let configPromise=null;
 
   function normalizeBaseUrl(value){
