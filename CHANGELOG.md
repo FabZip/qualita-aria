@@ -2,6 +2,28 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.3.3] - 2026-08-23
+
+### Temperatura · mappa
+
+- Sostituita la visualizzazione a quadrati delle celle ERA5-Land con una superficie termica sfumata.
+- I dati non vengono interpolati numericamente: i valori reali restano quelli dei centri cella; la sfumatura riguarda soltanto la resa grafica.
+- A zoom elevato vengono mostrati piccoli centri cella e le etichette, così resta visibile la posizione del dato effettivo.
+- Popup temperatura aggiornato con MED, MIN e MAX annuali.
+
+### Temperatura · pan e zoom
+
+- Aggiunto `temperatureViewportKey` indipendente dalla chiave generica usata dalle altre fonti.
+- Dopo `moveend` l'app attende 2 secondi e confronta la nuova bounding box ERA5-Land con l'ultima realmente renderizzata.
+- Se la zona è cambiata viene eseguito un nuovo caricamento e sostituita la superficie termica.
+- Corretto l'uso globale di `openaqSuppressMove`: ora può sopprimere refresh soltanto quando la fonte attiva è OpenAQ.
+- La diagnostica mostra `phase: viewport-changed`, bbox precedente/nuova e debounce quando lo spostamento attiva un refresh.
+- In caso di errore durante il refresh la chiave viene ripristinata, permettendo di ritentare la stessa area.
+
+### Versioning
+
+- Aggiornata l'app a `0.3.3` build `36`.
+
 ## [0.3.2] - 2026-08-23
 
 ### Temperatura · periodo annuale

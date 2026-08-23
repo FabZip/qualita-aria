@@ -143,8 +143,15 @@ Il Worker usa le aggregazioni giornaliere Open-Meteo `temperature_2m_mean`,
 `temperature_2m_min` e `temperature_2m_max`. Cambiare tra MED, MIN e MAX non
 richiede un nuovo download perché le tre statistiche sono nello stesso payload.
 
-Dopo pan/zoom il modulo aggiorna la zona visibile con il debounce condiviso di
-2 secondi.
+Dopo pan/zoom il modulo aggiorna la zona visibile con un debounce di **2 secondi**.
+La temperatura usa una chiave di viewport dedicata: quando cambia la bounding box
+ERA5-Land viene richiesta la nuova zona, indipendentemente dallo stato usato da
+EEA o OpenAQ.
+
+La griglia ERA5-Land non viene più disegnata come una scacchiera di quadrati.
+I centri delle celle restano i punti dati effettivi, mentre la mappa mostra una
+**superficie termica sfumata**. La sfumatura è soltanto una resa visuale: lista,
+popup e KPI continuano a usare i valori reali delle celle del modello.
 
 ### Interpretazione
 

@@ -33,3 +33,9 @@
   opacity:.45;
   cursor:not-allowed
 }
+
+.temperature-surface-note{
+  color:var(--muted);
+  font-size:.62rem;
+  line-height:1.4
+}

@@ -7,6 +7,7 @@ const state={
   eeaCities:new Map(),
   temperatureCache:new Map(),
   temperatureInflight:new Map(),
+  temperatureViewportKey:'',
   eeaValidatedInflight:new Map(),
   eeaViewportBbox:null,
   mapRefreshTimer:null,
@@ -102,7 +103,7 @@ const SOURCE_INFO={
   temperature:{
     name:'ERA5-Land · Open-Meteo',
     years:TEMPERATURE_YEARS,
-    description:'<strong>Temperatura:</strong> temperatura dell’aria a 2 metri del modello Copernicus ERA5-Land, letta tramite <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>. Seleziona l’anno e visualizza MED, MIN o MAX annuale.',
+    description:'<strong>Temperatura:</strong> temperatura dell’aria a 2 metri del modello Copernicus ERA5-Land, letta tramite <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>. Seleziona l’anno e visualizza MED, MIN o MAX annuale. La mappa usa una superficie sfumata tra i centri delle celle del modello.',
     hint:'ERA5-Land ha griglia 0,1° (circa 9–11 km). MED è la media annua; MIN e MAX sono gli estremi dell’anno. Il dato è adatto a confronti climatici e territoriali, non alla singola strada o edificio.'
   }
 };
@@ -229,7 +230,7 @@ async function loadEeaCities(){
   let cities=fallback;
 
   try{
-    const response=await fetch('data/italian-capitals.json?v=0.3.2',{cache:'no-store'});
+    const response=await fetch('data/italian-capitals.json?v=0.3.3',{cache:'no-store'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
     const payload=await response.json();
     if(Array.isArray(payload?.cities)&&payload.cities.length){
@@ -1484,11 +1485,11 @@ function temperatureMetric(){
   return $('temperatureMetricSelect')?.value||'mean'
 }
 
-function temperatureVisibleBbox(){
-  const bbox=visibleMapBbox(state.map);
+function temperatureVisibleBbox(map=state.map){
+  const bbox=visibleMapBbox(map);
   if(!bbox)return[12.15,41.65,12.85,42.15];
 
-  // Aggancia a decimi di grado: piccole variazioni della camera riusano la cache.
+  // Aggancia a decimi di grado: piccoli movimenti riusano la stessa richiesta.
   const[minLon,minLat,maxLon,maxLat]=bbox;
   return[
     Math.floor(minLon*10)/10,
@@ -1500,6 +1501,13 @@ function temperatureVisibleBbox(){
 
 function temperatureCacheKey(year,bbox){
   return`${year}:${bbox.join(',')}`
+}
+
+function temperatureViewportKey(map=state.map){
+  if(!map)return'';
+  const bbox=temperatureVisibleBbox(map);
+  const year=$('yearSelect')?.value||'';
+  return`temperature:${year}:${bbox.join(',')}`
 }
 
 async function fetchTemperatureRows(year){
@@ -1573,6 +1581,7 @@ async function fetchTemperatureRows(year){
       unit:'°C',
       year:Number(year),
       boundingBox:bbox,
+      viewportKey:temperatureViewportKey(state.map),
       nativeResolutionDegrees:meta.nativeResolutionDegrees??0.1,
       nativeResolutionApproxKm:meta.nativeResolutionApproxKm||'9–11',
       sampleStepDegrees:meta.sampleStepDegrees??null,
@@ -1798,43 +1807,37 @@ function temperatureColor(value){
 }
 
 function temperatureGeoJSON(rows){
-  const half=.05;
-
   return{
     type:'FeatureCollection',
-    features:rows.map(row=>{
-      const value=temperatureValue(row);
-      const lon=Number(row.lon);
-      const lat=Number(row.lat);
-
-      return{
-        type:'Feature',
-        properties:{
-          id:row.id,
-          name:row.name,
-          value,
-          mean:row.mean,
-          min:row.min,
-          max:row.max,
-          observations:row.observations,
-          elevation:row.elevation??'',
-          label:fmt(value)
-        },
-        geometry:{
-          type:'Polygon',
-          coordinates:[[
-            [lon-half,lat-half],
-            [lon+half,lat-half],
-            [lon+half,lat+half],
-            [lon-half,lat+half],
-            [lon-half,lat-half]
-          ]]
-        }
+    features:rows.map(row=>({
+      type:'Feature',
+      properties:{
+        id:row.id,
+        name:row.name,
+        value:temperatureValue(row),
+        mean:row.mean,
+        min:row.min,
+        max:row.max,
+        observations:row.observations,
+        elevation:row.elevation??'',
+        label:fmt(temperatureValue(row))
+      },
+      geometry:{
+        type:'Point',
+        coordinates:[Number(row.lon),Number(row.lat)]
       }
-    })
+    }))
   }
 }
 
+/*
+ * ERA5-Land è una griglia. La 0.3.0–0.3.2 disegnava ogni cella come quadrato,
+ * rendendo molto evidente la tassellatura. Qui i centri cella restano i dati
+ * effettivi, ma la visualizzazione usa cerchi sovrapposti e sfumati.
+ *
+ * È una interpolazione esclusivamente VISIVA: popup, lista e KPI continuano
+ * a usare i valori delle celle restituite dal modello.
+ */
 function addTemperatureLayers(map){
   if(!map||map.getSource('temperature-source'))return;
 
@@ -1844,12 +1847,20 @@ function addTemperatureLayers(map){
   });
 
   map.addLayer({
-    id:'temperature-fill',
-    type:'fill',
+    id:'temperature-surface',
+    type:'circle',
     source:'temperature-source',
     layout:{visibility:'none'},
     paint:{
-      'fill-color':[
+      'circle-radius':['interpolate',['linear'],['zoom'],
+        8,28,
+        9,42,
+        10,66,
+        11,108,
+        12,185,
+        13,320
+      ],
+      'circle-color':[
         'interpolate',['linear'],['get','value'],
         -5,'#3455d1',
         5,'#42b5db',
@@ -1858,18 +1869,36 @@ function addTemperatureLayers(map){
         35,'#f08b45',
         45,'#df4a49'
       ],
-      'fill-opacity':.68
+      'circle-opacity':.68,
+      'circle-blur':.62,
+      'circle-pitch-alignment':'map'
     }
   });
 
+  /*
+   * Piccolo centro cella: diventa visibile solo a zoom elevato e rende
+   * evidente dove si trova il dato reale rispetto alla sfumatura.
+   */
   map.addLayer({
-    id:'temperature-line',
-    type:'line',
+    id:'temperature-centers',
+    type:'circle',
     source:'temperature-source',
+    minzoom:10.5,
     layout:{visibility:'none'},
     paint:{
-      'line-color':'rgba(255,255,255,.72)',
-      'line-width':['interpolate',['linear'],['zoom'],5,.35,10,.8,13,1.2]
+      'circle-radius':['interpolate',['linear'],['zoom'],10.5,2.5,13,4],
+      'circle-color':[
+        'interpolate',['linear'],['get','value'],
+        -5,'#3455d1',
+        5,'#42b5db',
+        15,'#5fd19b',
+        25,'#f0c94c',
+        35,'#f08b45',
+        45,'#df4a49'
+      ],
+      'circle-stroke-color':'rgba(255,255,255,.85)',
+      'circle-stroke-width':1,
+      'circle-opacity':.9
     }
   });
 
@@ -1877,12 +1906,13 @@ function addTemperatureLayers(map){
     id:'temperature-label',
     type:'symbol',
     source:'temperature-source',
-    minzoom:7,
+    minzoom:10.5,
     layout:{
       visibility:'none',
       'text-field':['concat',['get','label'],'°'],
       'text-font':['Noto Sans Regular'],
-      'text-size':['interpolate',['linear'],['zoom'],7,8,10,10,13,12],
+      'text-size':['interpolate',['linear'],['zoom'],10.5,8,12,10,13,11],
+      'text-offset':[0,1.15],
       'text-allow-overlap':false
     },
     paint:{
@@ -1892,32 +1922,37 @@ function addTemperatureLayers(map){
     }
   });
 
-  map.on('click','temperature-fill',event=>{
+  const openTemperaturePopup=event=>{
     const feature=event.features?.[0];
     if(!feature)return;
     const p=feature.properties||{};
-    const center=feature.geometry?.coordinates?.[0]?.reduce(
-      (acc,point)=>[acc[0]+point[0],acc[1]+point[1]],
-      [0,0]
-    );
-    const coordinates=center
-      ?[center[0]/5,center[1]/5]
-      :event.lngLat.toArray();
 
     new maplibregl.Popup({offset:12})
-      .setLngLat(coordinates)
+      .setLngLat(feature.geometry.coordinates)
       .setHTML(
         `<strong>${p.name}</strong>`+
-        `<br>Media ${fmt(p.mean)} °C`+
-        `<br>Minima ${fmt(p.min)} °C · Massima ${fmt(p.max)} °C`+
-        `<br><small>ERA5-Land · aria a 2 m · cella 0,1°</small>`
+        `<br>MED ${fmt(p.mean)} °C`+
+        `<br>MIN ${fmt(p.min)} °C · MAX ${fmt(p.max)} °C`+
+        `<br><small>ERA5-Land · aria a 2 m · centro cella del modello</small>`
       )
       .addTo(map)
-  })
+  };
+
+  map.on('click','temperature-surface',openTemperaturePopup);
+  map.on('click','temperature-centers',openTemperaturePopup);
+
+  for(const id of ['temperature-surface','temperature-centers']){
+    map.on('mouseenter',id,()=>{
+      map.getCanvas().style.cursor='pointer'
+    });
+    map.on('mouseleave',id,()=>{
+      map.getCanvas().style.cursor=''
+    })
+  }
 }
 
 function setTemperatureVisibility(visible){
-  ['temperature-fill','temperature-line','temperature-label'].forEach(id=>{
+  ['temperature-surface','temperature-centers','temperature-label'].forEach(id=>{
     if(state.map?.getLayer(id)){
       state.map.setLayoutProperty(id,'visibility',visible?'visible':'none')
     }
@@ -1949,9 +1984,9 @@ function renderTemperatureList(rows){
   $('stations').innerHTML=rows.map(row=>{
     const value=Number(row[metric]);
     const details=[
-      `Media ${fmt(row.mean)} °C`,
-      `Min ${fmt(row.min)} °C`,
-      `Max ${fmt(row.max)} °C`
+      `MED ${fmt(row.mean)} °C`,
+      `MIN ${fmt(row.min)} °C`,
+      `MAX ${fmt(row.max)} °C`
     ].join(' · ');
 
     return`<div class="temperature-cell-row">
@@ -1964,6 +1999,7 @@ function renderTemperatureList(rows){
     </div>`
   }).join('')
 }
+
 
 function addDifferenceLayers(map){
   if(map.getSource('diff-source'))return;
@@ -2489,11 +2525,65 @@ function activeViewportMap(){
 function rememberViewportBaseline(){
   const map=activeViewportMap();
   if(!map)return;
-  state.lastMapViewportKey=viewportRefreshKey(map)
+
+  state.lastMapViewportKey=viewportRefreshKey(map);
+
+  if(isTemperature()){
+    state.temperatureViewportKey=temperatureViewportKey(map)
+  }
+}
+
+function mapRefreshSuppressed(){
+  if(state.mapRefreshSuppressCount>0)return true;
+
+  /*
+   * openaqSuppressMove è specifico di OpenAQ: non deve bloccare EEA,
+   * ARPA o temperatura.
+   */
+  return source()==='openaq'&&Boolean(state.openaqSuppressMove)
 }
 
 async function refreshForVisibleMap(map){
-  if(!map||state.mapRefreshSuppressCount>0||state.openaqSuppressMove)return;
+  if(!map||mapRefreshSuppressed())return;
+
+  /*
+   * La temperatura usa una chiave indipendente dalla cache generica.
+   * In questo modo un pan/zoom non può essere ignorato a causa di stato
+   * lasciato da EEA/OpenAQ.
+   */
+  if(isTemperature()){
+    const key=temperatureViewportKey(map);
+    if(!key||key===state.temperatureViewportKey)return;
+
+    const previous=state.temperatureViewportKey;
+    state.temperatureViewportKey=key;
+
+    diagnostics({
+      source:'Temperatura · ERA5-Land / Open-Meteo',
+      phase:'viewport-changed',
+      previousViewportKey:previous||null,
+      viewportKey:key,
+      year:$('yearSelect')?.value||null,
+      metric:temperatureMetric(),
+      boundingBox:temperatureVisibleBbox(map),
+      debounceMs:MAP_REFRESH_DELAY_MS
+    });
+
+    state.viewportRefreshDepth++;
+    try{
+      await render()
+    }catch(err){
+      /*
+       * Se il refresh fallisce, permetti un nuovo tentativo sulla stessa
+       * viewport al prossimo moveend.
+       */
+      state.temperatureViewportKey=previous;
+      throw err
+    }finally{
+      state.viewportRefreshDepth=Math.max(0,state.viewportRefreshDepth-1)
+    }
+    return
+  }
 
   const key=viewportRefreshKey(map);
   if(!key||key===state.lastMapViewportKey)return;
@@ -2515,7 +2605,7 @@ async function refreshForVisibleMap(map){
 }
 
 function scheduleMapRefresh(map){
-  if(!map||state.mapRefreshSuppressCount>0||state.openaqSuppressMove)return;
+  if(!map||mapRefreshSuppressed())return;
 
   clearScheduledMapRefresh();
   state.mapRefreshTimer=setTimeout(()=>{
@@ -2532,7 +2622,7 @@ function bindMapRefresh(map){
   map.__qaViewportRefreshBound=true;
 
   map.on('movestart',()=>{
-    if(state.mapRefreshSuppressCount>0||state.openaqSuppressMove)return;
+    if(mapRefreshSuppressed())return;
     clearScheduledMapRefresh()
   });
 
@@ -2557,7 +2647,7 @@ function setLoading(on){
 function sourceNotice(rows){
   if(isTemperature()){
     return rows.length
-      ?'Copernicus ERA5-Land · MIN / MED / MAX annuali · aria a 2 m · griglia 0,1°'
+      ?'Copernicus ERA5-Land · MIN / MED / MAX annuali · superficie termica da griglia 0,1°'
       :'ERA5-Land · nessuna cella disponibile';
   }
   if(source()==='arpa')return'ARPA Lazio · Standard comunali';
@@ -2609,7 +2699,8 @@ async function renderTemperatureMode(token){
   $('periodValue').textContent=`${year} · intero anno`;
   $('sourceValue').textContent='ERA5-Land · Open-Meteo';
   $('dataNotice').textContent=sourceNotice(rows);
-  $('mapHint').textContent=SOURCE_INFO.temperature.hint;
+  $('mapHint').textContent=
+    `${SOURCE_INFO.temperature.hint} La superficie colorata è una sfumatura visuale tra i centri delle celle ERA5-Land.`;
 
   rememberViewportBaseline()
 }
@@ -2846,6 +2937,7 @@ function bind(){
 
   $('sourceSelect').addEventListener('change',()=>{
     resetEeaViewport();
+    state.temperatureViewportKey='';
     fillYears();
     configureSourceUI();
     if(source()==='eea')focusSelectedEeaScope();
@@ -2881,8 +2973,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.3.2',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.3.2',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.3.3',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.3.3',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -2897,7 +2989,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.3.2')
+    navigator.serviceWorker.register('./service-worker.js?v=0.3.3')
       .then(reg=>reg.update())
       .catch(console.error)
   }
