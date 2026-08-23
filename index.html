@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/app.css?v=0.2.0">
   <link rel="stylesheet" href="css/station-list.css?v=0.2.2">
   <link rel="stylesheet" href="css/openaq-world.css?v=0.2.4">
+  <link rel="stylesheet" href="css/temperature.css?v=0.3.0">
   <title>Qualità dell'aria</title>
 </head>
 <body>
@@ -31,6 +32,7 @@
           <option value="eea" selected>EEA · stazioni</option>
           <option value="arpa">ARPA Lazio · comune</option>
           <option value="openaq">OpenAQ · area visibile</option>
+          <option value="temperature">Temperatura · ERA5-Land</option>
         </select>
       </label>
 
@@ -48,11 +50,19 @@
         </select>
       </label>
 
-      <label>Inquinante
+      <label id="pollutantField"><span>Inquinante</span>
         <select id="pollutantSelect">
           <option value="PM2.5">PM2.5</option>
           <option value="PM10">PM10</option>
           <option value="NO2">NO₂</option>
+        </select>
+      </label>
+
+      <label id="temperatureMetricField" class="hidden">Metrica
+        <select id="temperatureMetricSelect">
+          <option value="mean" selected>Temperatura media</option>
+          <option value="max">Temperatura massima</option>
+          <option value="min">Temperatura minima</option>
         </select>
       </label>
 
@@ -66,7 +76,7 @@
     </section>
 
     <p id="sourceDescription" class="source-description"></p>
-<p class="co2-note"><strong>CO₂:</strong> non fa parte di questi dataset di qualità dell’aria; è diverso dal CO (monossido di carbonio) e richiede una fonte dedicata ai gas serra.</p>
+<p id="co2Note" class="co2-note"><strong>CO₂:</strong> non fa parte di questi dataset di qualità dell’aria; è diverso dal CO (monossido di carbonio) e richiede una fonte dedicata ai gas serra.</p>
 
     <nav class="mode-tabs" aria-label="Modalità">
       <button class="tab active" data-mode="map" type="button">Mappa</button>
@@ -81,7 +91,7 @@
 
     <section class="legend-bar" aria-label="Legenda qualità dell’aria">
       <div id="standardLegend" class="legend">
-        <span>Bassa</span><i class="air-gradient"></i><span>Alta</span>
+        <span id="legendLow">Bassa</span><i id="standardGradient" class="air-gradient"></i><span id="legendHigh">Alta</span>
       </div>
       <div id="differenceLegend" class="legend hidden">
         <span>Migliora</span><i class="diff-gradient"></i><span>Peggiora</span>
@@ -143,7 +153,7 @@
     <section class="summary">
       <div>
         <span class="kicker" id="avgLabel">Media stazioni</span>
-        <strong id="avgValue">—</strong><small>µg/m³</small>
+        <strong id="avgValue">—</strong><small id="avgUnit">µg/m³</small>
       </div>
       <div>
         <span class="kicker" id="countLabel">Stazioni</span>
@@ -171,7 +181,7 @@
 
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
     <footer class="app-footer">
-      v<span id="appVersion">0.2.14</span> · dataset <span id="dataVersion">9</span>
+      v<span id="appVersion">0.3.0</span> · dataset <span id="dataVersion">9</span>
     </footer>
   </main>
 
@@ -179,9 +189,10 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="js/openaq-proxy.js?v=0.2.11" defer></script>
   <script src="js/eea-proxy.js?v=0.2.14" defer></script>
-  <script src="js/app.js?v=0.2.14" defer></script>
+  <script src="js/temperature-proxy.js?v=0.3.0" defer></script>
+  <script src="js/app.js?v=0.3.0" defer></script>
   <script src="js/eea-utd.js?v=0.2.14" defer></script>
-  <script src="js/openaq-world.js?v=0.2.12" defer></script>
+  <script src="js/openaq-world.js?v=0.3.0" defer></script>
   <script src="js/station-list.js?v=0.2.11" defer></script>
 </body>
 </html>

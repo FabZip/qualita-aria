@@ -120,6 +120,46 @@ La heatmap serve esclusivamente a facilitare la lettura spaziale dei punti e non
 
 CO₂ non è incluso: è un gas serra e richiede fonti dedicate diverse dai dataset di qualità dell'aria usati nell'app. CO e CO₂ sono sostanze differenti.
 
+
+## Temperatura · ERA5-Land
+
+La serie `0.3.x` introduce un modulo separato per la **temperatura dell'aria a 2 metri**.
+
+Fonte:
+
+- Copernicus **ERA5-Land**
+- accesso tramite Open-Meteo Historical Weather API
+- copertura usata dall'app: anni completi dal 1950 all'anno precedente
+- risoluzione nativa: `0,1°`, circa 9–11 km
+- frequenza originale: oraria
+- attribuzione dati: Open-Meteo / Copernicus Climate Change Service, con aggregazioni mensili calcolate dall'app
+
+La vista temperatura usa **anno + mese**. Per ogni cella visualizza tre statistiche calcolate sulle temperature orarie del mese:
+
+- temperatura media;
+- temperatura minima;
+- temperatura massima.
+
+La metrica può essere cambiata senza riscaricare lo stesso mese, perché il Worker restituisce tutte e tre le statistiche nello stesso payload.
+
+Il capoluogo o la posizione iniziale della mappa non rappresentano un confine amministrativo: dopo pan/zoom il modulo ricalcola le celle sulla zona visibile con lo stesso debounce di 2 secondi usato dalle altre fonti.
+
+### Interpretazione
+
+ERA5-Land è un **modello di rianalisi**, non una rete di termometri urbani. La sua griglia è adatta a confronti climatici e territoriali, ma non permette di attribuire con affidabilità differenze di temperatura a una singola strada, parco, albero o edificio. Le celle sulla mappa rappresentano esplicitamente la griglia del modello.
+
+### Proxy temperatura
+
+Il Worker `qualita-aria-temperature`:
+
+- riceve bounding box, anno e mese;
+- genera fino a 25 punti sulla zona visibile;
+- esegue una singola richiesta batch Open-Meteo;
+- calcola media/minima/massima delle osservazioni orarie;
+- mantiene il risultato aggregato nella Cache API Cloudflare per 30 giorni.
+
+Non richiede API key.
+
 ## PWA
 
 L'app può essere installata dal browser tramite il pulsante **Installa app**.

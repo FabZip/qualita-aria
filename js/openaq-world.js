@@ -283,7 +283,7 @@
       if($('yearFieldLabel'))$('yearFieldLabel').textContent='Anno';
 
       const result=baseConfigureSourceUI();
-      hideUnavailableMonthlyControl();
+      if(source()!=='temperature')hideUnavailableMonthlyControl();
       return result
     }
 

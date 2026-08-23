@@ -22,6 +22,21 @@ const EUROPE={center:[10.0,50.0],zoom:3.15,bbox:[-25.0,27.0,45.0,72.0]};
 const EEA_CITY_RADIUS_KM=40;
 const EEA_DEFAULT_CITY='roma';
 const MAP_REFRESH_DELAY_MS=2000;
+const TEMPERATURE_LAST_COMPLETE_YEAR=new Date().getUTCFullYear()-1;
+const TEMPERATURE_YEARS=Array.from(
+  {length:TEMPERATURE_LAST_COMPLETE_YEAR-1950+1},
+  (_,index)=>String(TEMPERATURE_LAST_COMPLETE_YEAR-index)
+);
+const TEMPERATURE_MONTHS=[
+  ['1','Gennaio'],['2','Febbraio'],['3','Marzo'],['4','Aprile'],
+  ['5','Maggio'],['6','Giugno'],['7','Luglio'],['8','Agosto'],
+  ['9','Settembre'],['10','Ottobre'],['11','Novembre'],['12','Dicembre']
+];
+const TEMPERATURE_METRICS={
+  mean:{label:'Temperatura media',short:'Media'},
+  max:{label:'Temperatura massima',short:'Massima'},
+  min:{label:'Temperatura minima',short:'Minima'}
+};
 
 const EEA_SCOPES={
   italy:{label:'Italia',country:'IT',kind:'country-city'},
@@ -86,10 +101,17 @@ const SOURCE_INFO={
     years:ARPA_YEARS,
     description:'<strong>ARPA Lazio:</strong> stime comunali ufficiali. I dati sono letti dai file annuali pubblicati da ARPA, senza dipendere dal Data API CKAN.',
     hint:'Il colore copre il territorio amministrativo di Roma per mostrare a quale area si riferisce il dato comunale. Non significa che la concentrazione sia uniforme in ogni punto del Comune.'
+  },
+  temperature:{
+    name:'ERA5-Land · Open-Meteo',
+    years:TEMPERATURE_YEARS,
+    description:'<strong>Temperatura:</strong> temperatura dell’aria a 2 metri del modello Copernicus ERA5-Land, letta tramite <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>. Le statistiche mensili sono calcolate dall’app; seleziona anno, mese e metrica.',
+    hint:'ERA5-Land ha griglia 0,1° (circa 9–11 km): è adatto a confronti climatici e territoriali, non a distinguere la temperatura di una singola strada, parco o edificio.'
   }
 };
 
 function source(){return $('sourceSelect').value}
+function isTemperature(){return source()==='temperature'}
 function eeaScope(){return $('eeaScopeSelect')?.value||'italy'}
 function eeaCity(){return $('eeaCitySelect')?.value||EEA_DEFAULT_CITY}
 
@@ -210,7 +232,7 @@ async function loadEeaCities(){
   let cities=fallback;
 
   try{
-    const response=await fetch('data/italian-capitals.json?v=0.2.14',{cache:'no-store'});
+    const response=await fetch('data/italian-capitals.json?v=0.3.0',{cache:'no-store'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
     const payload=await response.json();
     if(Array.isArray(payload?.cities)&&payload.cities.length){
@@ -253,16 +275,149 @@ function fillYears(){
   if(!years.includes($('compareYearB').value))$('compareYearB').value=preferredB;
 }
 
+function setPeriodFieldLabel(text){
+  const field=$('monthField');
+  if(!field)return;
+
+  let label=field.querySelector('[data-period-label]');
+  if(!label){
+    const first=[...field.childNodes].find(node=>node.nodeType===Node.TEXT_NODE);
+    if(first){
+      label=document.createElement('span');
+      label.dataset.periodLabel='true';
+      label.textContent=text;
+      first.replaceWith(label)
+    }
+  }
+  if(label)label.textContent=text
+}
+
+function configureTemperaturePeriod(){
+  const select=$('monthSelect');
+  const field=$('monthField');
+  if(!select||!field)return;
+
+  const previous=select.dataset.temperatureValue||
+    String(new Date().getMonth()+1);
+
+  select.innerHTML=TEMPERATURE_MONTHS
+    .map(([value,label])=>`<option value="${value}">${label}</option>`)
+    .join('');
+
+  select.value=TEMPERATURE_MONTHS.some(([value])=>value===previous)
+    ?previous
+    :String(new Date().getMonth()+1);
+
+  select.dataset.temperatureMode='true';
+  select.dataset.temperatureValue=select.value;
+  select.disabled=false;
+  select.title='Mese storico da analizzare con ERA5-Land.';
+  field.classList.remove('hidden');
+  setPeriodFieldLabel('Mese')
+}
+
+function configureAnnualPeriod(){
+  const select=$('monthSelect');
+  const field=$('monthField');
+  if(!select||!field)return;
+
+  if(select.dataset.temperatureMode==='true'){
+    select.dataset.temperatureValue=select.value;
+  }
+
+  select.innerHTML='<option value="0">Intero anno</option>';
+  select.value='0';
+  select.dataset.temperatureMode='false';
+  select.disabled=true;
+  select.title='La fonte attuale usa statistiche annuali.';
+  setPeriodFieldLabel('Periodo')
+}
+
+function setTemperatureModeLock(active){
+  document.querySelectorAll('.tab').forEach(button=>{
+    if(button.dataset.mode==='map'){
+      button.disabled=false;
+      if(active){
+        button.classList.add('active')
+      }
+      return
+    }
+    button.disabled=active
+  });
+
+  if(active&&state.mode!=='map'){
+    state.mode='map';
+    document.querySelectorAll('.tab').forEach(button=>{
+      button.classList.toggle('active',button.dataset.mode==='map')
+    })
+  }
+}
+
+function applyTemperatureMapConstraints(active){
+  const map=state.map;
+  if(!map)return;
+
+  map.setMinZoom(active?5:0);
+  if(active&&map.getZoom()<5){
+    withMapRefreshSuppressed(()=>{
+      map.jumpTo({
+        center:map.getCenter(),
+        zoom:5,
+        bearing:map.getBearing(),
+        pitch:map.getPitch()
+      })
+    })
+  }
+}
+
+function configureTemperatureLegend(active){
+  const low=$('legendLow');
+  const high=$('legendHigh');
+  const gradient=$('standardGradient');
+
+  if(active){
+    if(low)low.textContent='Freddo';
+    if(high)high.textContent='Caldo';
+    gradient?.classList.remove('air-gradient');
+    gradient?.classList.add('temp-gradient')
+  }else{
+    if(low)low.textContent='Bassa';
+    if(high)high.textContent='Alta';
+    gradient?.classList.remove('temp-gradient');
+    gradient?.classList.add('air-gradient')
+  }
+}
+
 function configureSourceUI(){
   const info=SOURCE_INFO[source()];
   const isEea=source()==='eea';
   const isItaly=isEea&&eeaScope()==='italy';
+  const temperature=isTemperature();
 
   $('sourceDescription').innerHTML=info.description;
   $('eeaScopeField').classList.toggle('hidden',!isEea);
   $('eeaCityField')?.classList.toggle('hidden',!isItaly);
-  $('monthSelect').disabled=true;
-  $('monthSelect').title='Le fonti reali attive in questa versione espongono statistiche annuali.';
+  $('pollutantField')?.classList.toggle('hidden',temperature);
+  $('temperatureMetricField')?.classList.toggle('hidden',!temperature);
+  $('co2Note')?.classList.toggle('hidden',temperature);
+
+  setTemperatureModeLock(temperature);
+  applyTemperatureMapConstraints(temperature);
+  configureTemperatureLegend(temperature);
+
+  if(temperature){
+    configureTemperaturePeriod();
+    $('avgLabel').textContent='Media celle';
+    $('countLabel').textContent='Celle';
+    $('countUnit').textContent='ERA5-Land';
+    $('listTitle').textContent='Celle temperatura visualizzate';
+    if($('avgUnit'))$('avgUnit').textContent='°C';
+    return
+  }
+
+  configureAnnualPeriod();
+  if($('avgUnit'))$('avgUnit').textContent='µg/m³';
+
   if(isEea){
     $('avgLabel').textContent='Media stazioni';
     $('countLabel').textContent='Stazioni';
@@ -1338,7 +1493,140 @@ async function fetchArpaRows(year,pollutant,silent=false){
   return rows
 }
 
+function temperatureMetric(){
+  return $('temperatureMetricSelect')?.value||'mean'
+}
+
+function temperatureMonth(){
+  const value=Number($('monthSelect')?.value||1);
+  return Number.isInteger(value)&&value>=1&&value<=12?value:1
+}
+
+function temperatureMonthLabel(){
+  const value=String(temperatureMonth());
+  return TEMPERATURE_MONTHS.find(([month])=>month===value)?.[1]||value
+}
+
+function temperatureVisibleBbox(){
+  const bbox=visibleMapBbox(state.map);
+  if(!bbox)return[12.15,41.65,12.85,42.15];
+
+  // Aggancia a decimi di grado: piccole variazioni della camera riusano la cache.
+  const[minLon,minLat,maxLon,maxLat]=bbox;
+  return[
+    Math.floor(minLon*10)/10,
+    Math.floor(minLat*10)/10,
+    Math.ceil(maxLon*10)/10,
+    Math.ceil(maxLat*10)/10
+  ].map(value=>Number(value.toFixed(1)))
+}
+
+function temperatureCacheKey(year,month,bbox){
+  return`${year}:${month}:${bbox.join(',')}`
+}
+
+async function fetchTemperatureRows(year){
+  const month=temperatureMonth();
+  const bbox=temperatureVisibleBbox();
+  const key=temperatureCacheKey(year,month,bbox);
+  const started=performance.now();
+
+  function reportEntry(entry,cache){
+    diagnostics({
+      ...entry.diagnostic,
+      cache,
+      durationMs:Math.round(performance.now()-started)
+    });
+    return entry.rows
+  }
+
+  if(state.temperatureCache.has(key)){
+    return reportEntry(state.temperatureCache.get(key),'memory')
+  }
+
+  if(state.temperatureInflight.has(key)){
+    const entry=await state.temperatureInflight.get(key);
+    return reportEntry(entry,'inflight-shared')
+  }
+
+  if(!globalThis.QualitaAriaTemperatureProxy?.viewport){
+    throw new Error('Proxy temperatura non disponibile.')
+  }
+
+  const promise=(async()=>{
+    const proxied=await QualitaAriaTemperatureProxy.viewport({
+      bbox,
+      year,
+      month
+    });
+
+    const rows=(Array.isArray(proxied.data?.results)
+      ?proxied.data.results
+      :[]
+    ).map(cell=>({
+      id:String(cell.id),
+      name:String(cell.name||'Cella ERA5-Land'),
+      lat:Number(cell.latitude),
+      lon:Number(cell.longitude),
+      mean:Number(cell.mean),
+      min:Number(cell.min),
+      max:Number(cell.max),
+      observations:Number(cell.observations||0),
+      elevation:cell.elevation===null?null:Number(cell.elevation),
+      kind:'temperature-cell',
+      provider:'Copernicus ERA5-Land · Open-Meteo'
+    })).filter(row=>
+      Number.isFinite(row.lat)&&
+      Number.isFinite(row.lon)&&
+      Number.isFinite(row.mean)&&
+      Number.isFinite(row.min)&&
+      Number.isFinite(row.max)
+    );
+
+    const meta=proxied.data?.meta||{};
+    const diagnostic={
+      source:'Copernicus ERA5-Land via Open-Meteo',
+      variable:'temperature_2m',
+      unit:'°C',
+      year:Number(year),
+      month,
+      monthLabel:temperatureMonthLabel(),
+      boundingBox:bbox,
+      nativeResolutionDegrees:meta.nativeResolutionDegrees??0.1,
+      nativeResolutionApproxKm:meta.nativeResolutionApproxKm||'9–11',
+      sampleStepDegrees:meta.sampleStepDegrees??null,
+      requestedPoints:meta.requestedPoints??rows.length,
+      returnedCells:rows.length,
+      upstreamMs:meta.upstreamMs??0,
+      edgeCache:proxied.cache,
+      proxyDurationMs:proxied.durationMs,
+      generatedAt:meta.generatedAt||null,
+      note:'Temperatura dell’aria a 2 metri. Le celle rappresentano la griglia del modello, non misure di una singola strada o edificio.'
+    };
+
+    const entry={rows,diagnostic};
+    state.temperatureCache.set(key,entry);
+
+    while(state.temperatureCache.size>36){
+      const first=state.temperatureCache.keys().next().value;
+      state.temperatureCache.delete(first)
+    }
+
+    return entry
+  })();
+
+  state.temperatureInflight.set(key,promise);
+  try{
+    const entry=await promise;
+    return reportEntry(entry,`edge-${String(entry.diagnostic.edgeCache||'unknown').toLowerCase()}`)
+  }finally{
+    state.temperatureInflight.delete(key)
+  }
+}
+
 async function rowsFor(year){
+  if(isTemperature())return fetchTemperatureRows(year);
+
   const pollutant=$('pollutantSelect').value;
   if(source()==='eea')return fetchEeaRows(year,pollutant);
   if(source()==='arpa')return fetchArpaRows(year,pollutant);
@@ -1506,6 +1794,189 @@ function addAirLayers(map,prefix='air'){
   });
 }
 
+function temperatureValue(row){
+  const metric=temperatureMetric();
+  return Number(row?.[metric])
+}
+
+function temperatureColor(value){
+  const n=Number(value);
+  if(!Number.isFinite(n))return'#64748b';
+  if(n<0)return'#3455d1';
+  if(n<10)return'#42b5db';
+  if(n<20)return'#5fd19b';
+  if(n<30)return'#f0c94c';
+  if(n<40)return'#f08b45';
+  return'#df4a49'
+}
+
+function temperatureGeoJSON(rows){
+  const half=.05;
+
+  return{
+    type:'FeatureCollection',
+    features:rows.map(row=>{
+      const value=temperatureValue(row);
+      const lon=Number(row.lon);
+      const lat=Number(row.lat);
+
+      return{
+        type:'Feature',
+        properties:{
+          id:row.id,
+          name:row.name,
+          value,
+          mean:row.mean,
+          min:row.min,
+          max:row.max,
+          observations:row.observations,
+          elevation:row.elevation??'',
+          label:fmt(value)
+        },
+        geometry:{
+          type:'Polygon',
+          coordinates:[[
+            [lon-half,lat-half],
+            [lon+half,lat-half],
+            [lon+half,lat+half],
+            [lon-half,lat+half],
+            [lon-half,lat-half]
+          ]]
+        }
+      }
+    })
+  }
+}
+
+function addTemperatureLayers(map){
+  if(!map||map.getSource('temperature-source'))return;
+
+  map.addSource('temperature-source',{
+    type:'geojson',
+    data:{type:'FeatureCollection',features:[]}
+  });
+
+  map.addLayer({
+    id:'temperature-fill',
+    type:'fill',
+    source:'temperature-source',
+    layout:{visibility:'none'},
+    paint:{
+      'fill-color':[
+        'interpolate',['linear'],['get','value'],
+        -5,'#3455d1',
+        5,'#42b5db',
+        15,'#5fd19b',
+        25,'#f0c94c',
+        35,'#f08b45',
+        45,'#df4a49'
+      ],
+      'fill-opacity':.68
+    }
+  });
+
+  map.addLayer({
+    id:'temperature-line',
+    type:'line',
+    source:'temperature-source',
+    layout:{visibility:'none'},
+    paint:{
+      'line-color':'rgba(255,255,255,.72)',
+      'line-width':['interpolate',['linear'],['zoom'],5,.35,10,.8,13,1.2]
+    }
+  });
+
+  map.addLayer({
+    id:'temperature-label',
+    type:'symbol',
+    source:'temperature-source',
+    minzoom:7,
+    layout:{
+      visibility:'none',
+      'text-field':['concat',['get','label'],'°'],
+      'text-size':['interpolate',['linear'],['zoom'],7,8,10,10,13,12],
+      'text-allow-overlap':false
+    },
+    paint:{
+      'text-color':'#07111d',
+      'text-halo-color':'rgba(255,255,255,.92)',
+      'text-halo-width':1
+    }
+  });
+
+  map.on('click','temperature-fill',event=>{
+    const feature=event.features?.[0];
+    if(!feature)return;
+    const p=feature.properties||{};
+    const center=feature.geometry?.coordinates?.[0]?.reduce(
+      (acc,point)=>[acc[0]+point[0],acc[1]+point[1]],
+      [0,0]
+    );
+    const coordinates=center
+      ?[center[0]/5,center[1]/5]
+      :event.lngLat.toArray();
+
+    new maplibregl.Popup({offset:12})
+      .setLngLat(coordinates)
+      .setHTML(
+        `<strong>${p.name}</strong>`+
+        `<br>Media ${fmt(p.mean)} °C`+
+        `<br>Minima ${fmt(p.min)} °C · Massima ${fmt(p.max)} °C`+
+        `<br><small>ERA5-Land · aria a 2 m · cella 0,1°</small>`
+      )
+      .addTo(map)
+  })
+}
+
+function setTemperatureVisibility(visible){
+  ['temperature-fill','temperature-line','temperature-label'].forEach(id=>{
+    if(state.map?.getLayer(id)){
+      state.map.setLayoutProperty(id,'visibility',visible?'visible':'none')
+    }
+  })
+}
+
+function showTemperatureOnSingle(rows){
+  state.map?.getSource('temperature-source')?.setData(temperatureGeoJSON(rows));
+  setTemperatureVisibility(true);
+
+  setLayerVisibility(state.map,[
+    'air-boundary-fill','air-boundary-line',
+    'air-heat','air-points','air-labels',
+    'diff-boundary-fill','diff-boundary-line',
+    'diff-good','diff-bad','diff-points','diff-labels'
+  ],false)
+}
+
+function renderTemperatureList(rows){
+  $('stationListTools')?.classList.add('hidden');
+  $('stationPagination')?.classList.add('hidden');
+
+  if(!rows.length){
+    $('stations').innerHTML='<div class="empty-state">Nessuna cella ERA5-Land disponibile per questa zona.</div>';
+    return
+  }
+
+  const metric=temperatureMetric();
+  $('stations').innerHTML=rows.map(row=>{
+    const value=Number(row[metric]);
+    const details=[
+      `Media ${fmt(row.mean)} °C`,
+      `Min ${fmt(row.min)} °C`,
+      `Max ${fmt(row.max)} °C`
+    ].join(' · ');
+
+    return`<div class="temperature-cell-row">
+      <i style="background:${temperatureColor(value)}"></i>
+      <div>
+        <strong>${row.name}</strong>
+        <small>${details}<br>ERA5-Land · aria a 2 m</small>
+      </div>
+      <b>${fmt(value)}°</b>
+    </div>`
+  }).join('')
+}
+
 function addDifferenceLayers(map){
   if(map.getSource('diff-source'))return;
 
@@ -1603,6 +2074,7 @@ function setLayerVisibility(map,ids,visible){
   })
 }
 function showAirOnSingle(rows){
+  setTemperatureVisibility(false);
   setAirData(state.map,rows);
   setLayerVisibility(state.map,[
     'air-boundary-fill','air-boundary-line',
@@ -1614,6 +2086,7 @@ function showAirOnSingle(rows){
   ],false)
 }
 function showDifferenceOnSingle(rows){
+  setTemperatureVisibility(false);
   setDifferenceData(state.map,rows);
   setLayerVisibility(state.map,[
     'air-boundary-fill','air-boundary-line',
@@ -2077,12 +2550,23 @@ function bindMapRefresh(map){
 
 function setLoading(on){
   $('loadingOverlay').classList.toggle('hidden',!on);
+
+  if(isTemperature()){
+    $('loadingText').textContent=`Caricamento temperatura · ${temperatureMonthLabel()}…`;
+    return
+  }
+
   $('loadingText').textContent=source()==='eea'
     ?`Caricamento EEA · ${currentEeaScope().label}…`
     :'Caricamento file ARPA Lazio…'
 }
 
 function sourceNotice(rows){
+  if(isTemperature()){
+    return rows.length
+      ?'Copernicus ERA5-Land · temperatura aria 2 m · griglia 0,1°'
+      :'ERA5-Land · nessuna cella disponibile';
+  }
   if(source()==='arpa')return'ARPA Lazio · Standard comunali';
   const scope=currentEeaScope().label;
   if(!rows.length)return`EEA · ${scope} · nessuna statistica annuale P1Y per questa selezione`;
@@ -2104,6 +2588,40 @@ async function updateCompareMaps(){
   return{a,b}
 }
 
+async function renderTemperatureMode(token){
+  const year=$('yearSelect').value;
+  const rows=await rowsFor(year);
+  if(token!==state.renderToken)return;
+
+  showTemperatureOnSingle(rows);
+  renderTemperatureList(rows);
+
+  const metric=temperatureMetric();
+  const metricInfo=TEMPERATURE_METRICS[metric];
+  const values=rows
+    .map(row=>Number(row[metric]))
+    .filter(Number.isFinite);
+
+  const average=values.length
+    ?values.reduce((sum,value)=>sum+value,0)/values.length
+    :null;
+
+  $('mapBadge').textContent=
+    `${metricInfo.label} · ${temperatureMonthLabel()} ${year}`;
+  $('avgLabel').textContent=`${metricInfo.short} celle`;
+  $('avgValue').textContent=average===null?'—':fmt(average);
+  if($('avgUnit'))$('avgUnit').textContent='°C';
+  $('stationCount').textContent=rows.length;
+  $('countLabel').textContent='Celle';
+  $('countUnit').textContent='ERA5-Land';
+  $('periodValue').textContent=`${temperatureMonthLabel()} ${year}`;
+  $('sourceValue').textContent='ERA5-Land · Open-Meteo';
+  $('dataNotice').textContent=sourceNotice(rows);
+  $('mapHint').textContent=SOURCE_INFO.temperature.hint;
+
+  rememberViewportBaseline()
+}
+
 async function render(){
   if(!state.map)return;
   const token=++state.renderToken;
@@ -2119,6 +2637,11 @@ async function render(){
   updateArpaHistoryVisibility();
 
   try{
+    if(isTemperature()){
+      await renderTemperatureMode(token);
+      return
+    }
+
     let rows=[];
 
     if(state.mode==='difference'){
@@ -2168,6 +2691,7 @@ async function render(){
       $('periodValue').textContent=$('yearSelect').value;
     }
 
+    if($('avgUnit'))$('avgUnit').textContent='µg/m³';
     $('stationCount').textContent=source()==='arpa'?'Roma':rows.length;
     $('sourceValue').textContent=source()==='eea'?`EEA · ${currentEeaScope().label}`:SOURCE_INFO[source()].name;
     $('dataNotice').textContent=sourceNotice(rows);
@@ -2238,6 +2762,7 @@ function initMaps(){
   state.map.on('load',()=>{
     addAirLayers(state.map);
     addDifferenceLayers(state.map);
+    addTemperatureLayers(state.map);
     render()
   });
 
@@ -2331,8 +2856,14 @@ function bind(){
     render()
   });
 
-  ['pollutantSelect','yearSelect','compareYearA','compareYearB']
-    .forEach(id=>$(id).addEventListener('change',render));
+  ['pollutantSelect','yearSelect','compareYearA','compareYearB','temperatureMetricSelect']
+    .forEach(id=>$(id)?.addEventListener('change',render));
+
+  $('monthSelect')?.addEventListener('change',()=>{
+    if(!isTemperature())return;
+    $('monthSelect').dataset.temperatureValue=$('monthSelect').value;
+    render()
+  });
 
   window.addEventListener('beforeinstallprompt',e=>{
     e.preventDefault();
@@ -2345,8 +2876,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.2.14',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.2.14',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.3.0',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.3.0',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -2361,7 +2892,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.2.14')
+    navigator.serviceWorker.register('./service-worker.js?v=0.3.0')
       .then(reg=>reg.update())
       .catch(console.error)
   }

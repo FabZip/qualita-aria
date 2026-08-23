@@ -2,6 +2,45 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.3.0] - 2026-08-23
+
+### Temperatura
+
+- Avviata la serie `0.3.x`, dedicata alle temperature.
+- Aggiunta la fonte `Temperatura · ERA5-Land`.
+- La temperatura resta separata dalle sorgenti di qualità dell'aria.
+- Fonte reale: Copernicus ERA5-Land tramite Open-Meteo Historical Weather API.
+- Variabile: temperatura dell'aria a 2 metri.
+- Anni disponibili nell'interfaccia: dal 1950 all'ultimo anno completo.
+- Aggiunta selezione del mese.
+- Aggiunte metriche `Temperatura media`, `Temperatura massima` e `Temperatura minima`.
+- La stessa risposta mensile contiene tutte le metriche, quindi cambiare metrica non richiede un nuovo download.
+- La vista temperatura usa celle di griglia invece di stazioni, per non confondere dati modellati e misure puntuali.
+- Aggiunti popup con media, minima e massima del mese.
+- Aggiunta legenda termica `Freddo → Caldo`.
+- Confronto e Differenza sono temporaneamente disabilitati nel modulo temperatura; verranno estesi nella serie 0.3.x.
+- Gli alberi restano esplicitamente fuori dalla 0.3.x e sono riservati alla futura serie 0.4.x.
+
+### Proxy temperatura
+
+- Aggiunto Worker Cloudflare dedicato `qualita-aria-temperature`.
+- Il Worker genera una griglia fino a 25 punti nella bounding box visibile.
+- Una singola richiesta batch recupera le temperature orarie ERA5-Land via Open-Meteo.
+- Il Worker aggrega i valori in media, minima e massima mensili.
+- Cache Cloudflare di 30 giorni per i mesi storici completi.
+- Nessuna API key richiesta.
+- Aggiunta diagnostica con risoluzione, passo di campionamento, cache edge, durata proxy e durata upstream.
+
+### Navigazione
+
+- Il refresh temperatura usa il debounce condiviso di 2 secondi dopo pan/zoom.
+- La vista viene limitata a bounding box di massimo 4° × 4° per evitare richieste eccessive.
+- Il modulo parte dalla posizione corrente della mappa e non la ricentra automaticamente dopo il caricamento.
+
+### Versioning
+
+- Aggiornata l'app a `0.3.0` build `33`.
+
 ## [0.2.14] - 2026-08-23
 
 ### Proxy EEA e prestazioni

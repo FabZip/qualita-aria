@@ -1,0 +1,5 @@
+{
+  "enabled": true,
+  "base_url": "https://qualita-aria-temperature.fabzip.workers.dev",
+  "note": "ERA5-Land via Open-Meteo, cache Cloudflare per mese e griglia visibile."
+}

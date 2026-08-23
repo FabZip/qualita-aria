@@ -1,0 +1,35 @@
+.temp-gradient{
+  background:linear-gradient(90deg,#3455d1,#42b5db,#5fd19b,#f0c94c,#f08b45,#df4a49)
+}
+.temperature-cell-row{
+  display:grid;
+  grid-template-columns:10px 1fr auto;
+  gap:9px;
+  align-items:center;
+  padding:10px 2px;
+  border-top:1px solid var(--line)
+}
+.temperature-cell-row:first-child{border-top:0}
+.temperature-cell-row>i{
+  width:9px;
+  height:9px;
+  border-radius:2px
+}
+.temperature-cell-row strong{font-size:.8rem}
+.temperature-cell-row small{
+  display:block;
+  color:var(--muted);
+  font-size:.64rem;
+  line-height:1.35
+}
+.temperature-cell-row b{font-size:.8rem}
+.temperature-method-note{
+  margin:7px 2px 0;
+  color:var(--muted);
+  font-size:.63rem;
+  line-height:1.4
+}
+.tab:disabled{
+  opacity:.45;
+  cursor:not-allowed
+}
