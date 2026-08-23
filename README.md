@@ -81,6 +81,8 @@ Le stazioni sono ricercabili e l'elenco è paginato. Selezionando una stazione d
 
 Gli aggiornamenti provocati da pan e zoom sono centralizzati: l'app aspetta **2 secondi dopo l'ultimo movimento** prima di ricaricare. Questo evita richieste ripetute mentre l'utente sta ancora esplorando la mappa. Per EEA e OpenAQ la nuova richiesta usa l'area visibile; ARPA Lazio mantiene invece il proprio ambito comunale perché la fonte attuale riguarda Roma.
 
+Per ridurre la latenza EEA, le statistiche annuali validate vengono richieste su una **cella geografica leggermente più ampia** della viewport e mantenute in memoria. Piccoli spostamenti dentro la stessa cella non generano una nuova query Discodata: l'app filtra localmente le stazioni già ricevute. Per i dati preliminari UTD, i Parquet vengono elaborati una sola volta per **città + anno + inquinante** durante la sessione e poi riutilizzati nei successivi spostamenti.
+
 ### Confronto
 
 Per le fonti storiche compatibili, mostra due periodi sincronizzati tramite divisore swipe.

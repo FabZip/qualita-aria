@@ -5,6 +5,7 @@ const state={
   toastTimer:null,renderToken:0,
   eeaCache:new Map(),arpaCache:new Map(),
   eeaCities:new Map(),
+  eeaValidatedInflight:new Map(),
   eeaViewportBbox:null,
   mapRefreshTimer:null,
   mapRefreshSuppressCount:0,
@@ -209,7 +210,7 @@ async function loadEeaCities(){
   let cities=fallback;
 
   try{
-    const response=await fetch('data/italian-capitals.json?v=0.2.12',{cache:'no-store'});
+    const response=await fetch('data/italian-capitals.json?v=0.2.13',{cache:'no-store'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
     const payload=await response.json();
     if(Array.isArray(payload?.cities)&&payload.cities.length){
@@ -275,40 +276,79 @@ function configureSourceUI(){
   }
 }
 
-function eeaSql(year,pollutant){
+function eeaSpatialGridStep(bbox){
+  const width=Math.max(0,Number(bbox?.[2])-Number(bbox?.[0]));
+  const height=Math.max(0,Number(bbox?.[3])-Number(bbox?.[1]));
+  const span=Math.max(width,height);
+
+  if(span<=1.5)return .5;
+  if(span<=4)return 1;
+  if(span<=12)return 2;
+  if(span<=30)return 5;
+  return 10
+}
+
+function eeaSnapBbox(bbox){
+  const step=eeaSpatialGridStep(bbox);
+  const[minLon,minLat,maxLon,maxLat]=bbox;
+
+  return[
+    Math.max(-180,Math.floor(minLon/step)*step),
+    Math.max(-85,Math.floor(minLat/step)*step),
+    Math.min(180,Math.ceil(maxLon/step)*step),
+    Math.min(85,Math.ceil(maxLat/step)*step)
+  ].map(value=>Number(value.toFixed(4)))
+}
+
+function rowsInsideBbox(rows,bbox){
+  const[minLon,minLat,maxLon,maxLat]=bbox;
+  return rows.filter(row=>
+    Number(row.lon)>=minLon&&Number(row.lon)<=maxLon&&
+    Number(row.lat)>=minLat&&Number(row.lat)<=maxLat
+  )
+}
+
+function eeaValidatedRegionKey(year,pollutant,country,bbox){
+  return[
+    'validated',
+    country||'EU',
+    String(year),
+    pollutant,
+    bbox.map(value=>Number(value).toFixed(4)).join(',')
+  ].join(':')
+}
+
+function eeaSql(year,pollutant,{bbox=null,country=null}={}){
   const code=POLLUTANTS[pollutant].eeaCode;
   const scope=currentEeaScope();
-  const [minLon,minLat,maxLon,maxLat]=scope.bbox;
+  const effectiveBbox=bbox||scope.bbox;
+  const effectiveCountry=country===null?scope.country:country;
+  const [minLon,minLat,maxLon,maxLat]=effectiveBbox;
 
-  const countryFilter=scope.country
-    ?`AND CountryCode='${scope.country}'`
+  const countryFilter=effectiveCountry
+    ?`AND CountryCode='${effectiveCountry}'`
     :'';
 
+  /*
+   * Selezioniamo solo i campi realmente usati dall'app. Il filtro P1Y resta
+   * nel WHERE ma non serve trasferire al browser colonne descrittive ridondanti.
+   */
   return `
 SELECT
   AcceptedforProducts,
-  AirPollutant,
-  AirPollutantCode,
-  AirPollutantDescription,
   AirPollutionLevel,
   AirQualityStation,
   AirQualityStationEoICode,
   AQStationName,
   AirQualityStationArea,
   AirQualityStationType,
-  component_code,
   CountryCode,
-  DataAggregationProcess,
-  DataAggregationProcessId,
   DataCapture,
   DataCoverage,
   Latitude,
   Longitude,
-  potentialOutlier,
   Timecoverage,
-  UnitOfAirpollutionLevel,
-  Verification,
-  YearOfStatistics
+  Verification
 FROM [AirQualityDataFlows].[latest].[AirQualityStatistics]
 WHERE YearOfStatistics=${Number(year)}
   AND component_code=${Number(code)}
@@ -371,110 +411,177 @@ function eeaRecordScore(r){
 }
 
 async function fetchEeaRows(year,pollutant){
+  const started=performance.now();
   const scope=currentEeaScope();
-  const cacheKey=`${eeaScopeKey()}:${year}:${pollutant}`;
+  const visibleBbox=[...scope.bbox];
+  const queryBbox=eeaSnapBbox(visibleBbox);
+  const regionKey=eeaValidatedRegionKey(
+    year,
+    pollutant,
+    scope.country,
+    queryBbox
+  );
 
-  if(state.eeaCache.has(cacheKey)){
-    const cached=state.eeaCache.get(cacheKey);
-    diagnostics({...cached.diagnostic,cache:'memory'});
-    return cached.rows
+  function rowsForViewport(allRows,baseDiagnostic,cache){
+    const rows=rowsInsideBbox(allRows,visibleBbox);
+    diagnostics({
+      ...baseDiagnostic,
+      scope:scope.label,
+      boundingBox:visibleBbox,
+      queryBoundingBox:queryBbox,
+      stationsUsed:rows.length,
+      cache,
+      durationMs:Math.round(performance.now()-started)
+    });
+    return rows
   }
 
-  const sql=eeaSql(year,pollutant);
-  let paged;
+  if(state.eeaCache.has(regionKey)){
+    const cached=state.eeaCache.get(regionKey);
+    return rowsForViewport(
+      cached.allRows,
+      cached.diagnostic,
+      'memory-spatial'
+    )
+  }
+
+  /*
+   * Due render concorrenti della stessa regione (per esempio subito dopo un
+   * cambio filtro + moveend) condividono la stessa Promise invece di lanciare
+   * due query identiche verso Discodata.
+   */
+  if(state.eeaValidatedInflight.has(regionKey)){
+    const pending=await state.eeaValidatedInflight.get(regionKey);
+    return rowsForViewport(
+      pending.allRows,
+      pending.diagnostic,
+      'inflight-shared'
+    )
+  }
+
+  const promise=(async()=>{
+    const sql=eeaSql(year,pollutant,{
+      bbox:queryBbox,
+      country:scope.country
+    });
+
+    let paged;
+    try{
+      paged=await fetchDiscodataPages(sql)
+    }catch(err){
+      diagnostics({
+        source:'EEA / Discodata',
+        scope:scope.label,
+        boundingBox:visibleBbox,
+        queryBoundingBox:queryBbox,
+        year,pollutant,
+        aggregation:'P1Y annual mean',
+        endpoint:EEA_SQL_API,
+        error:String(err.message||err),
+        durationMs:Math.round(performance.now()-started)
+      });
+      throw new Error(`EEA: impossibile leggere Discodata (${err.message||err}).`)
+    }
+
+    const raw=paged.rows;
+    const best=new Map();
+
+    for(const r of raw){
+      const id=String(
+        r.AirQualityStationEoICode||
+        r.AirQualityStation||
+        r.AQStationName||
+        ''
+      ).trim();
+      const value=parseNumber(r.AirPollutionLevel);
+      const lat=parseNumber(r.Latitude);
+      const lon=parseNumber(r.Longitude);
+      if(!id||value===null||lat===null||lon===null)continue;
+
+      const candidate={raw:r,score:eeaRecordScore(r)};
+      if(!best.has(id)||candidate.score>best.get(id).score){
+        best.set(id,candidate)
+      }
+    }
+
+    const allRows=[...best.entries()].map(([id,{raw:r}])=>{
+      const coverage=parseNumber(
+        r.DataCoverage??r.Timecoverage??r.DataCapture
+      );
+
+      return{
+        id,
+        name:String(r.AQStationName||r.AirQualityStation||id),
+        country:String(r.CountryCode||''),
+        lat:parseNumber(r.Latitude),
+        lon:parseNumber(r.Longitude),
+        value:parseNumber(r.AirPollutionLevel),
+        coverage,
+        verification:String(r.Verification||''),
+        accepted:String(r.AcceptedforProducts??''),
+        area:String(r.AirQualityStationArea||''),
+        stationType:String(r.AirQualityStationType||''),
+        kind:'station',
+        provider:'EEA'
+      }
+    }).sort((a,b)=>{
+      const countryCmp=a.country.localeCompare(b.country);
+      return countryCmp||a.name.localeCompare(b.name,'it')
+    });
+
+    const sample=raw[0]?{
+      CountryCode:raw[0].CountryCode,
+      AQStationName:raw[0].AQStationName,
+      AirQualityStationEoICode:raw[0].AirQualityStationEoICode,
+      AirPollutionLevel:raw[0].AirPollutionLevel,
+      DataCoverage:raw[0].DataCoverage,
+      Verification:raw[0].Verification,
+      Latitude:raw[0].Latitude,
+      Longitude:raw[0].Longitude
+    }:null;
+
+    const diagnostic={
+      source:'EEA / Discodata',
+      table:'AirQualityDataFlows.latest.AirQualityStatistics',
+      year,pollutant,
+      component_code:POLLUTANTS[pollutant].eeaCode,
+      aggregation:'P1Y annual mean',
+      pages:paged.pages,
+      truncated:paged.truncated,
+      rowsReceived:raw.length,
+      stationsInCachedRegion:allRows.length,
+      countries:[...new Set(allRows.map(r=>r.country).filter(Boolean))].sort(),
+      spatialGridDegrees:eeaSpatialGridStep(visibleBbox),
+      sample
+    };
+
+    const entry={allRows,diagnostic};
+    state.eeaCache.set(regionKey,entry);
+
+    while(state.eeaCache.size>60){
+      const first=state.eeaCache.keys().next().value;
+      state.eeaCache.delete(first)
+    }
+
+    if(paged.truncated){
+      showToast(`EEA: raggiunto il limite di ${paged.pages*1000} record. Restringi l’area per un risultato completo.`)
+    }
+
+    return entry
+  })();
+
+  state.eeaValidatedInflight.set(regionKey,promise);
 
   try{
-    paged=await fetchDiscodataPages(sql)
-  }catch(err){
-    diagnostics({
-      source:'EEA / Discodata',
-      scope:scope.label,
-      year,pollutant,
-      aggregation:'P1Y annual mean',
-      endpoint:EEA_SQL_API,
-      error:String(err.message||err)
-    });
-    throw new Error(`EEA: impossibile leggere Discodata (${err.message||err}).`)
+    const entry=await promise;
+    return rowsForViewport(
+      entry.allRows,
+      entry.diagnostic,
+      'network'
+    )
+  }finally{
+    state.eeaValidatedInflight.delete(regionKey)
   }
-
-  const raw=paged.rows;
-
-  const best=new Map();
-  for(const r of raw){
-    const id=String(r.AirQualityStationEoICode||r.AirQualityStation||r.AQStationName||'').trim();
-    const value=parseNumber(r.AirPollutionLevel);
-    const lat=parseNumber(r.Latitude);
-    const lon=parseNumber(r.Longitude);
-    if(!id||value===null||lat===null||lon===null)continue;
-
-    const candidate={raw:r,score:eeaRecordScore(r)};
-    if(!best.has(id)||candidate.score>best.get(id).score)best.set(id,candidate)
-  }
-
-  const rows=[...best.entries()].map(([id,{raw:r}])=>{
-    const coverage=parseNumber(r.DataCoverage??r.Timecoverage??r.DataCapture);
-    return{
-      id,
-      name:String(r.AQStationName||r.AirQualityStation||id),
-      country:String(r.CountryCode||''),
-      lat:parseNumber(r.Latitude),
-      lon:parseNumber(r.Longitude),
-      value:parseNumber(r.AirPollutionLevel),
-      coverage,
-      verification:String(r.Verification||''),
-      accepted:String(r.AcceptedforProducts??''),
-      area:String(r.AirQualityStationArea||''),
-      stationType:String(r.AirQualityStationType||''),
-      kind:'station',
-      provider:'EEA'
-    }
-  }).sort((a,b)=>{
-    const countryCmp=a.country.localeCompare(b.country);
-    return countryCmp||a.name.localeCompare(b.name,'it')
-  });
-
-  const sample=raw[0]?{
-    CountryCode:raw[0].CountryCode,
-    AQStationName:raw[0].AQStationName,
-    AirQualityStationEoICode:raw[0].AirQualityStationEoICode,
-    AirPollutionLevel:raw[0].AirPollutionLevel,
-    UnitOfAirpollutionLevel:raw[0].UnitOfAirpollutionLevel,
-    DataAggregationProcess:raw[0].DataAggregationProcess,
-    DataAggregationProcessId:raw[0].DataAggregationProcessId,
-    DataCoverage:raw[0].DataCoverage,
-    Verification:raw[0].Verification,
-    Latitude:raw[0].Latitude,
-    Longitude:raw[0].Longitude
-  }:null;
-
-  const diagnostic={
-    source:'EEA / Discodata',
-    scope:scope.label,
-    boundingBox:scope.bbox,
-    table:'AirQualityDataFlows.latest.AirQualityStatistics',
-    year,pollutant,
-    component_code:POLLUTANTS[pollutant].eeaCode,
-    aggregation:'P1Y annual mean',
-    pages:paged.pages,
-    truncated:paged.truncated,
-    rowsReceived:raw.length,
-    stationsUsed:rows.length,
-    countries:[...new Set(rows.map(r=>r.country).filter(Boolean))].sort(),
-    sample
-  };
-
-  diagnostics(diagnostic);
-  state.eeaCache.set(cacheKey,{rows,diagnostic});
-  while(state.eeaCache.size>80){
-    const first=state.eeaCache.keys().next().value;
-    state.eeaCache.delete(first)
-  }
-
-  if(paged.truncated){
-    showToast(`EEA: raggiunto il limite di ${paged.pages*1000} record. Restringi l’area per un risultato completo.`)
-  }
-
-  return rows
 }
 
 function normalizeArpaKey(v){
@@ -2195,8 +2302,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.2.12',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.2.12',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.2.13',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.2.13',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -2211,7 +2318,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.2.12')
+    navigator.serviceWorker.register('./service-worker.js?v=0.2.13')
       .then(reg=>reg.update())
       .catch(console.error)
   }

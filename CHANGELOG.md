@@ -2,6 +2,30 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.2.13] - 2026-08-23
+
+### Prestazioni EEA
+
+- Aggiunta cache spaziale per le statistiche annuali E1a validate.
+- La query Discodata usa una bounding box agganciata a una griglia geografica; piccoli pan nella stessa zona riutilizzano i dati già caricati e filtrano le stazioni localmente.
+- La griglia si adatta alla dimensione della viewport: più fine nelle viste cittadine e più ampia nelle viste continentali.
+- Ridotte le colonne richieste a `AirQualityStatistics` ai soli campi utilizzati dall'app, diminuendo il payload JSON.
+- Richieste EEA validate identiche e simultanee condividono la stessa Promise invece di duplicare la chiamata HTTP.
+- Aggiunti `queryBoundingBox`, `spatialGridDegrees`, `cache` e `durationMs` alla diagnostica EEA.
+
+### Prestazioni EEA UTD
+
+- I Parquet E2a/UTD non sono più memorizzati per singola viewport.
+- Il dataset preliminare viene elaborato una sola volta per `città + anno + inquinante` durante la sessione.
+- Gli spostamenti successivi filtrano localmente le stazioni già elaborate sulla bounding box visibile.
+- Anche i metadati EEA dei sampling point sono memorizzati per città, anno e inquinante.
+- Richieste UTD simultanee identiche condividono la stessa elaborazione.
+- Ridotto il numero massimo di dataset UTD mantenuti in memoria a 20 per contenere l'uso di RAM.
+
+### Versioning
+
+- Aggiornata l'app a `0.2.13` build `31`.
+
 ## [0.2.12] - 2026-08-22
 
 ### EEA · area visibile

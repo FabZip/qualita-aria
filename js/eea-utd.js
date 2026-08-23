@@ -8,6 +8,8 @@
   const UTD_MAX_FILES=60;
 
   state.eeaUtdCache=state.eeaUtdCache||new Map();
+  state.eeaUtdMetadataCache=state.eeaUtdMetadataCache||new Map();
+  state.eeaUtdInflight=state.eeaUtdInflight||new Map();
   let hyparquetPromise=null;
   let compressorsPromise=null;
 
@@ -165,8 +167,13 @@
       })
   }
 
-  function metadataSql(year,pollutant){
-    const scope=currentEeaScope();
+  function utdCityScope(){
+    return typeof eeaSelectedScope==='function'
+      ?eeaSelectedScope()
+      :currentEeaScope()
+  }
+
+  function metadataSql(year,pollutant,scope=utdCityScope()){
     const[minLon,minLat,maxLon,maxLat]=scope.bbox;
     const y=String(year).replace(/\D/g,'');
     const previous=String(Math.max(2013,Number(y)-1));
@@ -194,29 +201,49 @@ WHERE CountryCode='IT'
   }
 
   async function fetchMetadata(year,pollutant){
-    const paged=await fetchDiscodataPages(metadataSql(year,pollutant),{
-      pageSize:1000,
-      maxPages:5
-    });
+    const cityScope=utdCityScope();
+    const key=`${eeaCity()}:${year}:${pollutant}:metadata`;
 
-    const filtered=paged.rows.filter(row=>pollutantMatchesMetadata(row,pollutant));
+    if(state.eeaUtdMetadataCache.has(key)){
+      return state.eeaUtdMetadataCache.get(key)
+    }
+
+    const paged=await fetchDiscodataPages(
+      metadataSql(year,pollutant,cityScope),
+      {pageSize:1000,maxPages:5}
+    );
+
+    const filtered=paged.rows.filter(
+      row=>pollutantMatchesMetadata(row,pollutant)
+    );
     const bySample=new Map();
 
     // Prefer metadata from the requested year when duplicated.
-    filtered.sort((a,b)=>Number(b.ReportingYear||0)-Number(a.ReportingYear||0));
+    filtered.sort(
+      (a,b)=>Number(b.ReportingYear||0)-Number(a.ReportingYear||0)
+    );
 
     for(const row of filtered){
-      for(const key of identifierKeys(row.SampleId)){
-        if(!bySample.has(key))bySample.set(key,row)
+      for(const sampleKey of identifierKeys(row.SampleId)){
+        if(!bySample.has(sampleKey))bySample.set(sampleKey,row)
       }
     }
 
-    return{
+    const result={
       bySample,
       rows:filtered,
       pages:paged.pages,
-      truncated:paged.truncated
+      truncated:paged.truncated,
+      cityScope
+    };
+
+    state.eeaUtdMetadataCache.set(key,result);
+    while(state.eeaUtdMetadataCache.size>20){
+      const first=state.eeaUtdMetadataCache.keys().next().value;
+      state.eeaUtdMetadataCache.delete(first)
     }
+
+    return result
   }
 
   function addObservation(groups,row,year){
@@ -332,21 +359,55 @@ WHERE CountryCode='IT'
     return results
   }
 
+  function utdRowsForViewport(allRows,scope){
+    const[minLon,minLat,maxLon,maxLat]=scope.bbox;
+    return allRows.filter(row=>
+      row.lon>=minLon&&row.lon<=maxLon&&
+      row.lat>=minLat&&row.lat<=maxLat
+    )
+  }
+
+  function utdCityCacheKey(year,pollutant){
+    return`${eeaCity()}:${year}:${pollutant}:utd-city`
+  }
+
   async function fetchUtdRows(year,pollutant){
+    const started=performance.now();
     const scope=currentEeaScope();
-    const cacheKey=`${eeaScopeKey()}:${year}:${pollutant}:utd`;
+    const cityScope=utdCityScope();
+    const cacheKey=utdCityCacheKey(year,pollutant);
+
+    function fromEntry(entry,cache){
+      const rows=utdRowsForViewport(entry.allRows,scope);
+      diagnostics({
+        ...entry.diagnostic,
+        scope:scope.label,
+        boundingBox:scope.bbox,
+        stationsInCityCache:allRows.length,
+        cache,
+        durationMs:Math.round(performance.now()-started)
+      });
+      return rows
+    }
 
     if(state.eeaUtdCache.has(cacheKey)){
-      const cached=state.eeaUtdCache.get(cacheKey);
-      diagnostics({...cached.diagnostic,cache:'memory'});
-      return cached.rows
+      return fromEntry(
+        state.eeaUtdCache.get(cacheKey),
+        'memory-city'
+      )
+    }
+
+    if(state.eeaUtdInflight.has(cacheKey)){
+      const entry=await state.eeaUtdInflight.get(cacheKey);
+      return fromEntry(entry,'inflight-shared')
     }
 
     if(!globalThis.QualitaAriaOpenAQProxy?.eeaUtdFiles){
       throw new Error('Client proxy EEA UTD non disponibile.')
     }
 
-    const city=scope.cityLabel;
+    const promise=(async()=>{
+    const city=cityScope.cityLabel;
     const[fileResponse,metadata,parquetTools]=await Promise.all([
       QualitaAriaOpenAQProxy.eeaUtdFiles({
         country:'IT',
@@ -371,8 +432,9 @@ WHERE CountryCode='IT'
         note:'Nessun file UTD restituito dal servizio EEA.'
       };
       diagnostics(diagnostic);
-      state.eeaUtdCache.set(cacheKey,{rows:[],diagnostic});
-      return[]
+      const entry={allRows:[],diagnostic};
+      state.eeaUtdCache.set(cacheKey,entry);
+      return entry
     }
 
     const groups=new Map();
@@ -460,20 +522,15 @@ WHERE CountryCode='IT'
       }
     }
 
-    const[minLon,minLat,maxLon,maxLat]=scope.bbox;
-    const rows=[...bestStation.values()]
-      .filter(row=>
-        row.lon>=minLon&&row.lon<=maxLon&&
-        row.lat>=minLat&&row.lat<=maxLat
-      )
+    const allRows=[...bestStation.values()]
       .sort((a,b)=>a.name.localeCompare(b.name,'it'));
 
     const diagnostic={
       source:'EEA Air Quality Download Service',
       flow:'E2a/UTD',
       dataStatus:'preliminary',
-      scope:scope.label,
-      boundingBox:scope.bbox,
+      cachedScope:cityScope.label,
+      cachedBoundingBox:cityScope.bbox,
       city,
       year,pollutant,
       datasetId:1,
@@ -486,7 +543,7 @@ WHERE CountryCode='IT'
       metadataRows:metadata.rows.length,
       metadataPages:metadata.pages,
       metadataTruncated:metadata.truncated,
-      stationsUsed:rows.length,
+      stationsInCityCache:allRows.length,
       lowCoverageSkipped,
       minimumCoverage:UTD_MIN_COVERAGE,
       unmatchedSamplingPoints:unmatched.slice(0,20),
@@ -494,13 +551,23 @@ WHERE CountryCode='IT'
       note:'Media annuale preliminare calcolata da osservazioni E2a/UTD valide. Preferenza automatica per la serie con maggiore copertura; soglia minima 75%.'
     };
 
-    diagnostics(diagnostic);
-    state.eeaUtdCache.set(cacheKey,{rows,diagnostic});
-    while(state.eeaUtdCache.size>40){
+    const entry={allRows,diagnostic};
+    state.eeaUtdCache.set(cacheKey,entry);
+    while(state.eeaUtdCache.size>20){
       const first=state.eeaUtdCache.keys().next().value;
       state.eeaUtdCache.delete(first)
     }
-    return rows
+    return entry
+    })();
+
+    state.eeaUtdInflight.set(cacheKey,promise);
+
+    try{
+      const entry=await promise;
+      return fromEntry(entry,'network')
+    }finally{
+      state.eeaUtdInflight.delete(cacheKey)
+    }
   }
 
   fetchEeaRows=async function(year,pollutant){
@@ -556,7 +623,7 @@ WHERE CountryCode='IT'
     return baseSourceNotice(rows)
   };
 
-  SOURCE_INFO.eea.hint='EEA usa prima le statistiche annuali validate E1a. Per l’anno più recente, quando il dato validato manca, può usare il flusso preliminare E2a/UTD nell’area del capoluogo selezionato. Dopo uno spostamento della mappa il refresh parte dopo 2 secondi e i risultati vengono filtrati sulla zona visibile.';
+  SOURCE_INFO.eea.hint='EEA usa prima le statistiche annuali validate E1a. Le query validate vengono memorizzate per celle geografiche e filtrate sulla viewport; per l’anno più recente i file preliminari E2a/UTD vengono scaricati una sola volta per città, anno e inquinante e poi filtrati localmente. Dopo un pan/zoom il refresh parte dopo 2 secondi.';
 
   globalThis.QualitaAriaEEAUTD={
     fetchUtdRows,
