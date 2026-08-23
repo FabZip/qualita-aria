@@ -2,11 +2,22 @@
 
 Worker Cloudflare per il modulo temperatura della PWA Qualità aria.
 
-Fonte: Open-Meteo Historical Weather API, modello `ERA5-Land`, variabile `temperature_2m`.
+Fonte: Open-Meteo Historical Weather API, modello `ERA5-Land`.
 
-Il Worker riceve bounding box, anno e mese, genera una griglia limitata a 25 punti,
-effettua una singola richiesta batch a Open-Meteo, calcola media/minima/massima
-delle temperature orarie e salva il JSON aggregato nella Cache API per 30 giorni.
+Il Worker riceve bounding box e anno, genera fino a 25 punti sulla zona
+visibile ed effettua una singola richiesta batch a Open-Meteo usando:
+
+- `temperature_2m_mean`
+- `temperature_2m_min`
+- `temperature_2m_max`
+
+Per ogni cella restituisce:
+
+- **MED**: media annua;
+- **MIN**: minimo annuale;
+- **MAX**: massimo annuale.
+
+La risposta aggregata viene conservata nella Cache API Cloudflare per 30 giorni.
 
 ## Deploy
 
@@ -15,12 +26,6 @@ cd cloudflare/temperature-proxy
 npx wrangler@latest deploy
 ```
 
-URL previsto:
+URL:
 
 `https://qualita-aria-temperature.fabzip.workers.dev`
-
-Verifica:
-
-```bash
-curl https://qualita-aria-temperature.fabzip.workers.dev/health
-```

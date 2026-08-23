@@ -131,34 +131,33 @@ Fonte:
 - accesso tramite Open-Meteo Historical Weather API
 - copertura usata dall'app: anni completi dal 1950 all'anno precedente
 - risoluzione nativa: `0,1°`, circa 9–11 km
-- frequenza originale: oraria
-- attribuzione dati: Open-Meteo / Copernicus Climate Change Service, con aggregazioni mensili calcolate dall'app
+- attribuzione dati: Open-Meteo / Copernicus Climate Change Service
 
-La vista temperatura usa **anno + mese**. Per ogni cella visualizza tre statistiche calcolate sulle temperature orarie del mese:
+La vista temperatura usa un solo **anno** e tre metriche:
 
-- temperatura media;
-- temperatura minima;
-- temperatura massima.
+- **MED** — media annua della temperatura dell'aria a 2 m;
+- **MIN** — temperatura minima assoluta dell'anno;
+- **MAX** — temperatura massima assoluta dell'anno.
 
-La metrica può essere cambiata senza riscaricare lo stesso mese, perché il Worker restituisce tutte e tre le statistiche nello stesso payload.
+Il Worker usa le aggregazioni giornaliere Open-Meteo `temperature_2m_mean`,
+`temperature_2m_min` e `temperature_2m_max`. Cambiare tra MED, MIN e MAX non
+richiede un nuovo download perché le tre statistiche sono nello stesso payload.
 
-Il capoluogo o la posizione iniziale della mappa non rappresentano un confine amministrativo: dopo pan/zoom il modulo ricalcola le celle sulla zona visibile con lo stesso debounce di 2 secondi usato dalle altre fonti.
+Dopo pan/zoom il modulo aggiorna la zona visibile con il debounce condiviso di
+2 secondi.
 
 ### Interpretazione
 
-ERA5-Land è un **modello di rianalisi**, non una rete di termometri urbani. La sua griglia è adatta a confronti climatici e territoriali, ma non permette di attribuire con affidabilità differenze di temperatura a una singola strada, parco, albero o edificio. Le celle sulla mappa rappresentano esplicitamente la griglia del modello.
+ERA5-Land è un **modello di rianalisi**, non una rete di termometri urbani.
+La griglia è adatta a confronti climatici e territoriali ma non permette di
+attribuire con affidabilità differenze di temperatura a una singola strada,
+parco, albero o edificio.
 
-### Proxy temperatura
+### Resilienza e proxy
 
-Il Worker `qualita-aria-temperature`:
-
-- riceve bounding box, anno e mese;
-- genera fino a 25 punti sulla zona visibile;
-- esegue una singola richiesta batch Open-Meteo;
-- calcola media/minima/massima delle osservazioni orarie;
-- mantiene il risultato aggregato nella Cache API Cloudflare per 30 giorni.
-
-Non richiede API key.
+La via primaria è il Worker `qualita-aria-temperature`, con cache Cloudflare
+di 30 giorni. Se il Worker è temporaneamente non disponibile o restituisce zero
+celle, il frontend prova direttamente Open-Meteo con la stessa aggregazione.
 
 ## PWA
 

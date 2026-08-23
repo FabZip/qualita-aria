@@ -2,6 +2,39 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.3.2] - 2026-08-23
+
+### Temperatura · periodo annuale
+
+- Allineato il modulo alla specifica concordata: MIN, MED e MAX dell'anno selezionato.
+- Rimosso il mese dalla vista temperatura.
+- MED è la media annua; MIN e MAX sono gli estremi annuali.
+- Le tre metriche sono restituite nello stesso payload, quindi cambiare metrica non genera una nuova richiesta.
+
+### ERA5-Land / Open-Meteo
+
+- Il Worker usa le aggregazioni giornaliere `temperature_2m_mean`, `temperature_2m_min` e `temperature_2m_max`.
+- Ridotto il volume upstream rispetto al precedente download orario mensile.
+- Worker temperatura aggiornato alla versione `0.2.0`.
+- Cache Cloudflare annuale di 30 giorni.
+- Area massima portata a 8° × 6°.
+- Aggiunto fallback diretto a Open-Meteo se il Worker non risponde o restituisce zero celle.
+- La diagnostica espone `transport` per distinguere proxy Cloudflare e fallback diretto.
+
+### MapLibre / OpenFreeMap
+
+- Impostato `Noto Sans Regular` sui layer testuali personalizzati.
+- Eliminata la richiesta automatica al font stack predefinito `Open Sans Regular, Arial Unicode MS Regular`, che generava i 404 mostrati in console.
+- Il messaggio `beforeinstallpromptevent.preventDefault()` resta intenzionale e serve al pulsante personalizzato `Installa app`.
+
+### Diagnostica
+
+- Prima della richiesta temperatura viene mostrato `phase: requesting`, così il cambio fonte è verificabile immediatamente.
+
+### Versioning
+
+- Aggiornata l'app a `0.3.2` build `35`.
+
 ## [0.3.1] - 2026-08-23
 
 ### Correzioni mappa

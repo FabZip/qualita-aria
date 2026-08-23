@@ -3,9 +3,9 @@ const OPEN_METEO_ARCHIVE='https://archive-api.open-meteo.com/v1/archive';
 const PROD_ORIGIN='https://fabzip.github.io';
 const NATIVE_RESOLUTION_DEG=0.1;
 const MAX_GRID_POINTS=25;
-const MAX_BBOX_WIDTH=4;
-const MAX_BBOX_HEIGHT=4;
-const CACHE_TTL=2592000; // 30 giorni: periodi storici completi
+const MAX_BBOX_WIDTH=8;
+const MAX_BBOX_HEIGHT=6;
+const CACHE_TTL=2592000;
 
 function json(data,status=200,headers={}){
   return new Response(JSON.stringify(data,null,2),{
@@ -21,7 +21,6 @@ function json(data,status=200,headers={}){
 function originAllowed(origin){
   if(!origin)return true;
   if(origin===PROD_ORIGIN)return true;
-
   try{
     const url=new URL(origin);
     return(
@@ -36,7 +35,6 @@ function originAllowed(origin){
 function corsHeaders(origin){
   if(!origin)return{};
   if(!originAllowed(origin))return null;
-
   return{
     'Access-Control-Allow-Origin':origin,
     'Access-Control-Allow-Methods':'GET,OPTIONS',
@@ -57,22 +55,15 @@ function yearParam(value){
   return year
 }
 
-function monthParam(value){
-  const month=Number(value);
-  return Number.isInteger(month)&&month>=1&&month<=12?month:null
-}
-
 function bboxNumbers(value){
   const parts=String(value||'').split(',').map(Number);
   if(parts.length!==4||parts.some(v=>!Number.isFinite(v)))return null;
-
-  let[minLon,minLat,maxLon,maxLat]=parts;
+  const[minLon,minLat,maxLon,maxLat]=parts;
   if(
     minLon<-180||maxLon>180||
     minLat<-85||maxLat>85||
     minLon>=maxLon||minLat>=maxLat
   )return null;
-
   return parts.map(v=>Number(v.toFixed(4)))
 }
 
@@ -91,7 +82,6 @@ function floorTo(value,step){
 function candidateStep(bbox){
   const width=bbox[2]-bbox[0];
   const height=bbox[3]-bbox[1];
-
   let step=NATIVE_RESOLUTION_DEG;
   while(
     (Math.floor(width/step)+1)*(Math.floor(height/step)+1)>MAX_GRID_POINTS
@@ -110,7 +100,6 @@ function gridForBbox(bbox){
   let latStart=ceilTo(minLat,step);
   let latEnd=floorTo(maxLat,step);
 
-  // Se la viewport è più piccola dello step, usa il centro.
   if(lonStart>lonEnd){
     lonStart=lonEnd=roundTo((minLon+maxLon)/2,NATIVE_RESOLUTION_DEG)
   }
@@ -134,17 +123,16 @@ function gridForBbox(bbox){
   }
 }
 
-function monthDates(year,month){
-  const start=`${year}-${String(month).padStart(2,'0')}-01`;
-  const lastDay=new Date(Date.UTC(year,month,0)).getUTCDate();
-  const end=`${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
-  return{start,end}
+function annualDates(year){
+  return{
+    start:`${year}-01-01`,
+    end:`${year}-12-31`
+  }
 }
 
-function internalCacheRequest(year,month,grid){
-  const url=new URL('https://qualita-aria-temperature-cache.invalid/month');
+function internalCacheRequest(year,grid){
+  const url=new URL('https://qualita-aria-temperature-cache.invalid/year');
   url.searchParams.set('year',String(year));
-  url.searchParams.set('month',String(month));
   url.searchParams.set(
     'points',
     grid.points
@@ -164,26 +152,30 @@ function cachePut(request,response,ctx){
   catch{}
 }
 
-function finiteTemperatures(values){
+function finite(values){
   return(Array.isArray(values)?values:[])
     .map(Number)
     .filter(Number.isFinite)
 }
 
-function stats(values){
-  const valid=finiteTemperatures(values);
-  if(!valid.length)return null;
+function annualStats(daily){
+  const means=finite(daily?.temperature_2m_mean);
+  const mins=finite(daily?.temperature_2m_min);
+  const maxs=finite(daily?.temperature_2m_max);
 
-  const sum=valid.reduce((total,value)=>total+value,0);
+  if(!means.length||!mins.length||!maxs.length)return null;
+
   return{
-    mean:Number((sum/valid.length).toFixed(2)),
-    min:Number(Math.min(...valid).toFixed(2)),
-    max:Number(Math.max(...valid).toFixed(2)),
-    observations:valid.length
+    mean:Number(
+      (means.reduce((sum,value)=>sum+value,0)/means.length).toFixed(2)
+    ),
+    min:Number(Math.min(...mins).toFixed(2)),
+    max:Number(Math.max(...maxs).toFixed(2)),
+    observations:means.length
   }
 }
 
-async function temperatureResponse(ctx,cors,{bbox,year,month}){
+async function temperatureResponse(ctx,cors,{bbox,year}){
   const width=bbox[2]-bbox[0];
   const height=bbox[3]-bbox[1];
 
@@ -198,18 +190,22 @@ async function temperatureResponse(ctx,cors,{bbox,year,month}){
   }
 
   const grid=gridForBbox(bbox);
-  const cacheRequest=internalCacheRequest(year,month,grid);
+  const cacheRequest=internalCacheRequest(year,grid);
   const cached=await cacheGet(cacheRequest);
 
   if(cached){
-    const response=new Response(cached.body,cached);
-    response.headers.set('Access-Control-Allow-Origin',cors['Access-Control-Allow-Origin']||'*');
-    response.headers.set('Vary','Origin');
-    response.headers.set('X-Proxy-Cache','HIT');
-    return response
+    const body=await cached.arrayBuffer();
+    const headers=new Headers(cached.headers);
+    Object.entries(cors).forEach(([key,value])=>headers.set(key,value));
+    headers.set('X-Proxy-Cache','HIT');
+
+    return new Response(body,{
+      status:200,
+      headers
+    })
   }
 
-  const{start,end}=monthDates(year,month);
+  const{start,end}=annualDates(year);
   const latitude=grid.points.map(point=>point.latitude).join(',');
   const longitude=grid.points.map(point=>point.longitude).join(',');
 
@@ -218,7 +214,10 @@ async function temperatureResponse(ctx,cors,{bbox,year,month}){
   upstreamUrl.searchParams.set('longitude',longitude);
   upstreamUrl.searchParams.set('start_date',start);
   upstreamUrl.searchParams.set('end_date',end);
-  upstreamUrl.searchParams.set('hourly','temperature_2m');
+  upstreamUrl.searchParams.set(
+    'daily',
+    'temperature_2m_mean,temperature_2m_min,temperature_2m_max'
+  );
   upstreamUrl.searchParams.set('models','era5_land');
   upstreamUrl.searchParams.set('timezone','GMT');
   upstreamUrl.searchParams.set('temperature_unit','celsius');
@@ -244,7 +243,7 @@ async function temperatureResponse(ctx,cors,{bbox,year,month}){
   locations.forEach((location,index)=>{
     const latitude=Number(location?.latitude);
     const longitude=Number(location?.longitude);
-    const summary=stats(location?.hourly?.temperature_2m);
+    const summary=annualStats(location?.daily);
 
     if(
       !Number.isFinite(latitude)||
@@ -276,6 +275,7 @@ async function temperatureResponse(ctx,cors,{bbox,year,month}){
       model:'ERA5-Land',
       variable:'temperature_2m',
       variableLabel:'Temperatura aria a 2 m',
+      aggregation:'annual min / mean / max from daily aggregates',
       nativeResolutionDegrees:NATIVE_RESOLUTION_DEG,
       nativeResolutionApproxKm:'9–11',
       sampleStepDegrees:grid.sampleStepDegrees,
@@ -283,7 +283,6 @@ async function temperatureResponse(ctx,cors,{bbox,year,month}){
       returnedCells:results.length,
       bbox,
       year,
-      month,
       startDate:start,
       endDate:end,
       upstreamMs:Date.now()-started,
@@ -300,22 +299,20 @@ async function temperatureResponse(ctx,cors,{bbox,year,month}){
     'X-Qualita-Aria-Proxy':'Temperature'
   };
 
-  const cacheResponse=new Response(
-    JSON.stringify(responsePayload),
-    {status:200,headers:cacheHeaders}
+  const serialized=JSON.stringify(responsePayload);
+  cachePut(
+    cacheRequest,
+    new Response(serialized,{status:200,headers:cacheHeaders}),
+    ctx
   );
-  cachePut(cacheRequest,cacheResponse,ctx);
 
-  return new Response(
-    JSON.stringify(responsePayload),
-    {
-      status:200,
-      headers:{
-        ...cacheHeaders,
-        ...cors
-      }
+  return new Response(serialized,{
+    status:200,
+    headers:{
+      ...cacheHeaders,
+      ...cors
     }
-  )
+  })
 }
 
 export default{
@@ -343,9 +340,10 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.1.0',
+        version:'0.2.0',
         source:'ERA5-Land via Open-Meteo',
         temperature2m:true,
+        aggregation:'annual min / mean / max',
         historicalFrom:1950,
         maxGridPoints:MAX_GRID_POINTS,
         cacheSeconds:CACHE_TTL
@@ -358,20 +356,23 @@ export default{
     if(url.pathname==='/v1/temperature'){
       const bbox=bboxNumbers(url.searchParams.get('bbox'));
       const year=yearParam(url.searchParams.get('year'));
-      const month=monthParam(url.searchParams.get('month'));
 
       if(!bbox)return badRequest('Bounding box non valida',cors);
-      if(year===null)return badRequest('Anno non valido: sono ammessi anni completi dal 1950.',cors);
-      if(month===null)return badRequest('Mese non valido',cors);
+      if(year===null){
+        return badRequest(
+          'Anno non valido: sono ammessi anni completi dal 1950.',
+          cors
+        )
+      }
 
-      return temperatureResponse(ctx,cors,{bbox,year,month})
+      return temperatureResponse(ctx,cors,{bbox,year})
     }
 
     return json({
       error:'Endpoint non trovato',
       endpoints:[
         '/health',
-        '/v1/temperature?bbox=12.2,41.7,12.8,42.1&year=2025&month=8'
+        '/v1/temperature?bbox=12.2,41.7,12.8,42.1&year=2025'
       ]
     },404,cors)
   }
