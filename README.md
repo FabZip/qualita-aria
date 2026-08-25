@@ -186,6 +186,8 @@ Il service worker conserva la shell applicativa per migliorare caricamento e res
 
 La fonte **Alberi · fonti comunali** mostra eventi e bilanci arborei documentati, separandoli dal censimento del patrimonio esistente. Un albero censito non viene considerato una nuova piantumazione; una sparizione tra due censimenti non viene considerata un abbattimento senza conferma della fonte.
 
+Queste statistiche non descrivono lo stato fitosanitario, la vitalità o la condizione degli alberi esistenti. Lo stato dell'evento — per esempio programmato, eseguito o urgente — viene invece conservato quando è dichiarato dalla fonte.
+
 La prima fonte attiva è il [Bilancio Arboreo di Roma Capitale](https://www.comune.roma.it/web/it/scheda-servizi.page?contentId=INF70550). I bilanci 2017–2020 e il dato parziale 2021 sono rappresentati come aggregati comunali, quindi non vengono creati falsi punti sulle strade. Il totale novembre 2021–dicembre 2025 resta aggregato e non viene suddiviso tra i singoli anni.
 
 Quando il dato è comunale, la mappa colora il confine amministrativo in base al saldo: verde se le piantumazioni superano tagli o decrementi, rosso nel caso opposto. Un indicatore circolare mostra il rapporto proporzionale tra le due quantità e il totale degli interventi; sotto la mappa due barre rendono confrontabili i valori e mostrano il saldo esplicito. L'indicatore è dichiarato come riepilogo dell'intero Comune e non come posizione dei singoli alberi.
@@ -200,7 +202,11 @@ La fonte arborea utilizza le stesse tre modalità delle altre fonti:
 - **Confronto**: due mappe per due bilanci annuali documentati;
 - **Differenza**: variazione del saldo fra due anni comparabili.
 
-Un totale pluriennale non viene ripartito artificialmente e quindi non entra nei confronti o nelle differenze fra singoli anni.
+Un totale pluriennale non viene ripartito artificialmente e quindi non entra nei confronti o nelle differenze fra singoli anni. Il bilancio novembre 2021–dicembre 2025 e la stagione 2024–marzo 2025 sono selezioni autonome.
+
+Per il 2023, 2024 e 2025 l'app include una raccolta iniziale di avvisi e notizie ufficiali con data, luogo, stato e quantità. La loro somma è indicata come **totale minimo documentato**, non come totale annuale completo: gli avvisi pubblicamente reperibili potrebbero non coprire tutti gli interventi. Quantità sconosciute ed eventi soltanto programmati sono mostrati nell'elenco ma non vengono sommati al minimo eseguito.
+
+La modalità `Differenza` calcola una variazione soltanto quando le due selezioni hanno la stessa natura: bilancio ufficiale con bilancio ufficiale oppure raccolta parziale con raccolta parziale.
 
 ## Architettura
 

@@ -38,6 +38,16 @@ const TEMPERATURE_METRICS={
   max:{label:'Massima media annuale',short:'MAX'}
 };
 const TREE_YEARS=Array.from({length:13},(_,index)=>String(2025-index));
+const TREE_MAP_PERIODS=[
+  {value:'2025',label:'2025 · eventi documentati'},
+  {value:'2024',label:'2024 · eventi documentati'},
+  {value:'season-2024-2025',label:'stagione 2024–mar 2025 · aggregato'},
+  {value:'2023',label:'2023 · eventi documentati'},
+  {value:'2022',label:'2022 · nessun totale annuale'},
+  {value:'period-2021-2025',label:'nov 2021–dic 2025 · aggregato'},
+  ...TREE_YEARS.filter(year=>Number(year)<=2021).map(year=>({value:year,label:year}))
+];
+const TREE_PERIOD_LABELS=new Map(TREE_MAP_PERIODS.map(item=>[item.value,item.label]));
 
 const EEA_SCOPES={
   italy:{label:'Italia',country:'IT',kind:'country-city'},
@@ -263,16 +273,19 @@ async function loadEeaCities(){
 
 function fillYears(){
   const years=currentYears();
-  const latest=years[0];
-  const preferredA=years.includes('2015')?'2015':years.at(-1);
-  const preferredB=years.includes('2023')?'2023':latest;
+  const latest=isTrees()?TREE_MAP_PERIODS[0].value:years[0];
+  const preferredA=isTrees()?'2019':(years.includes('2015')?'2015':years.at(-1));
+  const preferredB=isTrees()?'2020':(years.includes('2023')?'2023':latest);
 
   for(const id of ['yearSelect','compareYearA','compareYearB']){
+    const options=isTrees()&&id==='yearSelect'
+      ?TREE_MAP_PERIODS.map(item=>item.value)
+      :years;
     const old=$(id).value;
-    $(id).innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join('');
-    if(old&&years.includes(old))$(id).value=old;
+    $(id).innerHTML=options.map(y=>`<option value="${y}">${TREE_PERIOD_LABELS.get(y)||y}</option>`).join('');
+    if(old&&options.includes(old))$(id).value=old;
   }
-  if(!years.includes($('yearSelect').value))$('yearSelect').value=latest;
+  if(!(isTrees()?TREE_MAP_PERIODS.some(item=>item.value===$('yearSelect').value):years.includes($('yearSelect').value)))$('yearSelect').value=latest;
   if(!years.includes($('compareYearA').value))$('compareYearA').value=preferredA;
   if(!years.includes($('compareYearB').value))$('compareYearB').value=preferredB;
 }
@@ -380,7 +393,7 @@ function configureSourceUI(){
   const trees=isTrees();
   if(trees){
     configureTreeCityOptions(true);
-    $('sourceDescription').innerHTML='<strong>Alberi:</strong> eventi e bilanci arborei documentati da fonti comunali. Censimenti, posti pianta e manutenzioni non vengono convertiti in piantumazioni o abbattimenti.';
+    $('sourceDescription').innerHTML='<strong>Alberi:</strong> eventi e bilanci arborei documentati da fonti comunali. Le statistiche non descrivono lo stato fitosanitario, la vitalità o la condizione degli alberi esistenti. Censimenti, posti pianta e manutenzioni non vengono convertiti in piantumazioni o abbattimenti.';
     $('pollutantSourceField')?.classList.remove('hidden');
     $('eeaScopeField').classList.add('hidden');
     $('eeaCityField')?.classList.remove('hidden');
@@ -2811,21 +2824,32 @@ async function renderTemperatureMode(token){
 }
 
 function treeListHtml(result,year,includeAggregate=true){
-  const {city,events,aggregate}=result;
+  const {city,events,aggregate,documentedEvents=[],documentedSummary}=result;
   if(!city)return'<div class="empty-state">Città non configurata per le statistiche arboree.</div>';
   if(!city.available)return`<div class="tree-period-note"><strong>${city.name}</strong><br>${city.reason}</div>`;
 
   const balanceRow=event=>{
     const saldo=Number(event.plantings)-Number(event.decrements);
     const max=Math.max(Number(event.plantings),Number(event.decrements),1);
-    return`<div class="tree-balance-row"><div class="tree-balance-head"><strong>${event.locationName} · ${event.period}</strong><b>Saldo ${saldo>0?'+':''}${TreeStats.fmt(saldo)}</b></div><div class="tree-compare"><span>Piantati</span><i class="tree-compare-bar tree-compare-planted" style="width:${Math.max(8,event.plantings/max*100)}%"><b>${TreeStats.fmt(event.plantings)}</b></i><span>${event.decrementLabel}</span><i class="tree-compare-bar tree-compare-cut" style="width:${Math.max(8,event.decrements/max*100)}%"><b>${TreeStats.fmt(event.decrements)}</b></i></div><small>${event.notes}</small></div>`
+    const prefix=event.dataKind==='documented_partial'?'Saldo minimo documentato':'Saldo';
+    const plantedLabel=event.dataKind==='documented_partial'?'Piantati documentati':'Piantati';
+    return`<div class="tree-balance-row"><div class="tree-balance-head"><strong>${event.locationName} · ${event.period}</strong><b>${prefix} ${saldo>0?'+':''}${TreeStats.fmt(saldo)}</b></div><div class="tree-compare"><span>${plantedLabel}</span><i class="tree-compare-bar tree-compare-planted" style="width:${Math.max(8,event.plantings/max*100)}%"><b>${TreeStats.fmt(event.plantings)}</b></i><span>${event.decrementLabel}</span><i class="tree-compare-bar tree-compare-cut" style="width:${Math.max(8,event.decrements/max*100)}%"><b>${TreeStats.fmt(event.decrements)}</b></i></div><small>${event.coverageLabel?`${event.coverageLabel}. `:''}${event.notes}</small></div>`
   };
   const rows=events.map(balanceRow).join('');
 
-  const aggregateNote=includeAggregate&&aggregate
-    ?`<div class="tree-period-note"><strong>Disponibile soltanto il totale aggregato del periodo ${aggregate.period}</strong><br>Il totale non viene suddiviso né attribuito al ${year}.</div>${balanceRow(aggregate)}`
+  const statusLabels={completed:'Eseguito',emergency_completed:'Urgente eseguito',planned:'Programmato',reported:'Comunicazione ufficiale',unknown:'Stato non determinato'};
+  const documentedList=documentedEvents.length
+    ?`${documentedSummary?balanceRow(documentedSummary):''}<div class="tree-event-list">${documentedEvents.map(event=>{
+      const type=event.eventType==='planting'?'Piantumazione':'Abbattimento';
+      const quantity=Number.isFinite(event.quantity)?`${TreeStats.fmt(event.quantity)} alberi`:'quantità non specificata';
+      return`<div class="tree-event-row"><i class="tree-swatch ${event.eventType==='planting'?'tree-swatch-planted':'tree-swatch-cut'}"></i><div><strong>${event.locationName}</strong><small>${event.date}${event.district?` · ${event.district}`:''}<br>${type} · ${statusLabels[event.status]||event.status} · ${quantity}<br><a href="${event.sourceUrl}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a></small></div></div>`
+    }).join('')}</div>`
     :'';
-  return rows+aggregateNote||'<div class="empty-state">Nessun evento arboreo documentato disponibile per questa selezione.</div>'
+
+  const aggregateNote=includeAggregate&&aggregate
+    ?`<div class="tree-period-note"><strong>Totale aggregato del periodo ${aggregate.period}</strong><br>Il periodo è mostrato come selezione autonoma e non viene attribuito ai singoli anni.</div>${balanceRow(aggregate)}`
+    :'';
+  return rows+documentedList+aggregateNote||'<div class="empty-state">Nessun totale annuale o evento arboreo documentato disponibile per questa selezione.</div>'
 }
 
 async function renderTreesMode(token){
@@ -2846,55 +2870,60 @@ async function renderTreesMode(token){
     yearB?TreeStats.rows(cityId,yearB):Promise.resolve(null)
   ]);
   if(token!==state.renderToken)return;
-  const boundary=cityId==='roma'&&(resultA.events.length||resultA.aggregate||resultB?.events.length)?await fetchRomeBoundary():null;
+  const boundary=cityId==='roma'&&(resultA.record||resultB?.record)?await fetchRomeBoundary():null;
   if(token!==state.renderToken)return;
 
   let displayed=0;
   let summaryValue=null;
   if(state.mode==='compare'){
     TreeStats.clear(state.map);
-    const recordA=resultA.events[0]||null;
-    const recordB=resultB.events[0]||null;
+    const recordA=resultA.record||null;
+    const recordB=resultB.record||null;
     TreeStats.showScope(state.mapBefore,recordA,boundary);
     TreeStats.showScope(state.mapAfter,recordB,boundary);
     $('beforeBadge').textContent=yearA;
     $('afterBadge').textContent=yearB;
-    $('stations').innerHTML=`<div class="tree-period-note"><strong>Confronto ${yearA} ↔ ${yearB}</strong><br>I totali aggregati pluriennali non vengono attribuiti ai singoli anni.</div>${treeListHtml(resultA,yearA,false)}${treeListHtml(resultB,yearB,false)}`;
+    const comparable=recordA&&recordB&&recordA.dataKind===recordB.dataKind;
+    $('stations').innerHTML=`<div class="tree-period-note"><strong>Confronto ${yearA} ↔ ${yearB}</strong><br>${comparable?'Le due selezioni usano dati della stessa natura.':'I dati hanno copertura diversa: il confronto visivo resta disponibile, ma la differenza numerica non è calcolata.'}</div>${treeListHtml(resultA,yearA,false)}${treeListHtml(resultB,yearB,false)}`;
     displayed=Number(Boolean(recordA))+Number(Boolean(recordB));
     summaryValue=recordB?TreeStats.balanceOf(recordB):null;
     requestAnimationFrame(()=>{state.mapBefore.resize();state.mapAfter.resize()})
   }else if(state.mode==='difference'){
     TreeStats.clear(state.mapBefore);
     TreeStats.clear(state.mapAfter);
-    const recordA=resultA.events[0]||null;
-    const recordB=resultB.events[0]||null;
+    const recordA=resultA.record||null;
+    const recordB=resultB.record||null;
     const diff=TreeStats.showDifferenceScope(state.map,recordA,recordB,boundary,yearA,yearB);
     if(diff){
-      $('stations').innerHTML=`<div class="tree-balance-row"><div class="tree-balance-head"><strong>Variazione del saldo · ${yearA} → ${yearB}</strong><b>${diff.difference>0?'+':''}${TreeStats.fmt(diff.difference)}</b></div><small>Saldo ${yearA}: ${diff.balanceA>0?'+':''}${TreeStats.fmt(diff.balanceA)} · saldo ${yearB}: ${diff.balanceB>0?'+':''}${TreeStats.fmt(diff.balanceB)}. Un valore positivo indica un miglioramento del saldo arboreo.</small></div>`;
+      const partial=diff.dataKind==='documented_partial';
+      $('stations').innerHTML=`<div class="tree-balance-row"><div class="tree-balance-head"><strong>${partial?'Variazione del saldo minimo documentato':'Variazione del saldo'} · ${yearA} → ${yearB}</strong><b>${diff.difference>0?'+':''}${TreeStats.fmt(diff.difference)}</b></div><small>${partial?'Confronto fra raccolte parziali di eventi pubblici; non rappresenta la variazione completa del patrimonio. ':''}Saldo ${yearA}: ${diff.balanceA>0?'+':''}${TreeStats.fmt(diff.balanceA)} · saldo ${yearB}: ${diff.balanceB>0?'+':''}${TreeStats.fmt(diff.balanceB)}.</small></div>`;
       displayed=1;
       summaryValue=diff.difference
     }else{
-      $('stations').innerHTML='<div class="empty-state">Differenza non calcolabile: servono due bilanci annuali comparabili. I totali pluriennali non vengono attribuiti ai singoli anni.</div>'
+      $('stations').innerHTML='<div class="empty-state">Differenza non calcolabile: servono due selezioni con la stessa natura e copertura. Un bilancio ufficiale completo non viene confrontato numericamente con una raccolta parziale.</div>'
     }
-    $('mapBadge').textContent=`Δ saldo alberi · ${yearB} − ${yearA}`
+    $('mapBadge').textContent=`Δ ${diff?.dataKind==='documented_partial'?'minimo documentato':'saldo alberi'} · ${yearB} − ${yearA}`
   }else{
     TreeStats.clear(state.mapBefore);
     TreeStats.clear(state.mapAfter);
-    const scopeRecord=resultA.events[0]||(resultA.aggregate||null);
+    const scopeRecord=resultA.record||null;
     TreeStats.showScope(state.map,scopeRecord,boundary);
     $('stations').innerHTML=treeListHtml(resultA,yearA);
-    summaryValue=resultA.events.length?TreeStats.balanceOf(resultA.events[0]):null;
-    displayed=resultA.events.length||(resultA.aggregate?1:0);
-    $('mapBadge').textContent=`Alberi · ${resultA.city?.name||'città'} · ${resultA.events.length?yearA:(resultA.aggregate?.period||yearA)}`
+    summaryValue=scopeRecord?TreeStats.balanceOf(scopeRecord):null;
+    displayed=scopeRecord?1:0;
+    $('mapBadge').textContent=`Alberi · ${resultA.city?.name||'città'} · ${scopeRecord?.period||TREE_PERIOD_LABELS.get(yearA)||yearA}`
   }
 
   $('avgValue').textContent=summaryValue===null?'—':`${summaryValue>0?'+':''}${TreeStats.fmt(summaryValue)}`;
-  $('avgLabel').textContent=state.mode==='difference'?'Variazione saldo':state.mode==='compare'?`Saldo ${yearB}`:'Saldo documentato';
+  const partialRecord=(resultB?.record||resultA.record)?.dataKind==='documented_partial';
+  $('avgLabel').textContent=state.mode==='difference'?(partialRecord?'Variazione minimo':'Variazione saldo'):state.mode==='compare'?`${partialRecord?'Saldo minimo':'Saldo'} ${yearB}`:(partialRecord?'Saldo minimo documentato':'Saldo documentato');
   $('stationCount').textContent=displayed;
-  $('periodValue').textContent=yearB?`${yearA}↔${yearB}`:yearA;
+  $('periodValue').textContent=yearB?`${yearA}↔${yearB}`:(TREE_PERIOD_LABELS.get(yearA)||yearA);
   $('sourceValue').textContent=resultA.city?.available?'Fonte comunale ufficiale':'Dati non ancora verificati';
-  $('dataNotice').textContent=displayed?`${displayed} ambito/i territoriale/i`:'Dati annuali non disponibili';
-  $('mapHint').textContent='Il colore copre l’intero ambito amministrativo: verde indica saldo positivo, rosso saldo negativo. L’indicatore centrale confronta piantati e tagliati/decrementi; non rappresenta la posizione dei singoli alberi.';
+  $('dataNotice').textContent=displayed?(partialRecord?'Copertura parziale · totale minimo documentato':`${displayed} ambito/i territoriale/i`):'Dati annuali non disponibili';
+  $('mapHint').textContent=partialRecord
+    ?'Il colore rappresenta soltanto il saldo minimo degli eventi pubblicamente documentati, non il bilancio annuale completo. Gli interventi elencati mantengono data, luogo e stato dichiarati dalla fonte.'
+    :'Il colore copre l’intero ambito amministrativo: verde indica saldo positivo, rosso saldo negativo. L’indicatore centrale confronta piantati e tagliati/decrementi; non rappresenta la posizione dei singoli alberi.';
   diagnostics({source:'Statistiche arboree',mode:state.mode,yearA,yearB,city:resultA.city?.name||null,available:resultA.city?.available||false,displayed});
 
   if(resultA.city?.center){
@@ -3171,6 +3200,10 @@ function bind(){
     state.temperatureViewportKey='';
     clearTemperatureOverlays();
     fillYears();
+    if(isTrees()){
+      $('compareYearA').value='2019';
+      $('compareYearB').value='2020'
+    }
     configureSourceUI();
     if(source()==='eea')focusSelectedEeaScope();
     render()
@@ -3209,8 +3242,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.4.2',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.4.2',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.4.3',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.4.3',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3225,7 +3258,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.4.2')
+    navigator.serviceWorker.register('./service-worker.js?v=0.4.3')
       .then(reg=>reg.update())
       .catch(console.error)
   }

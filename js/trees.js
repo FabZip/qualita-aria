@@ -6,7 +6,7 @@
   const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
   async function catalog(){
-    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.4.2',{cache:'no-store'}).then(response=>{
+    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.4.3',{cache:'no-store'}).then(response=>{
       if(!response.ok)throw new Error(`Dati arborei: HTTP ${response.status}`);
       return response.json()
     });
@@ -32,7 +32,8 @@
     const balance=balanceOf(event);
     const extra=event.falls?`<br>Di cui schianti: ${fmt(event.falls)}`:'';
     const forests=event.forestations?`<br>Forestazioni separate: ${fmt(event.forestations)}`:'';
-    return `<div class="tree-popup"><strong>${escapeHtml(event.locationName)} — ${escapeHtml(event.period)}</strong><br>Piantati: ${fmt(event.plantings)}<br>${escapeHtml(event.decrementLabel||'Decrementi')}: ${fmt(event.decrements)}${extra}${forests}<br><strong>Saldo: ${balance>0?'+':''}${fmt(balance)}</strong><br>Ambito: intero Comune<br>Localizzazione puntuale non disponibile<br>Fonte: ${escapeHtml(source.publisher)}<br><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">Documento ufficiale</a></div>`
+    const partial=event.dataKind==='documented_partial';
+    return `<div class="tree-popup"><strong>${escapeHtml(event.locationName)} — ${escapeHtml(event.period)}</strong><br>${partial?'Piantati documentati':'Piantati'}: ${fmt(event.plantings)}<br>${escapeHtml(event.decrementLabel||'Decrementi')}: ${fmt(event.decrements)}${extra}${forests}<br><strong>${partial?'Saldo minimo documentato':'Saldo'}: ${balance>0?'+':''}${fmt(balance)}</strong><br>${partial?'Copertura parziale: non è un totale annuale completo.<br>':''}Ambito: intero Comune<br>Localizzazione puntuale non disponibile<br>Fonte: ${escapeHtml(source.publisher)}<br><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">Documento ufficiale</a></div>`
   }
 
   function addScopeLayers(map){
@@ -55,15 +56,16 @@
       const p=feature.properties||{};
       const balance=Number(p.balance||0);
       if(p.viewKind==='difference'){
+        const partial=p.dataKind==='documented_partial';
         new maplibregl.Popup({offset:12})
           .setLngLat(event.lngLat)
-          .setHTML(`<div class="tree-popup"><strong>${escapeHtml(p.locationName)} — ${escapeHtml(p.period)}</strong><br>Saldo iniziale: ${Number(p.balanceA)>0?'+':''}${fmt(p.balanceA)}<br>Saldo finale: ${Number(p.balanceB)>0?'+':''}${fmt(p.balanceB)}<br><strong>Variazione: ${balance>0?'+':''}${fmt(balance)}</strong><br>Ambito: intero Comune</div>`)
+          .setHTML(`<div class="tree-popup"><strong>${escapeHtml(p.locationName)} — ${escapeHtml(p.period)}</strong><br>${partial?'Saldo minimo':'Saldo'} iniziale: ${Number(p.balanceA)>0?'+':''}${fmt(p.balanceA)}<br>${partial?'Saldo minimo':'Saldo'} finale: ${Number(p.balanceB)>0?'+':''}${fmt(p.balanceB)}<br><strong>Variazione${partial?' del minimo documentato':''}: ${balance>0?'+':''}${fmt(balance)}</strong><br>${partial?'Copertura parziale.<br>':''}Ambito: intero Comune</div>`)
           .addTo(map);
         return
       }
       new maplibregl.Popup({offset:12})
         .setLngLat(event.lngLat)
-        .setHTML(`<div class="tree-popup"><strong>${escapeHtml(p.locationName)} — ${escapeHtml(p.period)}</strong><br>Piantati: ${fmt(p.plantings)}<br>${escapeHtml(p.decrementLabel)}: ${fmt(p.decrements)}<br><strong>Saldo: ${balance>0?'+':''}${fmt(balance)}</strong><br>Ambito: intero Comune<br>Localizzazione puntuale non disponibile<br><a href="${escapeHtml(p.sourceUrl)}" target="_blank" rel="noopener noreferrer">Documento ufficiale</a></div>`)
+        .setHTML(`<div class="tree-popup"><strong>${escapeHtml(p.locationName)} — ${escapeHtml(p.period)}</strong><br>${p.dataKind==='documented_partial'?'Piantati documentati':'Piantati'}: ${fmt(p.plantings)}<br>${escapeHtml(p.decrementLabel)}: ${fmt(p.decrements)}<br><strong>${p.dataKind==='documented_partial'?'Saldo minimo documentato':'Saldo'}: ${balance>0?'+':''}${fmt(balance)}</strong><br>${p.dataKind==='documented_partial'?'Copertura parziale: non è un totale annuale completo.<br>':''}Ambito: intero Comune<br>Localizzazione puntuale non disponibile<br><a href="${escapeHtml(p.sourceUrl)}" target="_blank" rel="noopener noreferrer">Documento ufficiale</a></div>`)
         .addTo(map)
     });
     map.on('mouseenter','tree-scope-fill',()=>map.getCanvas().style.cursor='pointer');
@@ -89,7 +91,7 @@
         ...(feature.properties||{}),balance,balanceIntensity,
         locationName:event.locationName,period:event.period,
         plantings:Number(event.plantings||0),decrements:Number(event.decrements||0),
-        decrementLabel:event.decrementLabel||'Decrementi',sourceUrl:event.source?.url||''
+        decrementLabel:event.decrementLabel||'Decrementi',sourceUrl:event.source?.url||'',dataKind:event.dataKind||'official_period'
       }}))
     };
     map.getSource('tree-scope-source').setData(scoped);
@@ -105,7 +107,7 @@
     el.style.width=`${size}px`;
     el.style.height=`${size}px`;
     el.style.setProperty('--planted-angle',`${plantedPct*3.6}deg`);
-    el.innerHTML=`<span>${fmt(total)}</span><small>totale</small>`;
+    el.innerHTML=`<span>${fmt(total)}</span><small>${event.dataKind==='documented_partial'?'minimo':'totale'}</small>`;
     el.setAttribute('aria-label',`Intero Comune: ${fmt(planted)} piantati, ${fmt(decrements)} ${event.decrementLabel||'decrementi'}, saldo ${balance>0?'+':''}${fmt(balance)}`);
     const marker=new maplibregl.Marker({element:el,anchor:'center'})
       .setLngLat(event.coordinates)
@@ -122,13 +124,14 @@
       map.getSource('tree-scope-source')?.setData({type:'FeatureCollection',features:[]});
       return null
     }
+    if(recordA.dataKind!==recordB.dataKind)return null;
     const balanceA=balanceOf(recordA);
     const balanceB=balanceOf(recordB);
     const difference=balanceB-balanceA;
     const balanceIntensity=Math.min(1,Math.abs(difference)/Math.max(1,Math.abs(balanceA),Math.abs(balanceB)));
     const scoped={...boundary,features:boundary.features.map(feature=>({...feature,properties:{
       ...(feature.properties||{}),viewKind:'difference',balance:difference,balanceIntensity,
-      balanceA,balanceB,locationName:recordB.locationName,period:`${yearA} → ${yearB}`
+      balanceA,balanceB,dataKind:recordA.dataKind,locationName:recordB.locationName,period:`${yearA} → ${yearB}`
     }}))};
     map.getSource('tree-scope-source').setData(scoped);
     ['tree-scope-fill','tree-scope-line'].forEach(id=>map.setLayoutProperty(id,'visibility','visible'));
@@ -136,14 +139,15 @@
     const el=document.createElement('button');
     el.type='button';
     el.className=`tree-difference-marker ${difference>=0?'is-positive':'is-negative'}`;
-    el.innerHTML=`<span>${difference>0?'+':''}${fmt(difference)}</span><small>Δ saldo</small>`;
+    const partial=recordA.dataKind==='documented_partial';
+    el.innerHTML=`<span>${difference>0?'+':''}${fmt(difference)}</span><small>${partial?'Δ minimo':'Δ saldo'}</small>`;
     el.setAttribute('aria-label',`Variazione del saldo arboreo da ${yearA} a ${yearB}: ${difference>0?'+':''}${fmt(difference)}`);
     const marker=new maplibregl.Marker({element:el,anchor:'center'})
       .setLngLat(recordB.coordinates)
-      .setPopup(new maplibregl.Popup({offset:44}).setHTML(`<div class="tree-popup"><strong>${escapeHtml(recordB.locationName)} — ${yearA} → ${yearB}</strong><br>Saldo iniziale: ${balanceA>0?'+':''}${fmt(balanceA)}<br>Saldo finale: ${balanceB>0?'+':''}${fmt(balanceB)}<br><strong>Variazione: ${difference>0?'+':''}${fmt(difference)}</strong><br>Ambito: intero Comune</div>`))
+      .setPopup(new maplibregl.Popup({offset:44}).setHTML(`<div class="tree-popup"><strong>${escapeHtml(recordB.locationName)} — ${yearA} → ${yearB}</strong><br>${partial?'Saldo minimo':'Saldo'} iniziale: ${balanceA>0?'+':''}${fmt(balanceA)}<br>${partial?'Saldo minimo':'Saldo'} finale: ${balanceB>0?'+':''}${fmt(balanceB)}<br><strong>Variazione${partial?' del minimo documentato':''}: ${difference>0?'+':''}${fmt(difference)}</strong><br>${partial?'Copertura parziale.<br>':''}Ambito: intero Comune</div>`))
       .addTo(map);
     markerGroups.set(map,[marker]);
-    return{balanceA,balanceB,difference}
+    return{balanceA,balanceB,difference,dataKind:recordA.dataKind}
   }
 
   function eventMarkers(event){
@@ -182,14 +186,41 @@
     })
   }
 
-  async function rows(cityId,year){
+  async function rows(cityId,selection){
     const data=await catalog();
     const city=data.cities[cityId];
     if(!city)return{city:null,events:[],aggregate:null,diagnostic:{reason:'Città non configurata'}};
     const source=city.source||{};
-    const events=(city.events||[]).filter(event=>String(event.year)===String(year)).map(event=>({...event,source}));
-    const aggregate=(city.aggregatePeriods||[]).find(item=>Number(year)>=item.fromYear&&Number(year)<=item.toYear);
-    return{city,events,aggregate:aggregate?{...aggregate,source}:null,diagnostic:{schemaVersion:data.schemaVersion,city:city.name,year,available:city.available,events:events.length,aggregatePeriod:aggregate?.period||null}}
+    const events=(city.events||[])
+      .filter(event=>String(event.year)===String(selection))
+      .map(event=>({...event,dataKind:'official_annual',coverageLabel:'Bilancio ufficiale',source}));
+    const aggregate=(city.aggregatePeriods||[]).find(item=>item.selectorValue===selection);
+    const documentedEvents=(city.documentedEvents||[])
+      .filter(event=>String(event.year)===String(selection))
+      .map(event=>({...event,source:{publisher:'Roma Capitale',url:event.sourceUrl}}));
+    const completed=documentedEvents.filter(event=>
+      ['completed','emergency_completed'].includes(event.status)&&Number.isFinite(event.quantity)
+    );
+    const plantings=completed
+      .filter(event=>event.eventType==='planting')
+      .reduce((sum,event)=>sum+event.quantity,0);
+    const decrements=completed
+      .filter(event=>event.eventType==='decrement')
+      .reduce((sum,event)=>sum+event.quantity,0);
+    const documentedSummary=completed.length?{
+      id:`${cityId}-${selection}-documented-minimum`,year:String(selection),period:String(selection),
+      locationName:city.name,locationPrecision:'city',coordinates:city.center,status:'reported',
+      plantings,decrements,decrementLabel:'Abbattimenti documentati',
+      dataKind:'documented_partial',coverageLabel:'Totale minimo documentato',
+      notes:'Somma dei soli eventi pubblici raccolti con quantità nota e stato eseguito. Non rappresenta il totale annuale completo.',
+      source:{publisher:'Roma Capitale · avvisi e notizie ufficiali',url:'https://www.comune.roma.it/web/it/informazioni-di-servizio.page?tem=verde_urbano'}
+    }:null;
+    const aggregateRecord=aggregate?{...aggregate,source}:null;
+    const record=events[0]||documentedSummary||aggregateRecord||null;
+    return{
+      city,events,aggregate:aggregateRecord,documentedEvents,documentedSummary,record,
+      diagnostic:{schemaVersion:data.schemaVersion,city:city.name,selection,available:city.available,officialAnnual:events.length,documentedEvents:documentedEvents.length,aggregatePeriod:aggregate?.period||null,dataKind:record?.dataKind||null}
+    }
   }
 
   window.TreeStats={rows,show,showScope,showDifferenceScope,clear,fmt,balanceOf};

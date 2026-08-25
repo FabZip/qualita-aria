@@ -2,6 +2,24 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.4.3] - 2026-08-26
+
+### Alberi · periodi e copertura
+
+- Precisato che le statistiche non descrivono stato fitosanitario, vitalità o condizione degli alberi esistenti.
+- Rimosso il riuso del totale novembre 2021–dicembre 2025 nelle singole selezioni 2022, 2023, 2024 e 2025.
+- Aggiunte selezioni autonome per il bilancio aggregato novembre 2021–dicembre 2025 e per la stagione 2024–marzo 2025.
+- Aggiunta una raccolta iniziale di eventi ufficiali datati per il 2023, 2024 e 2025.
+- Le quantità annuali ricavate dagli eventi sono denominate `totale minimo documentato` e dichiarate con copertura parziale.
+- Eventi programmati, eseguiti, urgenti e con quantità sconosciuta restano distinti; soltanto quantità note ed eventi eseguiti entrano nel minimo documentato.
+- `Confronto` consente la lettura affiancata; `Differenza` viene calcolata soltanto tra dati della stessa natura.
+- Un bilancio annuale ufficiale non viene confrontato numericamente con una raccolta parziale.
+
+### Versioning
+
+- Dataset arboreo aggiornato allo schema 2.
+- App aggiornata alla versione `0.4.3` (build 46).
+
 ## [0.4.2] - 2026-08-25
 
 ### Alberi come fonte dati

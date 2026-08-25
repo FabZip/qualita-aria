@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 1,
-  "generatedAt": "2026-08-25",
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-26",
   "cities": {
     "roma": {
       "name": "Roma",
@@ -20,7 +20,22 @@
         {"id":"roma-2021-partial","year":"2021","period":"1 gennaio–3 settembre 2021","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":1616,"decrements":1033,"decrementLabel":"Abbattimenti","forestations":8782,"notes":"Dato parziale fino al 3 settembre 2021. Le forestazioni sono indicate separatamente e non sono sommate alle piantumazioni."}
       ],
       "aggregatePeriods": [
-        {"id":"roma-2021-2025-balance","fromYear":2021,"toYear":2025,"period":"novembre 2021–dicembre 2025","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":67640,"decrements":29842,"decrementLabel":"Decrementi","falls":706,"notes":"Totale aggregato del periodo: non attribuibile ai singoli anni. I decrementi comprendono 706 schianti."}
+        {"id":"roma-2021-2025-balance","selectorValue":"period-2021-2025","dataKind":"official_period","period":"novembre 2021–dicembre 2025","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":67640,"decrements":29842,"decrementLabel":"Decrementi","falls":706,"notes":"Totale aggregato ufficiale: non attribuibile ai singoli anni. I decrementi comprendono 706 schianti."},
+        {"id":"roma-season-2024-2025","selectorValue":"season-2024-2025","dataKind":"official_period","period":"stagione 2024–31 marzo 2025","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":29000,"decrements":13000,"decrementLabel":"Abbattimenti","approximate":true,"notes":"Quantità comunicate come circa 29.000 messe a dimora e 13.000 abbattimenti. Periodo stagionale non separabile tra 2024 e 2025."}
+      ],
+      "documentedEvents": [
+        {"id":"roma-2023-paola-falconieri","year":"2023","date":"12 aprile 2023","locationName":"Via Paola Falconieri","district":"Municipio XII","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":4,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1035500"},
+        {"id":"roma-2023-fabiola","year":"2023","date":"12 aprile 2023","locationName":"Via Fabiola","district":"Municipio XII","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":1,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1035500"},
+        {"id":"roma-2023-algardi","year":"2023","date":"11–12 aprile 2023","locationName":"Via Algardi","district":"Municipio XII","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":3,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1035500"},
+        {"id":"roma-2023-via-mario","year":"2023","date":"8 agosto 2023","locationName":"Via Mario","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":2,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1079891"},
+        {"id":"roma-2023-serafico","year":"2023","date":"9 agosto 2023","locationName":"Via del Serafico · Giardino Mattia Preti","district":"Municipio VIII","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":null,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1079891"},
+        {"id":"roma-2023-quattro-venti","year":"2023","date":"9–26 agosto 2023","locationName":"Viale dei Quattro Venti","locationPrecision":"address","eventType":"decrement","status":"planned","quantity":8,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1079891"},
+        {"id":"roma-2023-gianicolense","year":"2023","date":"23–26 ottobre 2023","locationName":"Circonvallazione Gianicolense 35 e 161","district":"Municipio XII","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":2,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1099296"},
+        {"id":"roma-2023-vascello","year":"2023","date":"23–26 ottobre 2023","locationName":"Via del Vascello 9","district":"Municipio XII","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":2,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1099296"},
+        {"id":"roma-2023-san-giovanni-dio","year":"2023","date":"23–26 ottobre 2023","locationName":"Piazza San Giovanni di Dio 10","district":"Municipio XII","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":1,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1099296"},
+        {"id":"roma-2023-laurentina","year":"2023","date":"23–26 ottobre 2023","locationName":"Via Laurentina · Serafico–Tintoretto","district":"Municipio IX","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":4,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1099296"},
+        {"id":"roma-2024-piazza-venezia","year":"2024","date":"28 marzo 2024","locationName":"Piazza Venezia, Piazza San Marco e Ara Coeli","locationPrecision":"address","eventType":"planting","status":"completed","quantity":11,"sourceUrl":"https://www.comune.roma.it/web/it/notizia/verde-alberature-nel-quadrante-di-piazza-venezia.page"},
+        {"id":"roma-2025-togliatti","year":"2025","date":"aprile 2025","locationName":"Viale Palmiro Togliatti 1493–1091","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":20,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1361217"}
       ]
     },
     "padova":{"name":"Padova","available":false,"reason":"Nessuna serie di eventi annuali verificata è inclusa in questa release."},
