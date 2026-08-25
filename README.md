@@ -188,7 +188,9 @@ La modalità **Alberi** mostra eventi e bilanci arborei documentati, separandoli
 
 La prima fonte attiva è il [Bilancio Arboreo di Roma Capitale](https://www.comune.roma.it/web/it/scheda-servizi.page?contentId=INF70550). I bilanci 2017–2020 e il dato parziale 2021 sono rappresentati come aggregati comunali, quindi non vengono creati falsi punti sulle strade. Il totale novembre 2021–dicembre 2025 resta aggregato e non viene suddiviso tra i singoli anni.
 
-I marker hanno dimensione fissa sullo schermo: verde per le piantumazioni e rosso per abbattimenti o decrementi. Ogni record dichiara la precisione geografica (`point`, `address`, `district` o `city`). Padova, Bologna e Torino sono predisposte ma non dichiarate disponibili finché non vengono verificate fonti pubbliche di eventi, storici confrontabili o documenti ufficiali sufficienti.
+Quando il dato è comunale, la mappa colora il confine amministrativo in base al saldo: verde se le piantumazioni superano tagli o decrementi, rosso nel caso opposto. Un indicatore circolare mostra il rapporto proporzionale tra le due quantità e il totale degli interventi; sotto la mappa due barre rendono confrontabili i valori e mostrano il saldo esplicito. L'indicatore è dichiarato come riepilogo dell'intero Comune e non come posizione dei singoli alberi.
+
+Quando saranno disponibili dati territoriali verificati, la stessa rappresentazione potrà essere applicata a Municipi o quartieri. I marker puntuali saranno utilizzati soltanto per interventi associati a coordinate o indirizzi reali. Ogni record dichiara comunque la precisione geografica (`point`, `address`, `district` o `city`). Padova, Bologna e Torino sono predisposte ma non dichiarate disponibili finché non vengono verificate fonti pubbliche di eventi, storici confrontabili o documenti ufficiali sufficienti.
 
 I dati arborei sono pre-elaborati in JSON/GeoJSON; il frontend non interpreta direttamente PDF o grandi portali durante la navigazione.
 

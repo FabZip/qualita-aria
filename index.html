@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="css/station-list.css?v=0.2.2">
   <link rel="stylesheet" href="css/openaq-world.css?v=0.2.4">
   <link rel="stylesheet" href="css/temperature.css?v=0.3.8">
-  <link rel="stylesheet" href="css/trees.css?v=0.4.0">
+  <link rel="stylesheet" href="css/trees.css?v=0.4.1">
   <title>Qualità dell'aria</title>
 </head>
 <body>
@@ -91,7 +91,7 @@
         <i id="temperatureOverlayLegendIcon" class="temperature-overlay-dot">🌡</i>
         <span id="temperatureOverlayLegendText">Temperatura · MIN / MEDIA / MAX</span>
       </div>
-      <div id="treeLegend" class="tree-legend hidden"><span><i>🌳</i>Piantumazioni</span><span><i>🌲</i>Abbattimenti / decrementi</span></div>
+      <div id="treeLegend" class="tree-legend hidden"><span><i class="tree-swatch tree-swatch-planted"></i>Piantati</span><span><i class="tree-swatch tree-swatch-cut"></i>Tagliati / decrementi</span></div>
     </section>
 
     <section class="map-card">
@@ -177,7 +177,7 @@
 
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
     <footer class="app-footer">
-      v<span id="appVersion">0.4.0</span> · dataset <span id="dataVersion">9</span>
+      v<span id="appVersion">0.4.1</span> · dataset <span id="dataVersion">9</span>
     </footer>
   </main>
 
@@ -186,8 +186,8 @@
   <script src="js/openaq-proxy.js?v=0.2.11" defer></script>
   <script src="js/eea-proxy.js?v=0.2.14" defer></script>
   <script src="js/temperature-proxy.js?v=0.3.8" defer></script>
-  <script src="js/trees.js?v=0.4.0" defer></script>
-  <script src="js/app.js?v=0.4.0" defer></script>
+  <script src="js/trees.js?v=0.4.1" defer></script>
+  <script src="js/app.js?v=0.4.1" defer></script>
   <script src="js/eea-utd.js?v=0.2.14" defer></script>
   <script src="js/openaq-world.js?v=0.3.8" defer></script>
   <script src="js/temperature-overlay.js?v=0.3.8" defer></script>

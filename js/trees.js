@@ -1,18 +1,108 @@
 (function(){
   let catalogPromise=null;
   const markers=[];
+  const scopeMaps=new Set();
   const fmt=n=>Number(n).toLocaleString('it-IT');
   const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
   async function catalog(){
-    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.4.0',{cache:'no-store'}).then(response=>{
+    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.4.1',{cache:'no-store'}).then(response=>{
       if(!response.ok)throw new Error(`Dati arborei: HTTP ${response.status}`);
       return response.json()
     });
     return catalogPromise
   }
 
-  function clear(){while(markers.length)markers.pop().remove()}
+  function clear(){
+    while(markers.length)markers.pop().remove();
+    scopeMaps.forEach(map=>{
+      ['tree-scope-fill','tree-scope-line'].forEach(id=>map.getLayer(id)&&map.setLayoutProperty(id,'visibility','none'))
+    })
+  }
+
+  function balanceOf(event){
+    return Number(event?.plantings||0)-Number(event?.decrements||0)
+  }
+
+  function scopePopupHtml(event){
+    const source=event.source||{};
+    const balance=balanceOf(event);
+    const extra=event.falls?`<br>Di cui schianti: ${fmt(event.falls)}`:'';
+    const forests=event.forestations?`<br>Forestazioni separate: ${fmt(event.forestations)}`:'';
+    return `<div class="tree-popup"><strong>${escapeHtml(event.locationName)} — ${escapeHtml(event.period)}</strong><br>Piantati: ${fmt(event.plantings)}<br>${escapeHtml(event.decrementLabel||'Decrementi')}: ${fmt(event.decrements)}${extra}${forests}<br><strong>Saldo: ${balance>0?'+':''}${fmt(balance)}</strong><br>Ambito: intero Comune<br>Localizzazione puntuale non disponibile<br>Fonte: ${escapeHtml(source.publisher)}<br><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">Documento ufficiale</a></div>`
+  }
+
+  function addScopeLayers(map){
+    if(map.getSource('tree-scope-source'))return;
+    map.addSource('tree-scope-source',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+    map.addLayer({
+      id:'tree-scope-fill',type:'fill',source:'tree-scope-source',layout:{visibility:'none'},
+      paint:{
+        'fill-color':['case',['>=',['get','balance'],0],'#22c55e','#ef4444'],
+        'fill-opacity':['interpolate',['linear'],['get','balanceIntensity'],0,.16,1,.42]
+      }
+    });
+    map.addLayer({
+      id:'tree-scope-line',type:'line',source:'tree-scope-source',layout:{visibility:'none'},
+      paint:{'line-color':['case',['>=',['get','balance'],0],'#15803d','#b91c1c'],'line-width':2}
+    });
+    map.on('click','tree-scope-fill',event=>{
+      const feature=event.features?.[0];
+      if(!feature)return;
+      const p=feature.properties||{};
+      const balance=Number(p.balance||0);
+      new maplibregl.Popup({offset:12})
+        .setLngLat(event.lngLat)
+        .setHTML(`<div class="tree-popup"><strong>${escapeHtml(p.locationName)} — ${escapeHtml(p.period)}</strong><br>Piantati: ${fmt(p.plantings)}<br>${escapeHtml(p.decrementLabel)}: ${fmt(p.decrements)}<br><strong>Saldo: ${balance>0?'+':''}${fmt(balance)}</strong><br>Ambito: intero Comune<br>Localizzazione puntuale non disponibile<br><a href="${escapeHtml(p.sourceUrl)}" target="_blank" rel="noopener noreferrer">Documento ufficiale</a></div>`)
+        .addTo(map)
+    });
+    map.on('mouseenter','tree-scope-fill',()=>map.getCanvas().style.cursor='pointer');
+    map.on('mouseleave','tree-scope-fill',()=>map.getCanvas().style.cursor='')
+  }
+
+  function showScope(map,event,boundary){
+    clear();
+    addScopeLayers(map);
+    scopeMaps.add(map);
+    if(!event||!boundary?.features?.length){
+      ['tree-scope-fill','tree-scope-line'].forEach(id=>map.getLayer(id)&&map.setLayoutProperty(id,'visibility','none'));
+      map.getSource('tree-scope-source')?.setData({type:'FeatureCollection',features:[]});
+      return
+    }
+
+    const balance=balanceOf(event);
+    const total=Number(event.plantings||0)+Number(event.decrements||0);
+    const balanceIntensity=total?Math.min(1,Math.abs(balance)/total):0;
+    const scoped={
+      ...boundary,
+      features:boundary.features.map(feature=>({...feature,properties:{
+        ...(feature.properties||{}),balance,balanceIntensity,
+        locationName:event.locationName,period:event.period,
+        plantings:Number(event.plantings||0),decrements:Number(event.decrements||0),
+        decrementLabel:event.decrementLabel||'Decrementi',sourceUrl:event.source?.url||''
+      }}))
+    };
+    map.getSource('tree-scope-source').setData(scoped);
+    ['tree-scope-fill','tree-scope-line'].forEach(id=>map.setLayoutProperty(id,'visibility','visible'));
+
+    const planted=Number(event.plantings||0);
+    const decrements=Number(event.decrements||0);
+    const plantedPct=total?planted/total*100:50;
+    const size=Math.round(Math.max(58,Math.min(86,46+Math.log10(Math.max(10,total))*10)));
+    const el=document.createElement('button');
+    el.type='button';
+    el.className='tree-balance-marker';
+    el.style.width=`${size}px`;
+    el.style.height=`${size}px`;
+    el.style.setProperty('--planted-angle',`${plantedPct*3.6}deg`);
+    el.innerHTML=`<span>${fmt(total)}</span><small>totale</small>`;
+    el.setAttribute('aria-label',`Intero Comune: ${fmt(planted)} piantati, ${fmt(decrements)} ${event.decrementLabel||'decrementi'}, saldo ${balance>0?'+':''}${fmt(balance)}`);
+    const marker=new maplibregl.Marker({element:el,anchor:'center'})
+      .setLngLat(event.coordinates)
+      .setPopup(new maplibregl.Popup({offset:Math.ceil(size/2)+8}).setHTML(scopePopupHtml(event)))
+      .addTo(map);
+    markers.push(marker)
+  }
 
   function eventMarkers(event){
     const result=[];
@@ -60,5 +150,5 @@
     return{city,events,aggregate:aggregate?{...aggregate,source}:null,diagnostic:{schemaVersion:data.schemaVersion,city:city.name,year,available:city.available,events:events.length,aggregatePeriod:aggregate?.period||null}}
   }
 
-  window.TreeStats={rows,show,clear,fmt};
+  window.TreeStats={rows,show,showScope,clear,fmt};
 })();

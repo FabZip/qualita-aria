@@ -2,6 +2,23 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.4.1] - 2026-08-25
+
+### Alberi · visualizzazione territoriale
+
+- Sostituiti i due alberelli comunali con una visualizzazione del bilancio arboreo sulla mappa.
+- Il confine amministrativo viene colorato in verde con saldo positivo e in rosso con saldo negativo.
+- L'intensità del riempimento rappresenta il peso del saldo rispetto agli interventi complessivi.
+- Aggiunto un indicatore circolare proporzionale, diviso tra piantati e tagliati/decrementi, con totale complessivo al centro.
+- Il popup riporta piantati, tagliati/decrementi, saldo, periodo, ambito territoriale e fonte ufficiale.
+- Aggiunto sotto la mappa il confronto con barre proporzionali e saldo esplicito.
+- I totali comunali continuano a essere dichiarati come dati dell'intero Comune e non come posizioni dei singoli alberi.
+- Il periodo novembre 2021–dicembre 2025 resta aggregato e non viene attribuito ai singoli anni.
+
+### Versioning
+
+- App aggiornata alla versione `0.4.1` (build 44).
+
 ## [0.4.0] - 2026-08-25
 
 ### Statistiche arboree
