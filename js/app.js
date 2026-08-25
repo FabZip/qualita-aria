@@ -37,6 +37,7 @@ const TEMPERATURE_METRICS={
   mean:{label:'Temperatura media annuale',short:'MEDIA'},
   max:{label:'Massima media annuale',short:'MAX'}
 };
+const TREE_YEARS=Array.from({length:13},(_,index)=>String(2025-index));
 
 const EEA_SCOPES={
   italy:{label:'Italia',country:'IT',kind:'country-city'},
@@ -112,6 +113,7 @@ const SOURCE_INFO={
 
 function source(){return $('sourceSelect').value}
 function isTemperature(){return state.mode==='temperature'}
+function isTrees(){return state.mode==='trees'}
 function eeaScope(){return $('eeaScopeSelect')?.value||'italy'}
 function eeaCity(){return $('eeaCitySelect')?.value||EEA_DEFAULT_CITY}
 
@@ -200,7 +202,7 @@ function currentEeaScope(){
   }
 }
 
-function currentYears(){return isTemperature()?TEMPERATURE_YEARS:SOURCE_INFO[source()].years}
+function currentYears(){return isTrees()?TREE_YEARS:(isTemperature()?TEMPERATURE_YEARS:SOURCE_INFO[source()].years)}
 function normalizeText(v){return String(v??'').toLowerCase().replace(/\s+/g,' ').trim()}
 function fmt(v){return Number(v).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})}
 function avg(rows){return rows.length?rows.reduce((s,r)=>s+r.value,0)/rows.length:0}
@@ -375,6 +377,29 @@ function configureTemperatureLegend(active){
 
 function configureSourceUI(){
   const temperature=isTemperature();
+  const trees=isTrees();
+  if(trees){
+    configureTreeCityOptions(true);
+    $('sourceDescription').innerHTML='<strong>Alberi:</strong> eventi e bilanci arborei documentati da fonti comunali. Censimenti, posti pianta e manutenzioni non vengono convertiti in piantumazioni o abbattimenti.';
+    $('pollutantSourceField')?.classList.add('hidden');
+    $('eeaScopeField').classList.add('hidden');
+    $('eeaCityField')?.classList.remove('hidden');
+    $('pollutantField')?.classList.add('hidden');
+    $('monthField')?.classList.add('hidden');
+    $('treeLegend')?.classList.remove('hidden');
+    $('standardLegend')?.classList.add('hidden');
+    $('differenceLegend')?.classList.add('hidden');
+    $('avgLabel').textContent='Saldo documentato';
+    $('countLabel').textContent='Eventi';
+    $('countUnit').textContent='documentati';
+    $('listTitle').textContent='Statistiche arboree';
+    if($('avgUnit'))$('avgUnit').textContent='alberi';
+    return
+  }
+
+  configureTreeCityOptions(false);
+  $('pollutantSourceField')?.classList.remove('hidden');
+  $('treeLegend')?.classList.add('hidden');
   const info=temperature
     ?SOURCE_INFO.temperature
     :SOURCE_INFO[source()];
@@ -416,6 +441,26 @@ function configureSourceUI(){
     $('countUnit').textContent='Comune di Roma';
     $('listTitle').textContent='Valutazione visualizzata';
   }
+}
+
+function configureTreeCityOptions(active){
+  const select=$('eeaCitySelect');
+  if(!select)return;
+  const treeCities=['roma','padova','bologna','torino'];
+  const desired=active
+    ?treeCities.map(id=>state.eeaCities.get(id)).filter(Boolean)
+    :[...state.eeaCities.values()];
+  const signature=`${active?'trees':'air'}:${desired.map(city=>city.id).join(',')}`;
+  if(select.dataset.optionSignature===signature)return;
+  const old=select.value;
+  select.replaceChildren(...desired.map(city=>{
+    const option=document.createElement('option');
+    option.value=String(city.id);
+    option.textContent=String(city.name);
+    return option
+  }));
+  select.value=desired.some(city=>String(city.id)===old)?old:EEA_DEFAULT_CITY;
+  select.dataset.optionSignature=signature
 }
 
 function eeaSpatialGridStep(bbox){
@@ -2618,6 +2663,11 @@ function bindMapRefresh(map){
 function setLoading(on){
   $('loadingOverlay').classList.toggle('hidden',!on);
 
+  if(isTrees()){
+    $('loadingText').textContent=`Caricamento statistiche arboree · ${$('yearSelect').value}…`;
+    return
+  }
+
   if(isTemperature()){
     $('loadingText').textContent=`Caricamento temperatura · ${$('yearSelect').value}…`;
     return
@@ -2753,6 +2803,57 @@ async function renderTemperatureMode(token){
   rememberViewportBaseline()
 }
 
+function treeListHtml(result,year){
+  const {city,events,aggregate}=result;
+  if(!city)return'<div class="empty-state">Città non configurata per le statistiche arboree.</div>';
+  if(!city.available)return`<div class="tree-period-note"><strong>${city.name}</strong><br>${city.reason}</div>`;
+
+  const rows=events.map(event=>{
+    const saldo=Number(event.plantings)-Number(event.decrements);
+    return`<div class="tree-row"><span class="tree-row-icon">🌳<br>🌲</span><div><strong>${event.locationName} · ${event.period}</strong><small>Piantumazioni ${TreeStats.fmt(event.plantings)} · ${event.decrementLabel} ${TreeStats.fmt(event.decrements)}<br>${event.notes}</small></div><b>${saldo>0?'+':''}${TreeStats.fmt(saldo)}</b></div>`
+  }).join('');
+
+  const aggregateNote=aggregate
+    ?`<div class="tree-period-note"><strong>Disponibile soltanto il totale aggregato del periodo ${aggregate.period}</strong><br>Piantagioni: ${TreeStats.fmt(aggregate.plantings)} · Decrementi: ${TreeStats.fmt(aggregate.decrements)} · di cui schianti: ${TreeStats.fmt(aggregate.falls)}.<br>Il totale non viene suddiviso né attribuito al ${year}.</div>`
+    :'';
+  return rows+aggregateNote||'<div class="empty-state">Nessun evento arboreo documentato disponibile per questa selezione.</div>'
+}
+
+async function renderTreesMode(token){
+  clearTemperatureOverlays();
+  setTemperatureVisibility(false);
+  setLayerVisibility(state.map,[
+    'air-boundary-fill','air-boundary-line','air-heat','air-points','air-labels',
+    'diff-boundary-fill','diff-boundary-line','diff-good','diff-bad','diff-points','diff-labels'
+  ],false);
+
+  const year=$('yearSelect').value;
+  const cityId=eeaCity();
+  const result=await TreeStats.rows(cityId,year);
+  if(token!==state.renderToken)return;
+
+  TreeStats.show(state.map,result.events.length?result.events:(result.aggregate?[result.aggregate]:[]));
+  $('stations').innerHTML=treeListHtml(result,year);
+
+  const plantings=result.events.reduce((sum,event)=>sum+(Number(event.plantings)||0),0);
+  const decrements=result.events.reduce((sum,event)=>sum+(Number(event.decrements)||0),0);
+  const saldo=result.events.length?plantings-decrements:null;
+  $('mapBadge').textContent=`Alberi · ${result.city?.name||'città'} · ${year}`;
+  $('avgValue').textContent=saldo===null?'—':`${saldo>0?'+':''}${TreeStats.fmt(saldo)}`;
+  $('stationCount').textContent=result.events.length;
+  $('periodValue').textContent=year;
+  $('sourceValue').textContent=result.city?.available?'Fonte comunale ufficiale':'Dati non ancora verificati';
+  $('dataNotice').textContent=result.aggregate&&!result.events.length
+    ?`Totale aggregato ${result.aggregate.period}`
+    :`${result.events.length} bilancio/evento documentato`;
+  $('mapHint').textContent='I marker indicano solo localizzazioni dichiarate dalla fonte. Un indicatore comunale non rappresenta la posizione dei singoli alberi.';
+  diagnostics({source:'Statistiche arboree',...result.diagnostic});
+
+  if(result.city?.center){
+    state.map.jumpTo({center:result.city.center,zoom:result.city.zoom||9.5})
+  }
+}
+
 async function render(){
   if(!state.map)return;
   const token=++state.renderToken;
@@ -2763,16 +2864,21 @@ async function render(){
   $('comparePanel').classList.toggle('hidden',!periodComparison);
   $('singleYearField').classList.toggle(
     'hidden',
-    !['map','temperature'].includes(state.mode)
+    !['map','temperature','trees'].includes(state.mode)
   );
   $('singleMapWrap').classList.toggle('hidden',state.mode==='compare');
   $('compareMapWrap').classList.toggle('hidden',state.mode!=='compare');
-  $('standardLegend').classList.toggle('hidden',state.mode==='difference');
+  $('standardLegend').classList.toggle('hidden',state.mode==='difference'||isTrees());
   $('differenceLegend').classList.toggle('hidden',state.mode!=='difference');
   $('mapBadge').classList.toggle('hidden',state.mode==='compare');
   updateArpaHistoryVisibility();
 
   try{
+    if(isTrees()){
+      await renderTreesMode(token);
+      return
+    }
+    window.TreeStats?.clear?.();
     if(isTemperature()){
       await renderTemperatureMode(token);
       return
@@ -2862,6 +2968,7 @@ $('mapHint').textContent=SOURCE_INFO[source()].hint;
       setTemperatureVisibility(false);
       renderTemperatureList([]);
     }else{
+      window.TreeStats?.clear?.();
       showAirOnSingle([]);
       renderList([]);
     }
@@ -2990,15 +3097,16 @@ function bind(){
   // La vecchia modalità ERA5-Land non deve poter riapparire nemmeno se il
   // browser conserva una copia precedente dell'HTML.
   document.querySelectorAll('[data-mode="temperature"]').forEach(node=>node.remove());
-  if(!['map','compare','difference'].includes(state.mode))state.mode='map';
+  if(!['map','compare','difference','trees'].includes(state.mode))state.mode='map';
 
   document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
-    if(!['map','compare','difference'].includes(btn.dataset.mode))return;
+    if(!['map','compare','difference','trees'].includes(btn.dataset.mode))return;
     document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     state.mode=btn.dataset.mode;
 
     clearTemperatureOverlays();
+    if(!isTrees())window.TreeStats?.clear?.();
     fillYears();
     configureSourceUI();
     render()
@@ -3023,6 +3131,10 @@ function bind(){
   });
 
   $('eeaCitySelect')?.addEventListener('change',()=>{
+    if(isTrees()){
+      render();
+      return
+    }
     if(source()!=='eea'||eeaScope()!=='italy')return;
     resetEeaViewport();
     focusSelectedEeaScope();
@@ -3043,8 +3155,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.3.6',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.3.6',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.4.0',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.4.0',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3059,7 +3171,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.3.6')
+    navigator.serviceWorker.register('./service-worker.js?v=0.4.0')
       .then(reg=>reg.update())
       .catch(console.error)
   }

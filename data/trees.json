@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-25",
+  "cities": {
+    "roma": {
+      "name": "Roma",
+      "center": [12.4964, 41.9028],
+      "zoom": 9.7,
+      "available": true,
+      "source": {
+        "publisher": "Roma Capitale",
+        "title": "Bilancio Arboreo",
+        "url": "https://www.comune.roma.it/web/it/scheda-servizi.page?contentId=INF70550"
+      },
+      "events": [
+        {"id":"roma-2017-balance","year":"2017","period":"2017","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":120,"decrements":1251,"decrementLabel":"Abbattimenti","notes":"Totale comunale ufficiale; localizzazione puntuale non disponibile."},
+        {"id":"roma-2018-balance","year":"2018","period":"2018","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":148,"decrements":1072,"decrementLabel":"Abbattimenti","notes":"Totale comunale ufficiale; localizzazione puntuale non disponibile."},
+        {"id":"roma-2019-balance","year":"2019","period":"2019","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":542,"decrements":1358,"decrementLabel":"Abbattimenti","notes":"Totale comunale ufficiale; localizzazione puntuale non disponibile."},
+        {"id":"roma-2020-balance","year":"2020","period":"2020","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":203,"decrements":2555,"decrementLabel":"Abbattimenti","notes":"Totale comunale ufficiale; localizzazione puntuale non disponibile."},
+        {"id":"roma-2021-partial","year":"2021","period":"1 gennaio–3 settembre 2021","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":1616,"decrements":1033,"decrementLabel":"Abbattimenti","forestations":8782,"notes":"Dato parziale fino al 3 settembre 2021. Le forestazioni sono indicate separatamente e non sono sommate alle piantumazioni."}
+      ],
+      "aggregatePeriods": [
+        {"id":"roma-2021-2025-balance","fromYear":2021,"toYear":2025,"period":"novembre 2021–dicembre 2025","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":67640,"decrements":29842,"decrementLabel":"Decrementi","falls":706,"notes":"Totale aggregato del periodo: non attribuibile ai singoli anni. I decrementi comprendono 706 schianti."}
+      ]
+    },
+    "padova":{"name":"Padova","available":false,"reason":"Nessuna serie di eventi annuali verificata è inclusa in questa release."},
+    "bologna":{"name":"Bologna","available":false,"reason":"Il dataset di manutenzione non viene trasformato in abbattimenti o piantumazioni."},
+    "torino":{"name":"Torino","available":false,"reason":"Il censimento e i posti pianta non dimostrano eventi annuali documentati."}
+  }
+}

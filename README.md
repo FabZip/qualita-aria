@@ -182,6 +182,16 @@ L'app può essere installata dal browser tramite il pulsante **Installa app**.
 
 Il service worker conserva la shell applicativa per migliorare caricamento e resilienza, mentre i dati ambientali reali vengono richiesti dalla rete e non vengono sostituiti da dati simulati offline.
 
+## Statistiche arboree
+
+La modalità **Alberi** mostra eventi e bilanci arborei documentati, separandoli dal censimento del patrimonio esistente. Un albero censito non viene considerato una nuova piantumazione; una sparizione tra due censimenti non viene considerata un abbattimento senza conferma della fonte.
+
+La prima fonte attiva è il [Bilancio Arboreo di Roma Capitale](https://www.comune.roma.it/web/it/scheda-servizi.page?contentId=INF70550). I bilanci 2017–2020 e il dato parziale 2021 sono rappresentati come aggregati comunali, quindi non vengono creati falsi punti sulle strade. Il totale novembre 2021–dicembre 2025 resta aggregato e non viene suddiviso tra i singoli anni.
+
+I marker hanno dimensione fissa sullo schermo: verde per le piantumazioni e rosso per abbattimenti o decrementi. Ogni record dichiara la precisione geografica (`point`, `address`, `district` o `city`). Padova, Bologna e Torino sono predisposte ma non dichiarate disponibili finché non vengono verificate fonti pubbliche di eventi, storici confrontabili o documenti ufficiali sufficienti.
+
+I dati arborei sono pre-elaborati in JSON/GeoJSON; il frontend non interpreta direttamente PDF o grandi portali durante la navigazione.
+
 ## Architettura
 
 Frontend:

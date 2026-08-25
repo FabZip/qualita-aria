@@ -2,6 +2,25 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.4.0] - 2026-08-25
+
+### Statistiche arboree
+
+- Aggiunta la modalità `Alberi` con selezione di città e anno sulla mappa MapLibre esistente.
+- Introdotti marker arborei a dimensione fissa: verde per le piantumazioni e rosso per abbattimenti o decrementi documentati.
+- Aggiunto uno schema dati che distingue evento, stato, periodo, quantità e precisione geografica.
+- Prima fonte attiva: Bilancio Arboreo ufficiale di Roma Capitale.
+- Inseriti i bilanci comunali 2017, 2018, 2019, 2020 e il dato parziale al 3 settembre 2021.
+- Conservato senza ripartizioni stimate il totale aggregato novembre 2021–dicembre 2025.
+- I 29.842 elementi del periodo 2021–2025 sono denominati `decrementi`, con 706 schianti indicati separatamente.
+- Padova, Bologna e Torino restano non disponibili finché non viene verificata una serie pubblica di eventi utilizzabile.
+- Censimenti, posti pianta, potature e manutenzioni non vengono convertiti automaticamente in eventi.
+
+### Versioning
+
+- Avviata la serie `0.4.x`.
+- App aggiornata alla versione `0.4.0` (build 43).
+
 ## [0.3.9] - 2026-08-25
 
 ### Interfaccia
