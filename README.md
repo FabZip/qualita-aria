@@ -121,82 +121,45 @@ La heatmap serve esclusivamente a facilitare la lettura spaziale dei punti e non
 CO₂ non è incluso: è un gas serra e richiede fonti dedicate diverse dai dataset di qualità dell'aria usati nell'app. CO e CO₂ sono sostanze differenti.
 
 
-## Temperatura · fonti indipendenti
+## Temperatura · stazioni fisiche nelle fonti osservazionali
 
-Il selettore `Fonte inquinante` continua a scegliere esclusivamente il backend
-della qualità dell'aria. La temperatura viene caricata separatamente.
+Il selettore `Fonte inquinante` continua a scegliere esclusivamente EEA,
+ARPA Lazio o Globale · OpenAQ.
 
-| Fonte inquinante | Visualizzazione inquinante | Fonte temperatura nelle viste inquinante |
-| --- | --- | --- |
-| ARPA Lazio | visualizzazione ARPA esistente | rete micro-meteorologica fisica ARPA Lazio |
-| EEA | visualizzazione EEA esistente | ARPA Lazio nel Lazio, poi stazioni fisiche NOAA/NCEI GHCN-Daily |
-| Globale · OpenAQ | visualizzazione OpenAQ esistente | celle Copernicus ERA5-Land |
-
-Il recupero degli inquinanti resta separato dal recupero delle temperature:
-`fetchEeaRows`, `fetchArpaRows` e il client OpenAQ non vengono usati per
-calcolare o localizzare la temperatura.
+I cerchi e le etichette numeriche dell'inquinante non vengono più mostrati
+sulla mappa: su mobile il campo cromatico resta leggibile e i valori puntuali
+rimangono nell'elenco sotto la mappa.
 
 ### ARPA Lazio
 
-Nelle viste ARPA la temperatura usa esclusivamente la rete micro-meteorologica
-fisica ARPA Lazio.
-
-I marker:
-
-- sono `🌡`;
-- hanno dimensione fissa durante lo zoom;
-- sono collocati alle coordinate pubblicate della stazione;
-- mostrano nell'ordine `MIN · MEDIA · MAX`;
-- non generano aree circolari o superfici termiche.
-
-Il Worker legge i file annuali pubblicati da ARPA Lazio e usa soltanto serie
-con almeno il 75% dei giorni validi.
+La temperatura usa la rete micro-meteorologica fisica ARPA Lazio. I marker
+`🌡` hanno dimensione fissa e restano alle coordinate reali delle postazioni.
 
 ### EEA
 
-La temperatura non proviene dal dataset EEA.
+La temperatura non viene ricavata da EEA. Nel Lazio viene data priorità ad
+ARPA Lazio. Fuori dal Lazio vengono cercate stazioni fisiche nel layer
+NOAA/NCEI **Global Summary of the Year (GSOY)**.
 
-Nel Lazio viene data priorità alla rete micro-meteorologica ARPA Lazio. Negli
-altri territori vengono cercate stazioni meteorologiche fisiche nel dataset
-osservazionale NOAA/NCEI GHCN-Daily.
+GSOY fornisce direttamente TMIN (Mean Min Temp), TAVG (Annual Mean Temp) e
+TMAX (Mean Max Temp). Sono mostrate soltanto stazioni con coordinate e tutti e
+tre i valori annuali.
 
-SCIA/ISPRA resta una priorità per l'Italia, ma questa release non effettua
-richieste automatiche verso SCIA perché non è stato integrato un endpoint
-machine-to-machine con condizioni di riuso adatte alla PWA. Non viene
-sostituito con ERA5-Land: se non ci sono stazioni fisiche con dati annuali
-sufficienti, l'overlay può risultare vuoto.
+Una stazione fisica può quindi esistere senza essere mostrata per un certo
+anno: accade quando il servizio annuale non pubblica ancora la tripla completa
+TMIN / TAVG / TMAX. Nel caso verificato di Firenze, NOAA/NCEI censisce la
+stazione meteorologica `FIRENZE` (LIRQ), ma per il 2025 GSOY non restituisce la
+tripla annuale completa; l'app lo segnala senza sostituirla con dati a celle.
 
 ### Globale · OpenAQ
 
-La visualizzazione dell'inquinante OpenAQ resta invariata.
-
-La temperatura usa ERA5-Land. Nelle viste dedicate agli inquinanti non viene
-aggiunta una seconda heatmap: ERA5-Land compare soltanto tramite marker `▦`
-associati alle celle climatiche.
-
-Il popup dichiara esplicitamente:
-
-- `Cella ERA5-Land`;
-- `Tipo: Rielaborazione climatica`;
-- risoluzione circa 9 km;
-- fonte temperatura Copernicus ERA5-Land.
-
-Il confronto OpenAQ resta disabilitato perché gli ultimi dati hanno timestamp
-eterogenei; la logica dell'inquinante non viene modificata.
+OpenAQ mostra esclusivamente l'inquinante. Non vengono caricati marker, celle o
+heatmap ERA5-Land.
 
 ### Modalità Temperatura
 
-`Temperatura` è una modalità indipendente accanto a `Mappa`, `Confronto` e
-`Differenza`: non è più una voce del selettore delle fonti inquinanti.
-
-La modalità usa ERA5-Land e permette di scegliere quale statistica colora la
-mappa:
-
-- **MIN** — media annuale delle temperature minime giornaliere;
-- **MEDIA** — media annuale delle temperature medie giornaliere;
-- **MAX** — media annuale delle temperature massime giornaliere.
-
-Cliccando una cella vengono mostrati tutti e tre i valori.
+La modalità/tab `Temperatura` è stata rimossa completamente dall'interfaccia.
+Non viene più inizializzata la visualizzazione ERA5-Land a celle/superficie.
 
 ## PWA
 

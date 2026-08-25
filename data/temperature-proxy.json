@@ -1,5 +1,5 @@
 {
   "enabled": true,
   "base_url": "https://qualita-aria-temperature.fabzip.workers.dev",
-  "note": "Temperatura indipendente: ARPA Lazio fisica per ARPA; ARPA/NCEI fisiche per EEA; ERA5-Land per Globale e modalità Temperatura."
+  "note": "ARPA/EEA: temperature solo da stazioni fisiche. EEA usa ARPA Lazio nel Lazio e NOAA/NCEI GSOY altrove. OpenAQ senza temperatura; modalità ERA5-Land rimossa."
 }

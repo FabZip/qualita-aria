@@ -3,12 +3,7 @@
 
   const markersBySide=new Map();
   const requestIdBySide=new Map();
-
-  const SOURCE_LABELS={
-    arpa:'ARPA Lazio',
-    eea:'EEA',
-    openaq:'Globale · OpenAQ'
-  };
+  const SOURCE_LABELS={arpa:'ARPA Lazio',eea:'EEA'};
 
   function fmt(value){
     return Number(value).toLocaleString('it-IT',{
@@ -28,64 +23,45 @@
     setLegend(false)
   }
 
-  function setLegend(
-    visible,
-    {kind='observed',year=null,status=''}={}
-  ){
+  function setLegend(visible,{year=null,status=''}={}){
     const root=document.getElementById('temperatureOverlayLegend');
     const icon=document.getElementById('temperatureOverlayLegendIcon');
     const text=document.getElementById('temperatureOverlayLegendText');
-
     if(!root||!icon||!text)return;
 
     root.classList.toggle('hidden',!visible);
     if(!visible)return;
 
-    icon.textContent=kind==='observed'?'🌡':'▦';
-    icon.classList.toggle(
-      'temperature-overlay-dot--cell',
-      kind!=='observed'
-    );
-
-    if(status){
-      text.textContent=status;
-      return
-    }
-
-    text.textContent=kind==='observed'
-      ?'Temperatura misurata · MIN / MEDIA / MAX'
-      :'Celle ERA5-Land · MIN / MEDIA / MAX'
+    icon.textContent='🌡';
+    icon.classList.remove('temperature-overlay-dot--cell');
+    text.textContent=status||
+      `Temperatura misurata ${year||''} · MIN / MEDIA / MAX`
   }
 
-  function markerElement(row,kind){
-    const element=document.createElement('button');
-    element.type='button';
-    element.className=
-      `qa-temperature-marker qa-temperature-marker--${kind}`;
-
-    element.setAttribute(
+  function markerElement(row){
+    const el=document.createElement('button');
+    el.type='button';
+    el.className='qa-temperature-marker qa-temperature-marker--observed';
+    el.setAttribute(
       'aria-label',
       `${row.name}: ${fmt(row.min)}, ${fmt(row.mean)}, ${fmt(row.max)} gradi`
     );
 
     const icon=document.createElement('span');
     icon.className='qa-temperature-marker__icon';
-    icon.textContent=kind==='observed'?'🌡':'▦';
+    icon.textContent='🌡';
 
     const values=document.createElement('span');
     values.className='qa-temperature-marker__values';
-    values.textContent=
-      `${fmt(row.min)} · ${fmt(row.mean)} · ${fmt(row.max)}°`;
+    values.textContent=`${fmt(row.min)} · ${fmt(row.mean)} · ${fmt(row.max)}°`;
 
-    element.append(icon,values);
-    return element
+    el.append(icon,values);
+    return el
   }
 
-  function observedPopup(row,context){
+  function popupHtml(row,context){
     const provider=String(
-      row.sourceTemperature||
-      row.network||
-      'Rete meteorologica osservazionale'
+      row.sourceTemperature||row.network||'Rete meteorologica osservazionale'
     );
 
     return(
@@ -95,35 +71,14 @@
       `<br>Massima media annuale: ${fmt(row.max)} °C`+
       `<br>Tipo: Misurato`+
       `<br>Fonte temperatura: ${provider}`+
-      `<br>Fonte inquinante: ${
-        SOURCE_LABELS[context.pollutantSource]||
-        context.pollutantSource
-      }`+
-      `${
-        Number.isFinite(Number(row.coverage))
-          ?`<br>Copertura annuale: ${fmt(row.coverage)}%`
-          :''
-      }`
+      `<br>Fonte inquinante: ${SOURCE_LABELS[context.pollutantSource]||context.pollutantSource}`+
+      `${Number.isFinite(Number(row.coverage))
+        ?`<br>Copertura annuale: ${fmt(row.coverage)}%`
+        :''}`
     )
   }
 
-  function eraPopup(row,context){
-    return(
-      `<strong>Cella ERA5-Land — ${context.year}</strong>`+
-      `<br>Minima media annuale: ${fmt(row.min)} °C`+
-      `<br>Temperatura media annuale: ${fmt(row.mean)} °C`+
-      `<br>Massima media annuale: ${fmt(row.max)} °C`+
-      `<br>Tipo: Rielaborazione climatica`+
-      `<br>Risoluzione: circa 9 km`+
-      `<br>Fonte temperatura: Copernicus ERA5-Land`+
-      `<br>Fonte inquinante: ${
-        SOURCE_LABELS[context.pollutantSource]||
-        context.pollutantSource
-      }`
-    )
-  }
-
-  function addMarkers(map,rows,context,kind){
+  function addMarkers(map,rows,context){
     const markers=[];
 
     rows.forEach(row=>{
@@ -142,80 +97,41 @@
       )return;
 
       const normalized={...row,min,mean,max};
-      const element=markerElement(normalized,kind);
-
       const popup=new maplibregl.Popup({offset:18})
-        .setHTML(
-          kind==='observed'
-            ?observedPopup(normalized,context)
-            :eraPopup(normalized,context)
-        );
+        .setHTML(popupHtml(normalized,context));
 
-      const marker=new maplibregl.Marker({
-        element,
-        anchor:'bottom'
-      })
-        .setLngLat([lon,lat])
-        .setPopup(popup)
-        .addTo(map);
-
-      markers.push(marker)
+      markers.push(
+        new maplibregl.Marker({
+          element:markerElement(normalized),
+          anchor:'bottom'
+        })
+          .setLngLat([lon,lat])
+          .setPopup(popup)
+          .addTo(map)
+      )
     });
 
     return markers
-  }
-
-  function visibleBbox(map){
-    const bounds=map?.getBounds?.();
-    if(!bounds)return null;
-
-    const west=Math.max(-180,Number(bounds.getWest()));
-    const east=Math.min(180,Number(bounds.getEast()));
-    const south=Math.max(-85,Number(bounds.getSouth()));
-    const north=Math.min(85,Number(bounds.getNorth()));
-
-    if(
-      ![west,east,south,north].every(Number.isFinite)||
-      west>=east||
-      south>=north
-    )return null;
-
-    return[
-      Number(west.toFixed(4)),
-      Number(south.toFixed(4)),
-      Number(east.toFixed(4)),
-      Number(north.toFixed(4))
-    ]
-  }
-
-  function overlayYear(value){
-    const year=Number(value);
-
-    if(Number.isInteger(year)&&year>=1950){
-      return year
-    }
-
-    return new Date().getUTCFullYear()-1
   }
 
   async function renderOverlay(detail){
     const map=detail?.map;
     const side=String(detail?.side||'single');
     const pollutantSource=String(detail?.pollutantSource||'');
-    const year=overlayYear(detail?.year);
+    const year=Number(detail?.year);
 
+    // OpenAQ non mostra più celle o temperature.
     if(
       !map||
-      !['arpa','eea','openaq'].includes(pollutantSource)
+      !['arpa','eea'].includes(pollutantSource)||
+      !Number.isInteger(year)
     ){
       clearSide(side);
+      if(pollutantSource==='openaq')setLegend(false);
       return
     }
 
-    const bbox=Array.isArray(detail?.bbox)
-      ?detail.bbox
-      :visibleBbox(map);
-
+    const bbox=Array.isArray(detail?.bbox)?detail.bbox:null;
     if(!bbox){
       clearSide(side);
       return
@@ -224,27 +140,13 @@
     const requestId=(requestIdBySide.get(side)||0)+1;
     requestIdBySide.set(side,requestId);
     clearSide(side);
-
-    const kind=pollutantSource==='openaq'
-      ?'era-cell'
-      :'observed';
-
-    setLegend(true,{
-      kind:kind==='observed'?'observed':'era-cell',
-      year
-    });
+    setLegend(true,{year});
 
     try{
-      const response=kind==='observed'
-        ?await globalThis.QualitaAriaTemperatureProxy?.observed?.({
-            pollutantSource,
-            year,
-            bbox
-          })
-        :await globalThis.QualitaAriaTemperatureProxy?.viewport?.({
-            year,
-            bbox
-          });
+      const response=
+        await globalThis.QualitaAriaTemperatureProxy?.observed?.({
+          pollutantSource,year,bbox
+        });
 
       if(requestIdBySide.get(side)!==requestId)return;
 
@@ -253,46 +155,33 @@
         :[];
 
       if(!rows.length){
+        const meta=response?.data?.meta||{};
+        const discovered=Number(meta?.ncei?.stationsDiscovered||0);
+        const annual=Number(meta?.ncei?.stationsWithAnnualTemperature||0);
+        const status=discovered>0&&annual===0
+          ?`Stazioni trovate, ma senza MIN / MEDIA / MAX annuali completi per ${year}`
+          :`Nessuna stazione meteorologica con dati annuali disponibili (${year})`;
         markersBySide.set(side,[]);
-
         setLegend(true,{
-          kind:kind==='observed'?'observed':'era-cell',
           year,
-          status:kind==='observed'
-            ?`Nessuna stazione meteorologica con dati annuali sufficienti (${year})`
-            :`Nessuna cella ERA5-Land disponibile (${year})`
+          status
         });
-
         return
       }
 
       markersBySide.set(
         side,
-        addMarkers(
-          map,
-          rows,
-          {pollutantSource,year,side},
-          kind
-        )
+        addMarkers(map,rows,{pollutantSource,year,side})
       );
-
-      setLegend(true,{
-        kind:kind==='observed'?'observed':'era-cell',
-        year
-      })
+      setLegend(true,{year})
     }catch(err){
       console.warn('Overlay temperatura non disponibile.',err);
-
       if(requestIdBySide.get(side)!==requestId)return;
 
       markersBySide.set(side,[]);
-
       setLegend(true,{
-        kind:kind==='observed'?'observed':'era-cell',
         year,
-        status:kind==='observed'
-          ?`Stazioni meteo non disponibili per ${year}`
-          :`ERA5-Land non disponibile per ${year}`
+        status:`Stazioni meteo non disponibili per ${year}`
       })
     }
   }
@@ -301,7 +190,6 @@
     'qualita-aria:temperature-overlay',
     event=>void renderOverlay(event.detail||{})
   );
-
   window.addEventListener(
     'qualita-aria:temperature-overlay-clear',
     clearAll

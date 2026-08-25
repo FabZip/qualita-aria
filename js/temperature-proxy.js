@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const CONFIG_URL='data/temperature-proxy.json?v=0.3.5';
+  const CONFIG_URL='data/temperature-proxy.json?v=0.3.6';
   const OPEN_METEO_ARCHIVE='https://archive-api.open-meteo.com/v1/archive';
   const NATIVE_RESOLUTION_DEG=.1;
   const MAX_GRID_POINTS=25;

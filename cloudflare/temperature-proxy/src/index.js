@@ -1,5 +1,5 @@
 const OPEN_METEO_ARCHIVE='https://archive-api.open-meteo.com/v1/archive';
-const NCEI_SEARCH='https://www.ncei.noaa.gov/access/services/search/v1/data';
+const NCEI_GSOY_STATIONS='https://gis.ncdc.noaa.gov/arcgis/rest/services/cdo/stations/MapServer/9/query';
 const NCEI_DATA='https://www.ncei.noaa.gov/access/services/data/v1';
 const ARPA_MICROMETEO_BASE='https://www.arpalazio.it/documents/20124/163276';
 
@@ -855,131 +855,122 @@ async function fetchArpaObserved(year,ctx){
 }
 
 /* ================================================================
- * NOAA/NCEI GHCN-Daily physical observational stations
+ * NOAA/NCEI Global Summary of the Year — physical stations
+ *
+ * TMIN = Mean Min Temp
+ * TAVG = Annual Mean Temp
+ * TMAX = Mean Max Temp
  * ================================================================ */
 
-function dataTypeCoverage(station,id){
-  const datatype=(station?.dataTypes||[]).find(
-    item=>String(item?.id||'').toUpperCase()===id
-  );
-
-  return datatype?finiteNumber(datatype.coverage):null
+function normalizeNceiStationId(value){
+  return String(value||'')
+    .replace(/^(?:GHCND|GSOY):/i,'')
+    .trim()
 }
 
-function nceiResultCoordinate(result){
-  const candidates=[
-    result?.centroid,
-    result?.location?.coordinates,
-    result?.boundingPoints?.[0]?.coordinates
-  ];
+function arcGisDateCoversYear(value,year,side){
+  if(value===null||value===undefined||value==='')return true;
 
-  for(const candidate of candidates){
-    if(
-      Array.isArray(candidate)&&
-      candidate.length>=2&&
-      candidate.every(Number.isFinite)
-    ){
-      return{
-        longitude:Number(candidate[0]),
-        latitude:Number(candidate[1])
-      }
-    }
+  const numeric=Number(value);
+  let date=null;
+
+  if(Number.isFinite(numeric)&&numeric>1000000000){
+    date=new Date(numeric)
+  }else{
+    const parsed=Date.parse(String(value));
+    if(Number.isFinite(parsed))date=new Date(parsed)
   }
 
-  return null
+  if(!date||Number.isNaN(date.getTime()))return true;
+
+  const stationYear=date.getUTCFullYear();
+  return side==='begin'
+    ?stationYear<=year
+    :stationYear>=year
 }
 
-function extractNceiStations(payload,bbox){
-  const results=Array.isArray(payload?.results)?payload.results:[];
-  const stations=[];
+function extractGsoyStations(payload,bbox,year){
+  const features=Array.isArray(payload?.features)?payload.features:[];
   const seen=new Set();
+  const stations=[];
 
-  for(const result of results){
-    const coordinate=nceiResultCoordinate(result);
-    if(!coordinate)continue;
+  for(const feature of features){
+    const a=feature?.attributes||feature||{};
+    const id=normalizeNceiStationId(a.STATION_ID);
+    const latitude=finiteNumber(a.LATITUDE);
+    const longitude=finiteNumber(a.LONGITUDE);
 
-    if(!pointInsideBbox(
-      coordinate.longitude,
-      coordinate.latitude,
-      bbox
-    ))continue;
+    if(
+      !id||
+      seen.has(id)||
+      latitude===null||
+      longitude===null||
+      !pointInsideBbox(longitude,latitude,bbox)
+    )continue;
 
-    const resultStations=Array.isArray(result?.stations)
-      ?result.stations
-      :[];
+    if(
+      !arcGisDateCoversYear(a.DATA_BEGIN_DATE,year,'begin')||
+      !arcGisDateCoversYear(a.DATA_END_DATE,year,'end')
+    )continue;
 
-    for(const station of resultStations){
-      const id=String(station?.id||'')
-        .replace(/^GHCND:/i,'')
-        .trim();
+    seen.add(id);
+    stations.push({
+      id,
+      name:String(a.STATION_NAME||id),
+      country:String(a.COUNTRY||''),
+      latitude,
+      longitude,
+      elevation:finiteNumber(a.ELEVATION)
+    });
 
-      if(!id||seen.has(id))continue;
-
-      const tminCoverage=dataTypeCoverage(station,'TMIN');
-      const tmaxCoverage=dataTypeCoverage(station,'TMAX');
-
-      /*
-       * Il search endpoint restituisce la copertura della serie complessiva.
-       * Non viene usata come copertura annuale definitiva, ma scartiamo
-       * stazioni chiaramente prive dei parametri richiesti.
-       */
-      if(tminCoverage===null||tmaxCoverage===null)continue;
-
-      seen.add(id);
-      stations.push({
-        id,
-        name:String(station?.name||id),
-        latitude:coordinate.latitude,
-        longitude:coordinate.longitude
-      });
-
-      if(stations.length>=MAX_NCEI_STATIONS)return stations
-    }
+    if(stations.length>=MAX_NCEI_STATIONS)break
   }
 
   return stations
 }
 
 async function discoverNceiStations(year,bbox){
-  const url=new URL(NCEI_SEARCH);
+  const url=new URL(NCEI_GSOY_STATIONS);
 
-  url.searchParams.set('dataset','daily-summaries');
-  url.searchParams.set('startDate',`${year}-01-01T00:00:00`);
-  url.searchParams.set('endDate',`${year}-12-31T23:59:59`);
+  url.searchParams.set('where','1=1');
   url.searchParams.set(
-    'bbox',
-    `${bbox[3]},${bbox[0]},${bbox[1]},${bbox[2]}`
+    'geometry',
+    `${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}`
   );
-  url.searchParams.set('dataTypes','TMIN,TMAX');
-  url.searchParams.set('limit','60');
-  url.searchParams.set('offset','0');
+  url.searchParams.set('geometryType','esriGeometryEnvelope');
+  url.searchParams.set('inSR','4326');
+  url.searchParams.set('spatialRel','esriSpatialRelIntersects');
+  url.searchParams.set(
+    'outFields',
+    'STATION_ID,STATION_NAME,DATA_BEGIN_DATE,DATA_END_DATE,COUNTRY,LATITUDE,LONGITUDE,ELEVATION'
+  );
+  url.searchParams.set('returnGeometry','false');
+  url.searchParams.set('resultRecordCount','100');
+  url.searchParams.set('f','json');
 
   const response=await fetch(url.toString(),{
     headers:{Accept:'application/json'}
   });
-
   const payload=await response.json().catch(()=>null);
 
-  if(!response.ok){
-    const error=new Error(
-      `NOAA/NCEI station search HTTP ${response.status}`
-    );
+  if(!response.ok||payload?.error){
+    const detail=payload?.error?.message||`HTTP ${response.status}`;
+    const error=new Error(`NOAA/NCEI GSOY station search: ${detail}`);
     error.status=response.status;
     throw error
   }
 
   return{
-    stations:extractNceiStations(payload,bbox),
+    stations:extractGsoyStations(payload,bbox,year),
     searchUrl:url.toString()
   }
 }
 
-async function fetchNceiDaily(year,stations){
+async function fetchNceiGsoy(year,stations){
   if(!stations.length)return[];
 
   const url=new URL(NCEI_DATA);
-
-  url.searchParams.set('dataset','daily-summaries');
+  url.searchParams.set('dataset','global-summary-of-the-year');
   url.searchParams.set(
     'stations',
     stations.map(station=>station.id).join(',')
@@ -995,13 +986,10 @@ async function fetchNceiDaily(year,stations){
   const response=await fetch(url.toString(),{
     headers:{Accept:'application/json'}
   });
-
   const payload=await response.json().catch(()=>null);
 
   if(!response.ok){
-    const error=new Error(
-      `NOAA/NCEI daily data HTTP ${response.status}`
-    );
+    const error=new Error(`NOAA/NCEI GSOY data HTTP ${response.status}`);
     error.status=response.status;
     throw error
   }
@@ -1009,80 +997,46 @@ async function fetchNceiDaily(year,stations){
   return Array.isArray(payload)?payload:[]
 }
 
-function aggregateNceiDaily(year,stationMeta,records){
-  const byStation=new Map(
-    stationMeta.map(station=>[
-      station.id,
-      {
-        meta:station,
-        mins:[],
-        means:[],
-        maxs:[],
-        row:null
-      }
-    ])
+function aggregateNceiGsoy(year,stationMeta,records){
+  const metaById=new Map(
+    stationMeta.map(station=>[station.id,station])
   );
-
-  for(const record of records){
-    const id=String(record.STATION??record.station??'')
-      .replace(/^GHCND:/i,'')
-      .trim();
-
-    if(!byStation.has(id))continue;
-    const entry=byStation.get(id);
-
-    const min=finiteNumber(record.TMIN??record.tmin);
-    const max=finiteNumber(record.TMAX??record.tmax);
-    let mean=finiteNumber(record.TAVG??record.tavg);
-
-    if(mean===null&&min!==null&&max!==null){
-      mean=(min+max)/2
-    }
-
-    if(min!==null)entry.mins.push(min);
-    if(mean!==null)entry.means.push(mean);
-    if(max!==null)entry.maxs.push(max);
-    entry.row=record
-  }
-
-  const expected=daysInYear(year);
-  const required=Math.ceil(expected*OBSERVED_COVERAGE_MIN);
   const results=[];
 
-  for(const[id,entry]of byStation){
-    const validDays=Math.min(
-      entry.mins.length,
-      entry.means.length,
-      entry.maxs.length
-    );
+  for(const record of records){
+    const id=normalizeNceiStationId(record.STATION??record.station);
+    const meta=metaById.get(id);
+    if(!meta)continue;
 
-    if(validDays<required)continue;
+    const min=finiteNumber(record.TMIN??record.tmin);
+    const mean=finiteNumber(record.TAVG??record.tavg);
+    const max=finiteNumber(record.TMAX??record.tmax);
 
-    const row=entry.row||{};
+    if(min===null||mean===null||max===null)continue;
+
     const latitude=
-      finiteNumber(row.LATITUDE??row.latitude)??entry.meta.latitude;
+      finiteNumber(record.LATITUDE??record.latitude)??meta.latitude;
     const longitude=
-      finiteNumber(row.LONGITUDE??row.longitude)??entry.meta.longitude;
+      finiteNumber(record.LONGITUDE??record.longitude)??meta.longitude;
 
-    if(
-      !Number.isFinite(latitude)||
-      !Number.isFinite(longitude)
-    )continue;
+    if(!Number.isFinite(latitude)||!Number.isFinite(longitude))continue;
 
     results.push({
       id,
-      name:String(row.NAME??row.name??entry.meta.name??id),
+      name:String(record.NAME??record.name??meta.name??id),
       latitude,
       longitude,
-      elevation:finiteNumber(row.ELEVATION??row.elevation),
-      min:fixed(average(entry.mins)),
-      mean:fixed(average(entry.means)),
-      max:fixed(average(entry.maxs)),
-      validDays,
-      coverage:fixed(validDays/expected*100,1),
+      elevation:
+        finiteNumber(record.ELEVATION??record.elevation)??meta.elevation,
+      min:fixed(min),
+      mean:fixed(mean),
+      max:fixed(max),
+      validDays:null,
+      coverage:null,
       type:'measured',
-      sourceTemperature:'NOAA/NCEI GHCN-Daily',
-      network:'GHCN-Daily'
+      annualSummary:true,
+      sourceTemperature:'NOAA/NCEI Global Summary of the Year',
+      network:'GSOY'
     })
   }
 
@@ -1096,33 +1050,29 @@ async function fetchNceiObserved(year,bbox){
   if(!discovery.stations.length){
     return{
       meta:{
-        source:'NOAA/NCEI GHCN-Daily',
+        source:'NOAA/NCEI Global Summary of the Year',
         type:'measured',
         year,
         stationsDiscovered:0,
-        stationsWithSufficientData:0,
+        stationsWithAnnualTemperature:0,
         upstreamMs:Date.now()-started
       },
       results:[]
     }
   }
 
-  const records=await fetchNceiDaily(year,discovery.stations);
-  const results=aggregateNceiDaily(
-    year,
-    discovery.stations,
-    records
-  );
+  const records=await fetchNceiGsoy(year,discovery.stations);
+  const results=aggregateNceiGsoy(year,discovery.stations,records);
 
   return{
     meta:{
-      source:'NOAA/NCEI GHCN-Daily',
+      source:'NOAA/NCEI Global Summary of the Year',
       type:'measured',
       year,
       stationsDiscovered:discovery.stations.length,
-      stationsWithSufficientData:results.length,
-      dailyRows:records.length,
-      coverageThresholdPct:OBSERVED_COVERAGE_MIN*100,
+      stationsWithAnnualTemperature:results.length,
+      annualRows:records.length,
+      annualElements:['TMIN','TAVG','TMAX'],
       upstreamMs:Date.now()-started,
       generatedAt:new Date().toISOString()
     },
@@ -1248,7 +1198,7 @@ async function observedResponse(ctx,cors,{pollutantSource,year,bbox}){
           temperatureProvider:
             'Physical meteorological stations',
           providerStrategy:
-            'ARPA Lazio in Lazio, then NOAA/NCEI GHCN-Daily observational stations',
+            'ARPA Lazio in Lazio, then NOAA/NCEI Global Summary of the Year observational stations',
           sciaStatus:
             'SCIA/ISPRA remains preferred for future Italian integration but no compatible machine endpoint is used by this release.',
           type:'measured',
@@ -1301,11 +1251,11 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.4.0',
+        version:'0.5.0',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,
-        nceiGhcnDaily:true,
+        nceiGlobalSummaryOfYear:true,
         stationCoverageThresholdPct:OBSERVED_COVERAGE_MIN*100,
         historicalFrom:1950,
         cacheSeconds:CACHE_TTL

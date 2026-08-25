@@ -232,7 +232,7 @@ async function loadEeaCities(){
   let cities=fallback;
 
   try{
-    const response=await fetch('data/italian-capitals.json?v=0.3.5',{cache:'no-store'});
+    const response=await fetch('data/italian-capitals.json?v=0.3.6',{cache:'no-store'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
     const payload=await response.json();
     if(Array.isArray(payload?.cities)&&payload.cities.length){
@@ -2084,12 +2084,12 @@ function showAirOnSingle(rows){
   setTemperatureVisibility(false);
   setAirData(state.map,rows);
 
+  // Mobile: niente cerchi/etichette numeriche dell'inquinante.
   setLayerVisibility(state.map,[
-    'air-boundary-fill','air-boundary-line',
-    'air-heat','air-points','air-labels'
+    'air-boundary-fill','air-boundary-line','air-heat'
   ],true);
-
   setLayerVisibility(state.map,[
+    'air-points','air-labels',
     'diff-boundary-fill','diff-boundary-line',
     'diff-good','diff-bad','diff-points','diff-labels'
   ],false)
@@ -2106,8 +2106,11 @@ function showDifferenceOnSingle(rows){
 
   setLayerVisibility(state.map,[
     'diff-boundary-fill','diff-boundary-line',
-    'diff-good','diff-bad','diff-points','diff-labels'
-  ],true)
+    'diff-good','diff-bad'
+  ],true);
+  setLayerVisibility(state.map,[
+    'diff-points','diff-labels'
+  ],false)
 }
 
 function renderList(rows,isDiff=false){
@@ -2634,7 +2637,13 @@ function clearTemperatureOverlays(){
 }
 
 function requestTemperatureOverlay(map,year,side='single'){
-  if(!map||isTemperature()||state.mode==='difference')return;
+  if(!map||state.mode==='difference')return;
+
+  // OpenAQ resta esclusivamente qualità dell'aria.
+  if(source()==='openaq'){
+    clearTemperatureOverlays();
+    return
+  }
 
   const bbox=visibleMapBbox(map);
   if(!bbox)return;
@@ -2678,6 +2687,20 @@ async function updateCompareMaps(token=state.renderToken){
 
   setAirData(state.mapBefore,a,'before');
   setAirData(state.mapAfter,b,'after');
+
+  setLayerVisibility(state.mapBefore,[
+    'before-boundary-fill','before-boundary-line','before-heat'
+  ],true);
+  setLayerVisibility(state.mapBefore,[
+    'before-points','before-labels'
+  ],false);
+
+  setLayerVisibility(state.mapAfter,[
+    'after-boundary-fill','after-boundary-line','after-heat'
+  ],true);
+  setLayerVisibility(state.mapAfter,[
+    'after-points','after-labels'
+  ],false);
 
   fitCurrentScope(state.mapBefore,a);
   fitCurrentScope(state.mapAfter,b);
@@ -2904,7 +2927,6 @@ function initMaps(){
   state.map.on('load',()=>{
     addAirLayers(state.map);
     addDifferenceLayers(state.map);
-    addTemperatureLayers(state.map);
     render()
   });
 
@@ -2967,7 +2989,13 @@ async function installApp(){
 }
 
 function bind(){
+  // La vecchia modalità ERA5-Land non deve poter riapparire nemmeno se il
+  // browser conserva una copia precedente dell'HTML.
+  document.querySelectorAll('[data-mode="temperature"]').forEach(node=>node.remove());
+  if(!['map','compare','difference'].includes(state.mode))state.mode='map';
+
   document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
+    if(!['map','compare','difference'].includes(btn.dataset.mode))return;
     document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     state.mode=btn.dataset.mode;
@@ -3006,10 +3034,6 @@ function bind(){
   ['pollutantSelect','yearSelect','compareYearA','compareYearB']
     .forEach(id=>$(id)?.addEventListener('change',render));
 
-  $('temperatureMetricSelect')?.addEventListener('change',()=>{
-    if(isTemperature())render()
-  });
-
   window.addEventListener('beforeinstallprompt',e=>{
     e.preventDefault();
     state.deferredPrompt=e
@@ -3021,8 +3045,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.3.5',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.3.5',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.3.6',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.3.6',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3037,7 +3061,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.3.5')
+    navigator.serviceWorker.register('./service-worker.js?v=0.3.6')
       .then(reg=>reg.update())
       .catch(console.error)
   }
