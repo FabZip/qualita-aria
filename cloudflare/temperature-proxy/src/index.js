@@ -1,6 +1,8 @@
 const OPEN_METEO_ARCHIVE='https://archive-api.open-meteo.com/v1/archive';
 const NCEI_GSOY_STATIONS='https://gis.ncdc.noaa.gov/arcgis/rest/services/cdo/stations/MapServer/9/query';
+const NCEI_GSOD_STATIONS='https://gis.ncdc.noaa.gov/arcgis/rest/services/cdo/stations/MapServer/6/query';
 const NCEI_DATA='https://www.ncei.noaa.gov/access/services/data/v1';
+const METEOSTAT_DAILY='https://data.meteostat.net/daily';
 const ARPA_MICROMETEO_BASE='https://www.arpalazio.it/documents/20124/163276';
 
 const PROD_ORIGIN='https://fabzip.github.io';
@@ -12,6 +14,12 @@ const MAX_BBOX_WIDTH=12;
 const MAX_BBOX_HEIGHT=9;
 const CACHE_TTL=2592000;
 const OBSERVED_COVERAGE_MIN=.75;
+
+const METEOSTAT_OBSERVED_SOURCES=new Set([
+  'isd_lite','metar','ghcnd','climat',
+  'dwd_poi','dwd_hourly','dwd_daily',
+  'eccc_hourly','eccc_daily'
+]);
 
 const LAZIO_BBOX=[11.35,40.75,14.10,42.95];
 
@@ -1080,6 +1088,202 @@ async function fetchNceiObserved(year,bbox){
   }
 }
 
+/* ================================================================
+ * Meteostat — fallback osservazionale basato su stazioni GSOD/WMO.
+ *
+ * I dump Meteostat possono contenere dati modellati. Per questo vengono
+ * accettati soltanto i giorni nei quali TEMP, TMIN e TMAX dichiarano
+ * esclusivamente provider osservativi presenti nella allowlist.
+ * ================================================================ */
+
+function compactDateCoversYear(value,year,side){
+  const match=String(value||'').match(/^(\d{4})/);
+  if(!match)return true;
+  const stationYear=Number(match[1]);
+  return side==='begin'?stationYear<=year:stationYear>=year
+}
+
+function meteostatIdFromGsod(attributes){
+  const aws=String(attributes?.AWS||'').replace(/\D/g,'');
+  if(/^\d{6}$/.test(aws)&&aws.endsWith('0'))return aws.slice(0,5);
+  if(/^\d{5}$/.test(aws))return aws;
+
+  const awsban=String(attributes?.AWSBAN||'').replace(/\D/g,'');
+  if(/^\d{11}$/.test(awsban))return awsban.slice(0,5);
+  return''
+}
+
+function extractGsodStations(payload,bbox,year){
+  const features=Array.isArray(payload?.features)?payload.features:[];
+  const seen=new Set();
+  const stations=[];
+
+  for(const feature of features){
+    const a=feature?.attributes||feature||{};
+    const id=meteostatIdFromGsod(a);
+    const latitude=finiteNumber(a.LATITUDE);
+    const longitude=finiteNumber(a.LONGITUDE);
+
+    if(
+      !id||seen.has(id)||latitude===null||longitude===null||
+      !pointInsideBbox(longitude,latitude,bbox)
+    )continue;
+
+    if(
+      !compactDateCoversYear(a.BEG_DATE,year,'begin')||
+      !compactDateCoversYear(a.END_DATE,year,'end')
+    )continue;
+
+    seen.add(id);
+    stations.push({
+      id,
+      name:String(a.STATION||a.ICAO||id),
+      icao:String(a.ICAO||''),
+      wmo:id,
+      latitude,
+      longitude,
+      elevation:finiteNumber(a.ELEVATION)
+    });
+
+    if(stations.length>=MAX_NCEI_STATIONS)break
+  }
+
+  return stations
+}
+
+async function discoverMeteostatStations(year,bbox){
+  const url=new URL(NCEI_GSOD_STATIONS);
+  url.searchParams.set('where','1=1');
+  url.searchParams.set('geometry',bbox.join(','));
+  url.searchParams.set('geometryType','esriGeometryEnvelope');
+  url.searchParams.set('inSR','4326');
+  url.searchParams.set('spatialRel','esriSpatialRelIntersects');
+  url.searchParams.set(
+    'outFields',
+    'STATION,AWS,WBAN,AWSBAN,ICAO,BEG_DATE,END_DATE,COUNTRY,LATITUDE,LONGITUDE,ELEVATION'
+  );
+  url.searchParams.set('returnGeometry','false');
+  url.searchParams.set('resultRecordCount','100');
+  url.searchParams.set('f','json');
+
+  const response=await fetch(url.toString(),{headers:{Accept:'application/json'}});
+  const payload=await response.json().catch(()=>null);
+
+  if(!response.ok||payload?.error){
+    const detail=payload?.error?.message||`HTTP ${response.status}`;
+    throw new Error(`Catalogo stazioni NOAA GSOD: ${detail}`)
+  }
+
+  return extractGsodStations(payload,bbox,year)
+}
+
+async function responseTextMaybeGzip(response){
+  const bytes=await response.arrayBuffer();
+  const signature=new Uint8Array(bytes,0,Math.min(2,bytes.byteLength));
+
+  if(signature[0]===0x1f&&signature[1]===0x8b){
+    const stream=new Blob([bytes]).stream()
+      .pipeThrough(new DecompressionStream('gzip'));
+    return new Response(stream).text()
+  }
+
+  return new TextDecoder().decode(bytes)
+}
+
+function parseSimpleCsv(text){
+  const lines=String(text||'').trim().split(/\r?\n/);
+  if(lines.length<2)return[];
+  const headers=lines[0].split(',').map(value=>value.trim());
+
+  return lines.slice(1).map(line=>{
+    const cells=line.split(',');
+    return Object.fromEntries(headers.map((header,index)=>[
+      header,String(cells[index]??'').trim()
+    ]))
+  })
+}
+
+function observedMeteostatSource(value){
+  const sources=String(value||'').trim().split(/\s+/).filter(Boolean);
+  return sources.length>0&&sources.every(source=>
+    METEOSTAT_OBSERVED_SOURCES.has(source)
+  )
+}
+
+async function fetchMeteostatStationYear(station,year){
+  const url=`${METEOSTAT_DAILY}/${year}/${encodeURIComponent(station.id)}.csv.gz`;
+  const response=await fetch(url,{headers:{Accept:'application/gzip,text/csv'}});
+
+  if(response.status===404)return null;
+  if(!response.ok)throw new Error(`Meteostat ${station.id}: HTTP ${response.status}`);
+
+  const records=parseSimpleCsv(await responseTextMaybeGzip(response));
+  const valid=records.filter(record=>
+    finiteNumber(record.temp)!==null&&
+    finiteNumber(record.tmin)!==null&&
+    finiteNumber(record.tmax)!==null&&
+    observedMeteostatSource(record.temp_source)&&
+    observedMeteostatSource(record.tmin_source)&&
+    observedMeteostatSource(record.tmax_source)
+  );
+
+  const validDays=valid.length;
+  const coverage=validDays/daysInYear(year);
+  if(coverage<OBSERVED_COVERAGE_MIN)return null;
+
+  return{
+    id:`meteostat:${station.id}`,
+    name:station.name,
+    latitude:station.latitude,
+    longitude:station.longitude,
+    elevation:station.elevation,
+    min:fixed(average(valid.map(record=>finiteNumber(record.tmin)))),
+    mean:fixed(average(valid.map(record=>finiteNumber(record.temp)))),
+    max:fixed(average(valid.map(record=>finiteNumber(record.tmax)))),
+    validDays,
+    coverage:fixed(coverage*100,1),
+    type:'measured',
+    annualSummary:true,
+    sourceTemperature:'Meteostat · sole fonti osservative',
+    network:'Meteostat observational',
+    wmo:station.wmo,
+    icao:station.icao,
+    observedProviders:[...new Set(valid.flatMap(record=>[
+      ...String(record.temp_source).split(/\s+/),
+      ...String(record.tmin_source).split(/\s+/),
+      ...String(record.tmax_source).split(/\s+/)
+    ]).filter(Boolean))]
+  }
+}
+
+async function fetchMeteostatObserved(year,bbox){
+  const started=Date.now();
+  const stations=await discoverMeteostatStations(year,bbox);
+  const settled=await Promise.allSettled(
+    stations.map(station=>fetchMeteostatStationYear(station,year))
+  );
+  const results=settled
+    .filter(item=>item.status==='fulfilled'&&item.value)
+    .map(item=>item.value);
+
+  return{
+    meta:{
+      source:'Meteostat observational station dumps',
+      catalog:'NOAA/NCEI Global Summary of the Day station layer',
+      type:'measured',
+      modelDataAccepted:false,
+      allowedProviders:[...METEOSTAT_OBSERVED_SOURCES],
+      year,
+      stationsDiscovered:stations.length,
+      stationsWithSufficientData:results.length,
+      coverageThresholdPct:OBSERVED_COVERAGE_MIN*100,
+      failedRequests:settled.filter(item=>item.status==='rejected').length,
+      upstreamMs:Date.now()-started
+    },
+    results
+  }
+}
+
 function haversineKm(a,b){
   const rad=value=>value*Math.PI/180;
   const dLat=rad(b.latitude-a.latitude);
@@ -1094,14 +1298,13 @@ function haversineKm(a,b){
   return 6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h))
 }
 
-function mergeObservedPrioritizingArpa(arpa,ncei){
-  const merged=[...arpa];
+function mergeObservedSources(...groups){
+  const merged=[];
 
-  for(const station of ncei){
-    const duplicate=arpa.some(
-      local=>haversineKm(local,station)<15
+  for(const station of groups.flat()){
+    const duplicate=merged.some(existing=>
+      haversineKm(existing,station)<15
     );
-
     if(!duplicate)merged.push(station)
   }
 
@@ -1177,6 +1380,7 @@ async function observedResponse(ctx,cors,{pollutantSource,year,bbox}){
       }
 
       let ncei={results:[],meta:null};
+      let meteostat={results:[],meta:null};
 
       try{
         ncei=await fetchNceiObserved(year,bbox)
@@ -1187,9 +1391,19 @@ async function observedResponse(ctx,cors,{pollutantSource,year,bbox}){
         }
       }
 
-      const results=mergeObservedPrioritizingArpa(
+      try{
+        meteostat=await fetchMeteostatObserved(year,bbox)
+      }catch(err){
+        meteostat={
+          results:[],
+          meta:{error:String(err.message||err)}
+        }
+      }
+
+      const results=mergeObservedSources(
         arpaResults,
-        ncei.results||[]
+        ncei.results||[],
+        meteostat.results||[]
       );
 
       return cacheableJson({
@@ -1198,7 +1412,7 @@ async function observedResponse(ctx,cors,{pollutantSource,year,bbox}){
           temperatureProvider:
             'Physical meteorological stations',
           providerStrategy:
-            'ARPA Lazio in Lazio, then NOAA/NCEI Global Summary of the Year observational stations',
+            'ARPA Lazio in Lazio, then NOAA/NCEI GSOY, then observation-only Meteostat station data',
           sciaStatus:
             'SCIA/ISPRA remains preferred for future Italian integration but no compatible machine endpoint is used by this release.',
           type:'measured',
@@ -1206,6 +1420,7 @@ async function observedResponse(ctx,cors,{pollutantSource,year,bbox}){
           bbox,
           arpa:arpaMeta,
           ncei:ncei.meta,
+          meteostat:meteostat.meta,
           stationsUsed:results.length,
           durationMs:Date.now()-started
         },
@@ -1251,11 +1466,13 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.5.0',
+        version:'0.6.0',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,
         nceiGlobalSummaryOfYear:true,
+        meteostatObservationOnlyFallback:true,
+        modeledTemperatureAccepted:false,
         stationCoverageThresholdPct:OBSERVED_COVERAGE_MIN*100,
         historicalFrom:1950,
         cacheSeconds:CACHE_TTL

@@ -63,6 +63,9 @@
     const provider=String(
       row.sourceTemperature||row.network||'Rete meteorologica osservazionale'
     );
+    const providerHtml=provider.startsWith('Meteostat')
+      ?'<a href="https://meteostat.net/" target="_blank" rel="noopener noreferrer">Meteostat</a> · sole fonti osservative'
+      :provider;
 
     return(
       `<strong>${row.name} — ${context.year}</strong>`+
@@ -70,7 +73,9 @@
       `<br>Temperatura media annuale: ${fmt(row.mean)} °C`+
       `<br>Massima media annuale: ${fmt(row.max)} °C`+
       `<br>Tipo: Misurato`+
-      `<br>Fonte temperatura: ${provider}`+
+      `<br>Fonte temperatura: ${providerHtml}`+
+      `${row.wmo?`<br>Codice WMO: ${row.wmo}`:''}`+
+      `${row.icao?`<br>Codice ICAO: ${row.icao}`:''}`+
       `<br>Fonte inquinante: ${SOURCE_LABELS[context.pollutantSource]||context.pollutantSource}`+
       `${Number.isFinite(Number(row.coverage))
         ?`<br>Copertura annuale: ${fmt(row.coverage)}%`

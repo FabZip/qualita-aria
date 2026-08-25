@@ -2,6 +2,29 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.3.8] - 2026-08-25
+
+### Temperature · copertura nazionale
+
+- Aggiunto Meteostat come fallback osservativo per le stazioni fisiche non disponibili nel catalogo annuale NOAA/NCEI GSOY.
+- Le stazioni Meteostat vengono individuate tramite catalogo NOAA/NCEI GSOD e codici WMO/ICAO.
+- Sono accettati soltanto giorni nei quali temperatura media, minima e massima provengono esclusivamente da provider osservativi verificati.
+- Esclusi esplicitamente dati modellati, previsioni e interpolazioni.
+- Confermata la soglia minima del 75% di copertura annuale.
+- ARPA Lazio mantiene la priorità nel Lazio; GSOY mantiene la priorità fuori dal Lazio.
+- Nei popup sono ora mostrati, quando disponibili, i codici WMO e ICAO.
+
+### Verifica Bari 2025
+
+- `BARI` (WMO 16270, ICAO LIBD): copertura osservativa 98,9%.
+- `GIOIA DEL COLLE` (WMO 16312, ICAO LIBV): copertura osservativa 98,4%.
+- Nessun dato modellato accettato nel test del Worker.
+
+### Worker e versioning
+
+- `qualita-aria-temperature-proxy` aggiornato alla versione `0.6.0`.
+- App aggiornata alla versione `0.3.8` (build 41).
+
 ## [0.3.7] - 2026-08-23
 
 ### Interfaccia e mappa

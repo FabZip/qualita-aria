@@ -145,11 +145,29 @@ GSOY fornisce direttamente TMIN (Mean Min Temp), TAVG (Annual Mean Temp) e
 TMAX (Mean Max Temp). Sono mostrate soltanto stazioni con coordinate e tutti e
 tre i valori annuali.
 
-Una stazione fisica può quindi esistere senza essere mostrata per un certo
-anno: accade quando il servizio annuale non pubblica ancora la tripla completa
-TMIN / TAVG / TMAX. Nel caso verificato di Firenze, NOAA/NCEI censisce la
-stazione meteorologica `FIRENZE` (LIRQ), ma per il 2025 GSOY non restituisce la
-tripla annuale completa; l'app lo segnala senza sostituirla con dati a celle.
+Una stazione fisica può non essere disponibile nel solo GSOY per un certo
+anno quando il servizio annuale non pubblica la tripla completa TMIN / TAVG /
+TMAX. In questo caso l'app tenta il fallback osservativo descritto sotto, senza
+sostituire la stazione con dati a celle.
+
+Quando GSOY non pubblica la tripla annuale, il Worker cerca le stazioni fisiche
+WMO/ICAO nel catalogo NOAA/NCEI GSOD e usa i dump giornalieri Meteostat. Ogni
+valore viene accettato soltanto se le colonne di provenienza di temperatura
+media, minima e massima indicano esclusivamente provider osservativi. Fonti
+modellistiche, previsioni e interpolazioni sono escluse. La stazione viene
+mostrata solo con almeno il 75% dei giorni validi nell'anno.
+
+Per Bari 2025 questo fallback restituisce le stazioni fisiche `BARI` (WMO
+16270, ICAO LIBD) e `GIOIA DEL COLLE` (WMO 16312, ICAO LIBV), entrambe con
+copertura osservativa superiore al 98%.
+
+Per Firenze 2025 restituisce `FIRENZE` (WMO 16170, ICAO LIRQ) con copertura
+osservativa del 98,4%, oltre a `CIMONE MOUNTAIN` quando compresa nell'area
+visibile.
+
+I dati Meteostat richiedono attribuzione; nell'app vengono mantenuti il nome
+della fonte, i codici WMO/ICAO, i provider osservativi usati e la percentuale
+di copertura.
 
 ### Globale · OpenAQ
 
