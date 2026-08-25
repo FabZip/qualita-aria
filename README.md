@@ -204,7 +204,9 @@ La fonte arborea utilizza le stesse tre modalità delle altre fonti:
 
 Un totale pluriennale non viene ripartito artificialmente e quindi non entra nei confronti o nelle differenze fra singoli anni. Il bilancio novembre 2021–dicembre 2025 e la stagione 2024–marzo 2025 sono selezioni autonome.
 
-Per il 2023, 2024 e 2025 l'app include una raccolta iniziale di avvisi e notizie ufficiali con data, luogo, stato e quantità. La loro somma è indicata come **totale minimo documentato**, non come totale annuale completo: gli avvisi pubblicamente reperibili potrebbero non coprire tutti gli interventi. Quantità sconosciute ed eventi soltanto programmati sono mostrati nell'elenco ma non vengono sommati al minimo eseguito.
+Per il 2023, 2024, 2025 e 2026 l'app include una raccolta iniziale di avvisi e notizie ufficiali con data, luogo, stato e quantità. La loro somma è indicata come **totale minimo documentato**, non come totale annuale completo: gli avvisi pubblicamente reperibili potrebbero non coprire tutti gli interventi. Quantità sconosciute ed eventi soltanto programmati o annunciati sono mostrati nell'elenco ma non vengono sommati al minimo eseguito.
+
+Per il 2026 il minimo iniziale comprende 603 alberi messi a dimora e 19 abbattimenti confermati. Ulteriori quantità comunicate per programmi e interventi non ancora attestati come completati restano visibili con il relativo stato, senza alterare il saldo minimo.
 
 La modalità `Differenza` calcola una variazione soltanto quando le due selezioni hanno la stessa natura: bilancio ufficiale con bilancio ufficiale oppure raccolta parziale con raccolta parziale.
 

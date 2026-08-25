@@ -2,6 +2,22 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.4.4] - 2026-08-26
+
+### Alberi · eventi 2026
+
+- Aggiunto il 2026 tra i periodi arborei selezionabili.
+- Inserita una prima raccolta verificata di eventi ufficiali 2026 con luogo, data, quantità, stato e collegamento alla fonte comunale.
+- Il totale minimo documentato 2026 include 603 piantumazioni e 19 abbattimenti confermati come eseguiti.
+- Per il Municipio III sono distinti 473 alberi già piantati e 231 ancora previsti, evitando di attribuire al saldo l'intero programma di 704 alberi.
+- Piantumazioni annunciate, lavori soltanto avviati e abbattimenti programmati sono visibili ma esclusi dal saldo minimo.
+- Mantenuta la distinzione tra interventi completati, urgenti eseguiti, programmati e comunicazioni ufficiali non ancora confermate come completate.
+
+### Versioning
+
+- Dataset visibile aggiornato alla revisione 11.
+- App aggiornata alla versione `0.4.4` (build 47).
+
 ## [0.4.3] - 2026-08-26
 
 ### Alberi · periodi e copertura

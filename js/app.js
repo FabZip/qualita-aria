@@ -37,8 +37,9 @@ const TEMPERATURE_METRICS={
   mean:{label:'Temperatura media annuale',short:'MEDIA'},
   max:{label:'Massima media annuale',short:'MAX'}
 };
-const TREE_YEARS=Array.from({length:13},(_,index)=>String(2025-index));
+const TREE_YEARS=Array.from({length:14},(_,index)=>String(2026-index));
 const TREE_MAP_PERIODS=[
+  {value:'2026',label:'2026 · eventi documentati'},
   {value:'2025',label:'2025 · eventi documentati'},
   {value:'2024',label:'2024 · eventi documentati'},
   {value:'season-2024-2025',label:'stagione 2024–mar 2025 · aggregato'},
@@ -3242,8 +3243,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.4.3',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.4.3',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.4.4',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.4.4',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3258,7 +3259,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.4.3')
+    navigator.serviceWorker.register('./service-worker.js?v=0.4.4')
       .then(reg=>reg.update())
       .catch(console.error)
   }
