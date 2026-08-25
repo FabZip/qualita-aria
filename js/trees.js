@@ -1,22 +1,25 @@
 (function(){
   let catalogPromise=null;
-  const markers=[];
+  const markerGroups=new Map();
   const scopeMaps=new Set();
   const fmt=n=>Number(n).toLocaleString('it-IT');
   const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
   async function catalog(){
-    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.4.1',{cache:'no-store'}).then(response=>{
+    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.4.2',{cache:'no-store'}).then(response=>{
       if(!response.ok)throw new Error(`Dati arborei: HTTP ${response.status}`);
       return response.json()
     });
     return catalogPromise
   }
 
-  function clear(){
-    while(markers.length)markers.pop().remove();
-    scopeMaps.forEach(map=>{
-      ['tree-scope-fill','tree-scope-line'].forEach(id=>map.getLayer(id)&&map.setLayoutProperty(id,'visibility','none'))
+  function clear(targetMap=null){
+    const maps=targetMap?[targetMap]:[...scopeMaps];
+    maps.forEach(map=>{
+      const markers=markerGroups.get(map)||[];
+      while(markers.length)markers.pop().remove();
+      markerGroups.delete(map);
+      ['tree-scope-fill','tree-scope-line'].forEach(id=>map.getLayer(id)&&map.setLayoutProperty(id,'visibility','none'));
     })
   }
 
@@ -51,6 +54,13 @@
       if(!feature)return;
       const p=feature.properties||{};
       const balance=Number(p.balance||0);
+      if(p.viewKind==='difference'){
+        new maplibregl.Popup({offset:12})
+          .setLngLat(event.lngLat)
+          .setHTML(`<div class="tree-popup"><strong>${escapeHtml(p.locationName)} — ${escapeHtml(p.period)}</strong><br>Saldo iniziale: ${Number(p.balanceA)>0?'+':''}${fmt(p.balanceA)}<br>Saldo finale: ${Number(p.balanceB)>0?'+':''}${fmt(p.balanceB)}<br><strong>Variazione: ${balance>0?'+':''}${fmt(balance)}</strong><br>Ambito: intero Comune</div>`)
+          .addTo(map);
+        return
+      }
       new maplibregl.Popup({offset:12})
         .setLngLat(event.lngLat)
         .setHTML(`<div class="tree-popup"><strong>${escapeHtml(p.locationName)} — ${escapeHtml(p.period)}</strong><br>Piantati: ${fmt(p.plantings)}<br>${escapeHtml(p.decrementLabel)}: ${fmt(p.decrements)}<br><strong>Saldo: ${balance>0?'+':''}${fmt(balance)}</strong><br>Ambito: intero Comune<br>Localizzazione puntuale non disponibile<br><a href="${escapeHtml(p.sourceUrl)}" target="_blank" rel="noopener noreferrer">Documento ufficiale</a></div>`)
@@ -61,7 +71,7 @@
   }
 
   function showScope(map,event,boundary){
-    clear();
+    clear(map);
     addScopeLayers(map);
     scopeMaps.add(map);
     if(!event||!boundary?.features?.length){
@@ -101,7 +111,39 @@
       .setLngLat(event.coordinates)
       .setPopup(new maplibregl.Popup({offset:Math.ceil(size/2)+8}).setHTML(scopePopupHtml(event)))
       .addTo(map);
-    markers.push(marker)
+    markerGroups.set(map,[...(markerGroups.get(map)||[]),marker])
+  }
+
+  function showDifferenceScope(map,recordA,recordB,boundary,yearA,yearB){
+    clear(map);
+    addScopeLayers(map);
+    scopeMaps.add(map);
+    if(!recordA||!recordB||!boundary?.features?.length){
+      map.getSource('tree-scope-source')?.setData({type:'FeatureCollection',features:[]});
+      return null
+    }
+    const balanceA=balanceOf(recordA);
+    const balanceB=balanceOf(recordB);
+    const difference=balanceB-balanceA;
+    const balanceIntensity=Math.min(1,Math.abs(difference)/Math.max(1,Math.abs(balanceA),Math.abs(balanceB)));
+    const scoped={...boundary,features:boundary.features.map(feature=>({...feature,properties:{
+      ...(feature.properties||{}),viewKind:'difference',balance:difference,balanceIntensity,
+      balanceA,balanceB,locationName:recordB.locationName,period:`${yearA} → ${yearB}`
+    }}))};
+    map.getSource('tree-scope-source').setData(scoped);
+    ['tree-scope-fill','tree-scope-line'].forEach(id=>map.setLayoutProperty(id,'visibility','visible'));
+
+    const el=document.createElement('button');
+    el.type='button';
+    el.className=`tree-difference-marker ${difference>=0?'is-positive':'is-negative'}`;
+    el.innerHTML=`<span>${difference>0?'+':''}${fmt(difference)}</span><small>Δ saldo</small>`;
+    el.setAttribute('aria-label',`Variazione del saldo arboreo da ${yearA} a ${yearB}: ${difference>0?'+':''}${fmt(difference)}`);
+    const marker=new maplibregl.Marker({element:el,anchor:'center'})
+      .setLngLat(recordB.coordinates)
+      .setPopup(new maplibregl.Popup({offset:44}).setHTML(`<div class="tree-popup"><strong>${escapeHtml(recordB.locationName)} — ${yearA} → ${yearB}</strong><br>Saldo iniziale: ${balanceA>0?'+':''}${fmt(balanceA)}<br>Saldo finale: ${balanceB>0?'+':''}${fmt(balanceB)}<br><strong>Variazione: ${difference>0?'+':''}${fmt(difference)}</strong><br>Ambito: intero Comune</div>`))
+      .addTo(map);
+    markerGroups.set(map,[marker]);
+    return{balanceA,balanceB,difference}
   }
 
   function eventMarkers(event){
@@ -120,7 +162,7 @@
   }
 
   function show(map,events){
-    clear();
+    clear(map);
     events.forEach((event,eventIndex)=>{
       eventMarkers(event).forEach((item,itemIndex)=>{
         const el=document.createElement('button');
@@ -135,7 +177,7 @@
           .setLngLat(event.coordinates)
           .setPopup(new maplibregl.Popup({offset:26}).setHTML(popupHtml(event,item)))
           .addTo(map);
-        markers.push(marker)
+        markerGroups.set(map,[...(markerGroups.get(map)||[]),marker])
       })
     })
   }
@@ -150,5 +192,5 @@
     return{city,events,aggregate:aggregate?{...aggregate,source}:null,diagnostic:{schemaVersion:data.schemaVersion,city:city.name,year,available:city.available,events:events.length,aggregatePeriod:aggregate?.period||null}}
   }
 
-  window.TreeStats={rows,show,showScope,clear,fmt};
+  window.TreeStats={rows,show,showScope,showDifferenceScope,clear,fmt,balanceOf};
 })();

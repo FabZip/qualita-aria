@@ -184,7 +184,7 @@ Il service worker conserva la shell applicativa per migliorare caricamento e res
 
 ## Statistiche arboree
 
-La modalità **Alberi** mostra eventi e bilanci arborei documentati, separandoli dal censimento del patrimonio esistente. Un albero censito non viene considerato una nuova piantumazione; una sparizione tra due censimenti non viene considerata un abbattimento senza conferma della fonte.
+La fonte **Alberi · fonti comunali** mostra eventi e bilanci arborei documentati, separandoli dal censimento del patrimonio esistente. Un albero censito non viene considerato una nuova piantumazione; una sparizione tra due censimenti non viene considerata un abbattimento senza conferma della fonte.
 
 La prima fonte attiva è il [Bilancio Arboreo di Roma Capitale](https://www.comune.roma.it/web/it/scheda-servizi.page?contentId=INF70550). I bilanci 2017–2020 e il dato parziale 2021 sono rappresentati come aggregati comunali, quindi non vengono creati falsi punti sulle strade. Il totale novembre 2021–dicembre 2025 resta aggregato e non viene suddiviso tra i singoli anni.
 
@@ -193,6 +193,14 @@ Quando il dato è comunale, la mappa colora il confine amministrativo in base al
 Quando saranno disponibili dati territoriali verificati, la stessa rappresentazione potrà essere applicata a Municipi o quartieri. I marker puntuali saranno utilizzati soltanto per interventi associati a coordinate o indirizzi reali. Ogni record dichiara comunque la precisione geografica (`point`, `address`, `district` o `city`). Padova, Bologna e Torino sono predisposte ma non dichiarate disponibili finché non vengono verificate fonti pubbliche di eventi, storici confrontabili o documenti ufficiali sufficienti.
 
 I dati arborei sono pre-elaborati in JSON/GeoJSON; il frontend non interpreta direttamente PDF o grandi portali durante la navigazione.
+
+La fonte arborea utilizza le stesse tre modalità delle altre fonti:
+
+- **Mappa**: bilancio dell'anno selezionato o periodo aggregato dichiarato esplicitamente;
+- **Confronto**: due mappe per due bilanci annuali documentati;
+- **Differenza**: variazione del saldo fra due anni comparabili.
+
+Un totale pluriennale non viene ripartito artificialmente e quindi non entra nei confronti o nelle differenze fra singoli anni.
 
 ## Architettura
 

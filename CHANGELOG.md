@@ -2,6 +2,22 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.4.2] - 2026-08-25
+
+### Alberi come fonte dati
+
+- Spostata `Alberi` dalle modalità al selettore `Fonte dati`.
+- Le sole modalità dell'app tornano a essere `Mappa`, `Confronto` e `Differenza` per tutte le fonti.
+- `Mappa` mostra il bilancio arboreo dell'anno selezionato oppure il solo periodo aggregato disponibile.
+- `Confronto` applica la visualizzazione territoriale alle due mappe e confronta esclusivamente bilanci annuali documentati.
+- `Differenza` calcola la variazione del saldo arboreo tra due anni comparabili e colora il territorio in base al miglioramento o peggioramento.
+- I totali pluriennali non vengono utilizzati nel confronto o nella differenza fra singoli anni.
+- Rimossa automaticamente anche l'eventuale vecchia tab `Alberi` conservata nella cache HTML.
+
+### Versioning
+
+- App aggiornata alla versione `0.4.2` (build 45).
+
 ## [0.4.1] - 2026-08-25
 
 ### Alberi · visualizzazione territoriale
