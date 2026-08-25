@@ -387,8 +387,6 @@ function configureSourceUI(){
   $('eeaCityField')?.classList.toggle('hidden',!isItaly);
   $('pollutantField')?.classList.toggle('hidden',temperature);
   $('temperatureMetricField')?.classList.toggle('hidden',!temperature);
-  $('co2Note')?.classList.toggle('hidden',temperature);
-
   setTemperatureModeLock(temperature);
   applyTemperatureMapConstraints(temperature);
   configureTemperatureLegend(temperature);

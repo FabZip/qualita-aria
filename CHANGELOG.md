@@ -2,6 +2,17 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.3.9] - 2026-08-25
+
+### Interfaccia
+
+- Rimosso dall'interfaccia il messaggio informativo dedicato alla CO₂.
+- Rimosso il relativo riferimento non più utilizzato dal codice frontend.
+
+### Versioning
+
+- App aggiornata alla versione `0.3.9` (build 42).
+
 ## [0.3.8] - 2026-08-25
 
 ### Temperature · copertura nazionale

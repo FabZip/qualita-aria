@@ -118,9 +118,6 @@ L'app distingue tra:
 
 La heatmap serve esclusivamente a facilitare la lettura spaziale dei punti e non deve essere interpretata come interpolazione scientifica o modello atmosferico.
 
-CO₂ non è incluso: è un gas serra e richiede fonti dedicate diverse dai dataset di qualità dell'aria usati nell'app. CO e CO₂ sono sostanze differenti.
-
-
 ## Temperatura · stazioni fisiche nelle fonti osservazionali
 
 Il selettore `Fonte inquinante` continua a scegliere esclusivamente EEA,
