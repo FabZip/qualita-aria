@@ -2,6 +2,24 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.5.0] - 2026-08-26
+
+### Alberi · evidenziazione geografica degli eventi
+
+- Ridotta l'opacità del riempimento comunale al range `0.06–0.14`, mantenendo leggibili strade e toponimi.
+- Aggiunto un tracciato azzurro in stile navigatore quando si seleziona un evento con geometria disponibile.
+- Il tracciato usa sempre lo stesso azzurro e non comunica il tipo di evento: verde e rosso restano riservati alle icone degli alberi.
+- Inseriti tracciato e bordo sotto il primo livello di etichette della cartografia, in modo che i nomi delle vie rimangano visibili.
+- La mappa inquadra automaticamente tutte le geometrie disponibili per gli eventi che interessano più luoghi.
+- Per gli eventi multilocalità viene indicato quante località sono state riconosciute, senza suddividere artificialmente la quantità complessiva.
+- Aggiunto `data/tree-paths.json` con geometrie consolidate e semplificate dei tratti verificati.
+
+### Versioning
+
+- App aggiornata alla versione `0.5.0` (build 53).
+- Dataset visibile aggiornato alla revisione 14.
+- Cache offline aggiornata a `qualita-aria-v0.5.0`.
+
 ## [0.4.9] - 2026-08-26
 
 ### Alberi · leggibilità e riepilogo

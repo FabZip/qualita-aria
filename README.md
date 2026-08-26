@@ -204,6 +204,10 @@ Gli eventi datati con indirizzo sono mostrati anche come alberi sulla mappa: ver
 
 Il riepilogo sotto la mappa mostra piantumazioni, abbattimenti, totale degli interventi documentati e saldo. Il precedente indicatore circolare centrale è stato rimosso per non coprire gli eventi sulla mappa. Quando si entra nella fonte Alberi, gli eventuali controlli di paginazione della lista OpenAQ vengono nascosti e sostituiti dalla sola paginazione degli eventi arborei.
 
+Se l'evento dispone di una geometria verificata, la selezione dalla lista evidenzia in azzurro la strada o il contorno disponibile e inquadra automaticamente tutte le località riconosciute. Il tracciato azzurro è neutro: non distingue piantumazioni e abbattimenti, che continuano a essere comunicati esclusivamente dalle icone verdi o rosse. Il tracciato viene disegnato sotto le etichette della cartografia per lasciare leggibili i nomi delle vie.
+
+Le geometrie consolidate sono conservate in `data/tree-paths.json`. Negli eventi con più strade, la quantità resta complessiva e non viene ripartita senza una dichiarazione della fonte. Se soltanto alcune località sono state riconosciute, la lista mostra il rapporto fra località visualizzate e località documentate.
+
 Ogni record dichiara la precisione geografica (`point`, `address`, `area`, `district` o `city`). Un punto `area` o `district` è intenzionalmente indicativo e non rappresenta la posizione di ogni singolo albero. La geocodifica consolidata è separata in `data/tree-coordinates.json`; l'attribuzione geografica è basata su OpenStreetMap. Padova, Bologna e Torino sono predisposte ma non dichiarate disponibili finché non vengono verificate fonti pubbliche di eventi, storici confrontabili o documenti ufficiali sufficienti.
 
 I dati arborei consolidati sono pre-elaborati in JSON/GeoJSON; il frontend non interpreta direttamente PDF o grandi portali durante la navigazione.

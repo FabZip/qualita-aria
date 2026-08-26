@@ -1,6 +1,7 @@
 (function(){
   let catalogPromise=null;
   let coordinatesPromise=null;
+  let pathsPromise=null;
   let proxyConfigPromise=null;
   const markerGroups=new Map();
   const eventMarkerGroups=new Map();
@@ -9,7 +10,7 @@
   const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
   async function catalog(){
-    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.4.9',{cache:'no-store'}).then(response=>{
+    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.5.0',{cache:'no-store'}).then(response=>{
       if(!response.ok)throw new Error(`Dati arborei: HTTP ${response.status}`);
       return response.json()
     });
@@ -17,17 +18,24 @@
   }
 
   async function proxyConfig(){
-    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.4.9',{cache:'no-store'})
+    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.5.0',{cache:'no-store'})
       .then(response=>response.ok?response.json():null)
       .catch(()=>null);
     return proxyConfigPromise
   }
 
   async function coordinatesCatalog(){
-    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.4.9',{cache:'no-store'})
+    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.5.0',{cache:'no-store'})
       .then(response=>response.ok?response.json():{events:{}})
       .catch(()=>({events:{}}));
     return coordinatesPromise
+  }
+
+  async function pathsCatalog(){
+    if(!pathsPromise)pathsPromise=fetch('data/tree-paths.json?v=0.5.0',{cache:'no-store'})
+      .then(response=>response.ok?response.json():{events:{}})
+      .catch(()=>({events:{}}));
+    return pathsPromise
   }
 
   async function dynamicEvents(cityId,year){
@@ -54,6 +62,7 @@
       while(markers.length)markers.pop().remove();
       markerGroups.delete(map);
       eventMarkerGroups.delete(map);
+      map.getSource('tree-active-path')?.setData({type:'FeatureCollection',features:[]});
       ['tree-scope-fill','tree-scope-line'].forEach(id=>map.getLayer(id)&&map.setLayoutProperty(id,'visibility','none'));
     })
   }
@@ -74,17 +83,18 @@
   function addScopeLayers(map){
     if(map.getSource('tree-scope-source'))return;
     map.addSource('tree-scope-source',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+    const beforeId=map.getStyle()?.layers?.find(layer=>layer.type==='symbol'&&layer.layout?.['text-field'])?.id;
     map.addLayer({
       id:'tree-scope-fill',type:'fill',source:'tree-scope-source',layout:{visibility:'none'},
       paint:{
         'fill-color':['case',['>=',['get','balance'],0],'#22c55e','#ef4444'],
-        'fill-opacity':['interpolate',['linear'],['get','balanceIntensity'],0,.16,1,.42]
+        'fill-opacity':['interpolate',['linear'],['get','balanceIntensity'],0,.06,1,.14]
       }
-    });
+    },beforeId);
     map.addLayer({
       id:'tree-scope-line',type:'line',source:'tree-scope-source',layout:{visibility:'none'},
-      paint:{'line-color':['case',['>=',['get','balance'],0],'#15803d','#b91c1c'],'line-width':2}
-    });
+      paint:{'line-color':['case',['>=',['get','balance'],0],'#15803d','#b91c1c'],'line-width':1.5,'line-opacity':.72}
+    },beforeId);
     map.on('click','tree-scope-fill',event=>{
       const feature=event.features?.[0];
       if(!feature)return;
@@ -242,15 +252,43 @@
         .setPopup(new maplibregl.Popup({offset:Math.ceil(size*.65)}).setHTML(documentedPopupHtml(event)))
         .addTo(map);
       markerGroups.set(map,[...(markerGroups.get(map)||[]),marker]);
-      byId.set(String(event.id),marker)
+      byId.set(String(event.id),{marker,event})
     });
     eventMarkerGroups.set(map,byId)
   }
 
+  function addActivePathLayers(map){
+    if(map.getSource('tree-active-path'))return;
+    map.addSource('tree-active-path',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+    const beforeId=map.getStyle()?.layers?.find(layer=>layer.type==='symbol'&&layer.layout?.['text-field'])?.id;
+    map.addLayer({
+      id:'tree-active-path-casing',type:'line',source:'tree-active-path',
+      layout:{'line-cap':'round','line-join':'round'},
+      paint:{'line-color':'rgba(255,255,255,.92)','line-width':['interpolate',['linear'],['zoom'],10,7,14,11,17,15],'line-opacity':.95}
+    },beforeId);
+    map.addLayer({
+      id:'tree-active-path-line',type:'line',source:'tree-active-path',
+      layout:{'line-cap':'round','line-join':'round'},
+      paint:{'line-color':'#38bdf8','line-width':['interpolate',['linear'],['zoom'],10,4,14,7,17,10],'line-opacity':.92}
+    },beforeId)
+  }
+
+  function pathCoordinates(path){
+    return(path?.features||[]).flatMap(feature=>feature.geometry?.type==='LineString'?feature.geometry.coordinates:[])
+  }
+
   function focusEvent(map,eventId){
-    const marker=eventMarkerGroups.get(map)?.get(String(eventId));
-    if(!marker)return false;
-    map.flyTo({center:marker.getLngLat(),zoom:15.2,duration:900,essential:true});
+    const selected=eventMarkerGroups.get(map)?.get(String(eventId));
+    if(!selected)return false;
+    const {marker,event}=selected;
+    addActivePathLayers(map);
+    const path=event.path?.features?.length?event.path:{type:'FeatureCollection',features:[]};
+    map.getSource('tree-active-path').setData(path);
+    const coordinates=pathCoordinates(path);
+    if(coordinates.length>1){
+      const bounds=coordinates.reduce((box,coordinate)=>box.extend(coordinate),new maplibregl.LngLatBounds(coordinates[0],coordinates[0]));
+      map.fitBounds(bounds,{padding:70,maxZoom:16,duration:900,essential:true})
+    }else map.flyTo({center:marker.getLngLat(),zoom:15.2,duration:900,essential:true});
     window.setTimeout(()=>{
       const popup=marker.getPopup();
       if(popup&&!popup.isOpen())marker.togglePopup()
@@ -259,7 +297,7 @@
   }
 
   async function rows(cityId,selection){
-    const [data,coordinateData]=await Promise.all([catalog(),coordinatesCatalog()]);
+    const [data,coordinateData,pathData]=await Promise.all([catalog(),coordinatesCatalog(),pathsCatalog()]);
     const city=data.cities[cityId];
     if(!city)return{city:null,events:[],aggregate:null,diagnostic:{reason:'Città non configurata'}};
     const source=city.source||{};
@@ -271,7 +309,7 @@
       .filter(event=>String(event.year)===String(selection))
       .map(event=>{
         const location=coordinateData.events?.[event.id];
-        return{...event,coordinates:location?.coordinates||event.coordinates,locationPrecision:location?.precision||event.locationPrecision,source:{publisher:'Roma Capitale',url:event.sourceUrl}}
+        return{...event,coordinates:location?.coordinates||event.coordinates,locationPrecision:location?.precision||event.locationPrecision,path:pathData.events?.[event.id]||null,source:{publisher:'Roma Capitale',url:event.sourceUrl}}
       });
     const dynamic=await dynamicEvents(cityId,selection);
     const localSourceUrls=new Set(localDocumented.map(event=>event.sourceUrl));
