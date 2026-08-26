@@ -54,22 +54,49 @@ npx wrangler@latest secret put TREE_ADMIN_TOKEN
 npx wrangler@latest deploy
 ```
 
-Per eseguire subito la prima scansione, senza attendere il cron:
+### Forzare manualmente l'aggiornamento arboreo
+
+Il token amministrativo **non serve all'app e non serve al cron mensile**. È richiesto soltanto per avviare manualmente una scansione o revisionare un evento. Conservarlo in un password manager e non inserirlo in Git, `wrangler.toml`, README o script versionati.
+
+Per forzare un aggiornamento senza lasciare il token nella cronologia della shell:
 
 ```bash
+read -rsp "Token: " ARIA_TREE_TOKEN
+echo
 curl -X POST \
-  -H "Authorization: Bearer IL_TOKEN_SCELTO" \
+  -H "Authorization: Bearer $ARIA_TREE_TOKEN" \
   https://qualita-aria-temperature.fabzip.workers.dev/v1/trees/refresh
+unset ARIA_TREE_TOKEN
 ```
+
+Alla richiesta `Token:` incollare il valore configurato con `wrangler secret put TREE_ADMIN_TOKEN`: durante l'inserimento non vengono visualizzati caratteri. Una risposta con `"ok": true` conferma la scansione; `discovered` indica le pagine individuate, `inserted` i nuovi eventi, `updated` quelli già presenti e ricontrollati, `errors` gli errori incontrati.
+
+Per verificare senza token ciò che leggerà la PWA:
+
+```bash
+curl "https://qualita-aria-temperature.fabzip.workers.dev/v1/trees/events?city=roma&year=2026"
+```
+
+Se il token viene perso o esposto, generarne uno nuovo e sostituirlo:
+
+```bash
+openssl rand -hex 32
+npx wrangler@latest secret put TREE_ADMIN_TOKEN
+```
+
+Il nuovo valore sostituisce immediatamente il precedente. Non è necessario modificare o ripubblicare il frontend.
 
 Esempio di revisione manuale:
 
 ```bash
+read -rsp "Token: " ARIA_TREE_TOKEN
+echo
 curl -X POST \
-  -H "Authorization: Bearer IL_TOKEN_SCELTO" \
+  -H "Authorization: Bearer $ARIA_TREE_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"sourceKey":"IDS1551137","validation":"manual_confirmed","status":"emergency_completed","eventType":"decrement","quantity":8,"locationName":"Roma"}' \
   https://qualita-aria-temperature.fabzip.workers.dev/v1/trees/review
+unset ARIA_TREE_TOKEN
 ```
 
 Il file `data/trees.json` rimane il dataset consolidato di fallback se D1 o il proxy non sono raggiungibili.

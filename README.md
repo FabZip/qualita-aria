@@ -214,6 +214,8 @@ Per il 2026 il minimo iniziale comprende 603 alberi messi a dimora e 19 abbattim
 
 La risposta dinamica espone la data dell'ultima scansione. Nell'interfaccia viene indicato se l'aggiornamento automatico è attivo oppure se è in uso il fallback locale.
 
+La procedura per forzare una scansione senza salvare il token nella cronologia del terminale è documentata in `cloudflare/temperature-proxy/README.md`. L'app e il cron mensile non conoscono e non richiedono il token amministrativo.
+
 La modalità `Differenza` calcola una variazione soltanto quando le due selezioni hanno la stessa natura: bilancio ufficiale con bilancio ufficiale oppure raccolta parziale con raccolta parziale.
 
 ## Architettura

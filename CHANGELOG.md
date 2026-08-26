@@ -2,6 +2,18 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.4.6] - 2026-08-26
+
+### Documentazione proxy arboreo
+
+- Documentata la procedura sicura per forzare manualmente la scansione degli eventi arborei senza lasciare il token nella cronologia della shell.
+- Chiarito che applicazione e Cron Trigger non richiedono il token amministrativo.
+- Aggiunte istruzioni per interpretare il risultato della sincronizzazione, verificare l'endpoint pubblico e sostituire un token perso o esposto.
+
+### Versioning
+
+- App aggiornata alla versione `0.4.6` (build 49); dataset invariato alla revisione 12.
+
 ## [0.4.5] - 2026-08-26
 
 ### Alberi · aggiornamento dinamico
