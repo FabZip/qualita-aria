@@ -1649,10 +1649,10 @@ async function treeEventsResponse(env,cors,url){
   `).bind(city,year).all();
   const events=(result.results||[]).map(row=>({
     id:`dynamic-${row.source_key}`,year:String(row.year),date:row.event_date||row.source_published_at||String(row.year),
-    locationName:row.location_name,district:row.district||undefined,locationPrecision:row.location_name==='Roma'?'city':'address',
+    locationName:row.location_name,district:row.district||undefined,
     eventType:row.event_type,status:row.status,quantity:row.quantity,
     coordinates:Number.isFinite(row.longitude)&&Number.isFinite(row.latitude)?[row.longitude,row.latitude]:undefined,
-    locationPrecision:row.geocode_precision||undefined,
+    locationPrecision:row.geocode_precision||(row.location_name==='Roma'?'city':'address'),
     validation:row.validation,title:row.title,sourceUrl:row.source_url,
     firstSeenAt:row.first_seen_at,lastCheckedAt:row.last_checked_at
   }));

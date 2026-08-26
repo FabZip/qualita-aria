@@ -1,6 +1,7 @@
 name = "qualita-aria-temperature"
 main = "src/index.js"
 compatibility_date = "2026-08-26"
+preview_urls = false
 
 [[d1_databases]]
 binding = "TREE_DB"
