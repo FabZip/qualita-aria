@@ -5,7 +5,7 @@ compatibility_date = "2026-08-26"
 [[d1_databases]]
 binding = "TREE_DB"
 database_name = "qualita-aria-tree-events"
-database_id = "INSERIRE_DATABASE_ID"
+database_id = "3127bec6-abc9-4145-a6c1-3bf1f2bb088e"
 migrations_dir = "migrations"
 
 [triggers]
