@@ -2,6 +2,30 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.4.9] - 2026-08-26
+
+### Alberi · leggibilità e riepilogo
+
+- Rimosso dalla mappa il cerchio centrale con il totale degli interventi, che copriva i marker degli eventi.
+- Spostato il totale degli interventi documentati nel riepilogo a barre sotto la mappa, insieme a piantumazioni, abbattimenti e saldo.
+- Rimosso dall'elenco il messaggio separato sull'attribuzione e sulle posizioni indicative.
+- Aumentati dimensione, contrasto e interlinea del testo guida arboreo sotto la mappa.
+- Sostituiti i quadratini della lista con le stesse sagome arboree e gli stessi colori utilizzati dai marker sulla mappa.
+- Impedita la permanenza dei controlli di paginazione OpenAQ quando si passa alla fonte Alberi.
+
+### Versioning
+
+- App aggiornata alla versione `0.4.9` (build 52).
+- Dataset invariato alla revisione 13.
+- Cache offline aggiornata a `qualita-aria-v0.4.9`.
+
+## Proxy arboreo [0.8.1] - 2026-08-26
+
+- Rimossa la chiave duplicata `locationPrecision` dalla trasformazione degli eventi D1.
+- Conservato il valore geocodificato quando disponibile, con fallback coerente a `city` per Roma o `address` per gli altri luoghi.
+- Eliminato il warning Wrangler `Duplicate key "locationPrecision" in object literal`.
+- La versione dell'app resta `0.4.8` build 51; il dataset resta alla revisione 13.
+
 ## [0.4.8] - 2026-08-26
 
 ### Alberi · eventi sulla mappa

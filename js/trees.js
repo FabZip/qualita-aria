@@ -9,7 +9,7 @@
   const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
   async function catalog(){
-    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.4.8',{cache:'no-store'}).then(response=>{
+    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.4.9',{cache:'no-store'}).then(response=>{
       if(!response.ok)throw new Error(`Dati arborei: HTTP ${response.status}`);
       return response.json()
     });
@@ -17,14 +17,14 @@
   }
 
   async function proxyConfig(){
-    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.4.8',{cache:'no-store'})
+    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.4.9',{cache:'no-store'})
       .then(response=>response.ok?response.json():null)
       .catch(()=>null);
     return proxyConfigPromise
   }
 
   async function coordinatesCatalog(){
-    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.4.8',{cache:'no-store'})
+    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.4.9',{cache:'no-store'})
       .then(response=>response.ok?response.json():{events:{}})
       .catch(()=>({events:{}}));
     return coordinatesPromise
@@ -132,23 +132,6 @@
     map.getSource('tree-scope-source').setData(scoped);
     ['tree-scope-fill','tree-scope-line'].forEach(id=>map.setLayoutProperty(id,'visibility','visible'));
 
-    const planted=Number(event.plantings||0);
-    const decrements=Number(event.decrements||0);
-    const plantedPct=total?planted/total*100:50;
-    const size=Math.round(Math.max(58,Math.min(86,46+Math.log10(Math.max(10,total))*10)));
-    const el=document.createElement('button');
-    el.type='button';
-    el.className='tree-balance-marker';
-    el.style.width=`${size}px`;
-    el.style.height=`${size}px`;
-    el.style.setProperty('--planted-angle',`${plantedPct*3.6}deg`);
-    el.innerHTML=`<span>${fmt(total)}</span><small>${event.dataKind==='documented_partial'?'minimo':'totale'}</small>`;
-    el.setAttribute('aria-label',`Intero Comune: ${fmt(planted)} piantati, ${fmt(decrements)} ${event.decrementLabel||'decrementi'}, saldo ${balance>0?'+':''}${fmt(balance)}`);
-    const marker=new maplibregl.Marker({element:el,anchor:'center'})
-      .setLngLat(event.coordinates)
-      .setPopup(new maplibregl.Popup({offset:Math.ceil(size/2)+8}).setHTML(scopePopupHtml(event)))
-      .addTo(map);
-    markerGroups.set(map,[...(markerGroups.get(map)||[]),marker])
   }
 
   function showDifferenceScope(map,recordA,recordB,boundary,yearA,yearB){
@@ -230,6 +213,11 @@
     return`<svg viewBox="0 0 44 52" aria-hidden="true"><g fill="currentColor">${crown}</g><path fill="#6b4423" d="M19 29h6v18h-6z"/><path fill="rgba(255,255,255,.34)" d="M13 18c3-6 8-8 13-7-5 2-8 5-9 10z"/></svg>`
   }
 
+  function iconSvg(event){
+    const variant=Math.abs([...String(event?.id||'tree')].reduce((sum,char)=>sum+char.charCodeAt(0),0))%3;
+    return treeIconSvg(variant)
+  }
+
   function documentedPopupHtml(event){
     const type=event.eventType==='planting'?'Piantumazione':event.eventType==='decrement'?'Abbattimento':'Evento arboreo';
     const quantity=Number.isFinite(event.quantity)?`${fmt(event.quantity)} alberi`:'quantità non specificata';
@@ -247,7 +235,7 @@
       el.className=`tree-event-marker ${event.eventType==='planting'?'is-planted':'is-cut'} ${event.status==='planned'?'is-planned':''}`;
       el.style.width=`${size}px`;
       el.style.height=`${Math.round(size*1.18)}px`;
-      el.innerHTML=treeIconSvg(Math.abs([...String(event.id)].reduce((sum,char)=>sum+char.charCodeAt(0),0))%3);
+      el.innerHTML=iconSvg(event);
       el.setAttribute('aria-label',`${event.eventType==='planting'?'Piantumazione':'Abbattimento'}: ${event.locationName}, ${Number.isFinite(event.quantity)?fmt(event.quantity):'quantità non specificata'} alberi`);
       const marker=new maplibregl.Marker({element:el,anchor:'bottom'})
         .setLngLat(event.coordinates)
@@ -316,5 +304,5 @@
     }
   }
 
-  window.TreeStats={rows,show,showScope,showDifferenceScope,showDocumentedEvents,focusEvent,clear,fmt,balanceOf};
+  window.TreeStats={rows,show,showScope,showDifferenceScope,showDocumentedEvents,focusEvent,iconSvg,clear,fmt,balanceOf};
 })();

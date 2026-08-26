@@ -111,7 +111,7 @@ unset ARIA_TREE_TOKEN
 
 Il file `data/trees.json` rimane il dataset consolidato di fallback se D1 o il proxy non sono raggiungibili.
 
-Il modulo eventi arborei del Worker è identificato dalla versione proxy `0.8.0`.
+Il modulo eventi arborei del Worker è identificato dalla versione proxy `0.8.1`.
 
 ### Pubblicazione Worker
 

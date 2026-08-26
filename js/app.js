@@ -2834,10 +2834,11 @@ function treeListHtml(result,year,includeAggregate=true){
 
   const balanceRow=event=>{
     const saldo=Number(event.plantings)-Number(event.decrements);
+    const total=Number(event.plantings)+Number(event.decrements);
     const max=Math.max(Number(event.plantings),Number(event.decrements),1);
     const prefix=event.dataKind==='documented_partial'?'Saldo minimo documentato':'Saldo';
     const plantedLabel=event.dataKind==='documented_partial'?'Piantati documentati':'Piantati';
-    return`<div class="tree-balance-row"><div class="tree-balance-head"><strong>${event.locationName} · ${event.period}</strong><b>${prefix} ${saldo>0?'+':''}${TreeStats.fmt(saldo)}</b></div><div class="tree-compare"><span>${plantedLabel}</span><i class="tree-compare-bar tree-compare-planted" style="width:${Math.max(8,event.plantings/max*100)}%"><b>${TreeStats.fmt(event.plantings)}</b></i><span>${event.decrementLabel}</span><i class="tree-compare-bar tree-compare-cut" style="width:${Math.max(8,event.decrements/max*100)}%"><b>${TreeStats.fmt(event.decrements)}</b></i></div><small>${event.coverageLabel?`${event.coverageLabel}. `:''}${event.notes}</small></div>`
+    return`<div class="tree-balance-row"><div class="tree-balance-head"><strong>${event.locationName} · ${event.period}</strong><b>${prefix} ${saldo>0?'+':''}${TreeStats.fmt(saldo)}</b></div><div class="tree-compare"><span>${plantedLabel}</span><i class="tree-compare-bar tree-compare-planted" style="width:${Math.max(8,event.plantings/max*100)}%"><b>${TreeStats.fmt(event.plantings)}</b></i><span>${event.decrementLabel}</span><i class="tree-compare-bar tree-compare-cut" style="width:${Math.max(8,event.decrements/max*100)}%"><b>${TreeStats.fmt(event.decrements)}</b></i><span>Totale</span><strong class="tree-compare-total">${TreeStats.fmt(total)} interventi documentati</strong></div><small>${event.coverageLabel?`${event.coverageLabel}. `:''}${event.notes}</small></div>`
   };
   const rows=events.map(balanceRow).join('');
 
@@ -2848,7 +2849,7 @@ function treeListHtml(result,year,includeAggregate=true){
       const quantity=Number.isFinite(event.quantity)?`${TreeStats.fmt(event.quantity)} alberi`:'quantità non specificata';
       const validation=event.validation==='automatic_pending'?' · da verificare':event.validation==='automatic_confirmed'?' · verifica automatica':'';
       const located=Array.isArray(event.coordinates)&&event.coordinates.length===2;
-      return`<div class="tree-event-row" data-tree-event-index="${index}" data-tree-event-id="${safe(event.id)}"><button class="tree-event-focus" type="button" data-tree-focus="${safe(event.id)}" ${located?'':`disabled title="Coordinate non ancora disponibili"`}><i class="tree-swatch ${event.eventType==='planting'?'tree-swatch-planted':'tree-swatch-cut'}"></i><span><strong>${safe(event.locationName)}</strong><small>${safe(event.date)}${event.district?` · ${safe(event.district)}`:''}<br>${safe(type)} · ${safe(statusLabels[event.status]||event.status)}${safe(validation)} · ${safe(quantity)}${located?' · mostra sulla mappa':' · posizione in verifica'}</small></span></button><a href="${safeUrl(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a></div>`
+      return`<div class="tree-event-row" data-tree-event-index="${index}" data-tree-event-id="${safe(event.id)}"><button class="tree-event-focus" type="button" data-tree-focus="${safe(event.id)}" ${located?'':`disabled title="Coordinate non ancora disponibili"`}><i class="tree-list-icon ${event.eventType==='planting'?'is-planted':'is-cut'} ${event.status==='planned'?'is-planned':''}">${TreeStats.iconSvg(event)}</i><span><strong>${safe(event.locationName)}</strong><small>${safe(event.date)}${event.district?` · ${safe(event.district)}`:''}<br>${safe(type)} · ${safe(statusLabels[event.status]||event.status)}${safe(validation)} · ${safe(quantity)}${located?' · mostra sulla mappa':' · posizione in verifica'}</small></span></button><a href="${safeUrl(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a></div>`
     }).join('')}</div>${documentedEvents.length>TREE_EVENTS_PER_PAGE?`<nav class="tree-pagination" data-tree-pagination aria-label="Pagine degli eventi"><button type="button" data-tree-page="prev">Precedente</button><span data-tree-page-status></span><button type="button" data-tree-page="next">Successiva</button></nav>`:''}`
     :'';
 
@@ -2860,10 +2861,7 @@ function treeListHtml(result,year,includeAggregate=true){
   const aggregateNote=includeAggregate&&aggregate
     ?`<div class="tree-period-note"><strong>Totale aggregato del periodo ${aggregate.period}</strong><br>Il periodo è mostrato come selezione autonoma e non viene attribuito ai singoli anni.</div>${balanceRow(aggregate)}`
     :'';
-  const mapAttribution=documentedEvents.some(event=>Array.isArray(event.coordinates))
-    ?'<div class="tree-map-attribution">Posizioni: © OpenStreetMap contributors. I punti di area o distretto sono indicativi.</div>'
-    :'';
-  return dynamicNote+rows+documentedList+aggregateNote+mapAttribution||'<div class="empty-state">Nessun totale annuale o evento arboreo documentato disponibile per questa selezione.</div>'
+  return dynamicNote+rows+documentedList+aggregateNote||'<div class="empty-state">Nessun totale annuale o evento arboreo documentato disponibile per questa selezione.</div>'
 }
 
 function bindTreeEventLists(groups=[]){
@@ -2898,6 +2896,8 @@ function bindTreeEventLists(groups=[]){
 async function renderTreesMode(token){
   clearTemperatureOverlays();
   setTemperatureVisibility(false);
+  $('stationListTools')?.classList.add('hidden');
+  $('stationPagination')?.classList.add('hidden');
   const cityId=eeaCity();
   const treeLayerIds=prefix=>[
     `${prefix}-boundary-fill`,`${prefix}-boundary-line`,`${prefix}-heat`,`${prefix}-points`,`${prefix}-labels`
@@ -2973,7 +2973,7 @@ async function renderTreesMode(token){
   $('dataNotice').textContent=displayed?(partialRecord?'Copertura parziale · totale minimo documentato':`${displayed} ambito/i territoriale/i`):'Dati annuali non disponibili';
   $('mapHint').textContent=partialRecord
     ?'Il colore del territorio rappresenta il saldo minimo documentato; gli alberi verdi indicano piantumazioni e quelli rossi abbattimenti. Dimensione e sagoma distinguono visivamente gli eventi; clicca un evento nell\'elenco per raggiungerlo sulla mappa. Le posizioni di area o distretto sono indicative.'
-    :'Il colore copre l’intero ambito amministrativo: verde indica saldo positivo, rosso saldo negativo. L’indicatore centrale confronta piantati e tagliati/decrementi; non rappresenta la posizione dei singoli alberi.';
+    :'Il colore copre l’intero ambito amministrativo: verde indica saldo positivo, rosso saldo negativo. Il riepilogo sotto la mappa confronta piantati, tagliati/decrementi e totale documentato.';
   diagnostics({source:'Statistiche arboree',mode:state.mode,yearA,yearB,city:resultA.city?.name||null,available:resultA.city?.available||false,displayed});
 
   if(resultA.city?.center){
@@ -2990,6 +2990,8 @@ async function render(){
   setLoading(true);
 
   const periodComparison=['compare','difference'].includes(state.mode);
+  document.documentElement.classList.toggle('trees-source',isTrees());
+  $('mapHint').classList.toggle('tree-map-hint',isTrees());
 
   $('comparePanel').classList.toggle('hidden',!periodComparison);
   $('singleYearField').classList.toggle(
@@ -3293,8 +3295,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.4.8',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.4.8',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.4.9',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.4.9',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3309,7 +3311,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.4.8')
+    navigator.serviceWorker.register('./service-worker.js?v=0.4.9')
       .then(reg=>reg.update())
       .catch(console.error)
   }
