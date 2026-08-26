@@ -8,14 +8,57 @@
   <link rel="manifest" href="manifest.json?v=0.2.0">
   <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="css/aria-splash.css?v=0.4.7">
   <link rel="stylesheet" href="css/app.css?v=0.2.0">
   <link rel="stylesheet" href="css/station-list.css?v=0.2.2">
   <link rel="stylesheet" href="css/openaq-world.css?v=0.2.4">
   <link rel="stylesheet" href="css/temperature.css?v=0.3.8">
-  <link rel="stylesheet" href="css/trees.css?v=0.4.6">
+  <link rel="stylesheet" href="css/trees.css?v=0.4.7">
   <title>Qualità dell'aria</title>
 </head>
 <body>
+  <script>
+    (()=>{try{const key='ariaSplashShown';const shown=sessionStorage.getItem(key)==='1';document.documentElement.classList.toggle('aria-splash-seen',shown);if(!shown)sessionStorage.setItem(key,'1')}catch{}})();
+  </script>
+  <section id="aria-splash" aria-label="Introduzione A.R.I.A.">
+    <button class="aria-splash__skip" id="aria-splash-skip" type="button">Salta</button>
+    <div class="aria-splash__atmosphere" aria-hidden="true"></div>
+
+    <div class="aria-splash__intro" role="img" aria-label="A.R.I.A., Analisi e Rappresentazione degli Indicatori Ambientali">
+      <svg class="aria-splash__environment" viewBox="0 0 920 390" aria-hidden="true">
+        <defs>
+          <linearGradient id="aria-splash-air-gradient" x1="0" x2="1">
+            <stop offset="0" stop-color="#70d6ff"/>
+            <stop offset=".5" stop-color="#55d6a8"/>
+            <stop offset="1" stop-color="#f4b942"/>
+          </linearGradient>
+          <linearGradient id="aria-splash-heat-gradient" x1="0" x2="1">
+            <stop offset="0" stop-color="#56c8ef"/>
+            <stop offset=".55" stop-color="#f1c84b"/>
+            <stop offset="1" stop-color="#ef6a57"/>
+          </linearGradient>
+        </defs>
+        <path class="aria-splash__air-line aria-splash__air-line--main" pathLength="1" d="M-40 170 C110 95 210 220 355 146 S615 80 965 142"/>
+        <path class="aria-splash__air-line aria-splash__air-line--soft" pathLength="1" d="M-20 212 C132 145 228 255 382 192 S650 132 950 178"/>
+        <path class="aria-splash__data-line" pathLength="1" d="M180 286 C265 270 300 295 365 270 S474 210 548 240 S665 305 764 248"/>
+        <circle class="aria-splash__data-dot" cx="365" cy="270" r="5"/>
+        <circle class="aria-splash__data-dot aria-splash__data-dot--two" cx="548" cy="240" r="5"/>
+        <g class="aria-splash__tree-mark" transform="translate(705 198)">
+          <path d="M18 70 V109"/>
+          <path d="M18 78 C-22 64 -13 27 12 34 C14 5 58 11 53 42 C78 47 69 82 18 78Z"/>
+        </g>
+      </svg>
+
+      <div class="aria-splash__wordmark" aria-hidden="true">
+        <span>A</span><i>.</i><span>R</span><i>.</i><span>I</span><i>.</i><span>A</span><i>.</i>
+      </div>
+      <h1 class="aria-splash__sr-only">A.R.I.A.</h1>
+      <p class="aria-splash__subtitle">Analisi e Rappresentazione degli Indicatori Ambientali</p>
+      <div class="aria-splash__spectrum" aria-hidden="true"><span></span></div>
+      <p class="aria-splash__signal" aria-hidden="true">ARIA · TEMPERATURA · ALBERI</p>
+    </div>
+  </section>
+
   <main class="app-shell">
     <header class="topbar">
       <div>
@@ -177,17 +220,18 @@
 
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
     <footer class="app-footer">
-      v<span id="appVersion">0.4.6</span> · dataset <span id="dataVersion">12</span>
+      v<span id="appVersion">0.4.7</span> · dataset <span id="dataVersion">12</span>
     </footer>
   </main>
 
   <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="js/aria-splash.js?v=0.4.7" defer></script>
   <script src="js/openaq-proxy.js?v=0.2.11" defer></script>
   <script src="js/eea-proxy.js?v=0.2.14" defer></script>
   <script src="js/temperature-proxy.js?v=0.3.8" defer></script>
-  <script src="js/trees.js?v=0.4.6" defer></script>
-  <script src="js/app.js?v=0.4.6" defer></script>
+  <script src="js/trees.js?v=0.4.7" defer></script>
+  <script src="js/app.js?v=0.4.7" defer></script>
   <script src="js/eea-utd.js?v=0.2.14" defer></script>
   <script src="js/openaq-world.js?v=0.3.8" defer></script>
   <script src="js/temperature-overlay.js?v=0.3.8" defer></script>

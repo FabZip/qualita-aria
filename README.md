@@ -182,6 +182,14 @@ L'app può essere installata dal browser tramite il pulsante **Installa app**.
 
 Il service worker conserva la shell applicativa per migliorare caricamento e resilienza, mentre i dati ambientali reali vengono richiesti dalla rete e non vengono sostituiti da dati simulati offline.
 
+## Splash screen A.R.I.A.
+
+All'inizio di una nuova sessione viene mostrata la splash approvata di **A.R.I.A. — Analisi e Rappresentazione degli Indicatori Ambientali**. È un overlay temporaneo: MapLibre, interfaccia e fonti iniziano a caricarsi normalmente dietro di essa.
+
+La chiave `sessionStorage` è `ariaSplashShown`. La durata ordinaria è 3 secondi, con dissolvenza di 380 ms; con `prefers-reduced-motion` la permanenza scende a 850 ms e la dissolvenza a 180 ms. Un timeout di sicurezza avvia comunque la chiusura entro 4,6 secondi. Il pulsante `Salta` chiude immediatamente la schermata e il nodo viene rimosso realmente dal DOM.
+
+I file attivi sono `css/aria-splash.css` e `js/aria-splash.js`; gli stili sono limitati a `#aria-splash` e alle classi `.aria-splash__*`. La cartella `aria-splash/` rimane nel repository come demo approvata e non viene caricata dall'app né aggiunta alla cache offline.
+
 ## Statistiche arboree
 
 La fonte **Alberi · fonti comunali** mostra eventi e bilanci arborei documentati, separandoli dal censimento del patrimonio esistente. Un albero censito non viene considerato una nuova piantumazione; una sparizione tra due censimenti non viene considerata un abbattimento senza conferma della fonte.

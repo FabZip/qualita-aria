@@ -1,0 +1,183 @@
+#aria-splash {
+  --aria-splash-ink: #f4fbff;
+  --aria-splash-deep: #061923;
+  --aria-splash-blue: #70d6ff;
+  --aria-splash-green: #55d6a8;
+  position: fixed;
+  z-index: 10000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: radial-gradient(circle at 50% 46%, #123f4d 0, #0a2b37 45%, var(--aria-splash-deep) 100%);
+  color: var(--aria-splash-ink);
+  opacity: 1;
+  isolation: isolate;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.aria-splash-seen #aria-splash { display: none; }
+
+#aria-splash,
+#aria-splash * { box-sizing: border-box; }
+
+#aria-splash::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  z-index: -1;
+  background: radial-gradient(circle at 24% 38%, #3db5c61b, transparent 28%), radial-gradient(circle at 78% 62%, #55d6a817, transparent 28%);
+  animation: aria-splash-breathe 2.5s ease-out both;
+}
+
+#aria-splash.aria-splash--leaving {
+  animation: aria-splash-out .38s ease forwards;
+  pointer-events: none;
+}
+
+#aria-splash .aria-splash__skip {
+  position: absolute;
+  z-index: 4;
+  top: max(18px, env(safe-area-inset-top));
+  right: max(18px, env(safe-area-inset-right));
+  padding: .62rem .95rem;
+  border: 1px solid #d8f6ff55;
+  border-radius: 999px;
+  background: #071c2599;
+  color: #effcff;
+  cursor: pointer;
+  font: inherit;
+  backdrop-filter: blur(8px);
+  transition: background-color .2s, border-color .2s;
+}
+
+#aria-splash .aria-splash__skip:hover,
+#aria-splash .aria-splash__skip:focus-visible {
+  background: #174452;
+  border-color: #9be8ff;
+  outline: 3px solid #70d6ff55;
+  outline-offset: 2px;
+}
+
+#aria-splash .aria-splash__atmosphere {
+  position: absolute;
+  inset: 0;
+  opacity: .24;
+  background-image: linear-gradient(115deg, transparent 20%, #9ce9ff12 48%, transparent 75%);
+  transform: translateX(-30%);
+  animation: aria-splash-atmosphere 1.8s ease-out both;
+}
+
+#aria-splash .aria-splash__intro {
+  position: relative;
+  width: min(920px, 94vw);
+  min-height: 390px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  padding: 30px 16px;
+}
+
+#aria-splash .aria-splash__environment {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+#aria-splash .aria-splash__air-line,
+#aria-splash .aria-splash__data-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+#aria-splash .aria-splash__air-line { stroke: url(#aria-splash-air-gradient); }
+#aria-splash .aria-splash__air-line--main { stroke-width: 3.2; opacity: .9; animation: aria-splash-draw-line 1.15s .12s cubic-bezier(.45,.05,.15,1) forwards; }
+#aria-splash .aria-splash__air-line--soft { stroke-width: 1.2; opacity: .32; animation: aria-splash-draw-line 1.25s .25s ease-out forwards; }
+#aria-splash .aria-splash__data-line { stroke: url(#aria-splash-heat-gradient); stroke-width: 2; opacity: .68; animation: aria-splash-draw-line .85s .9s ease-out forwards; }
+#aria-splash .aria-splash__data-dot { fill: #f3d05c; opacity: 0; transform-box: fill-box; transform-origin: center; animation: aria-splash-dot-in .28s 1.35s ease-out forwards; }
+#aria-splash .aria-splash__data-dot--two { fill: #ef765e; animation-delay: 1.47s; }
+#aria-splash .aria-splash__tree-mark { fill: none; stroke: var(--aria-splash-green); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transform-box: fill-box; transform-origin: bottom center; animation: aria-splash-tree-in .55s 1.18s ease-out forwards; }
+
+#aria-splash .aria-splash__wordmark {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  margin-top: -20px;
+  font-size: clamp(3.6rem, 11vw, 7.6rem);
+  font-weight: 300;
+  letter-spacing: .035em;
+  line-height: .9;
+  text-shadow: 0 6px 30px #00101899;
+}
+
+#aria-splash .aria-splash__wordmark span,
+#aria-splash .aria-splash__wordmark i { display: inline-block; opacity: 0; transform: translateY(14px); animation: aria-splash-letter-in .35s cubic-bezier(.2,.85,.3,1) forwards; }
+#aria-splash .aria-splash__wordmark i { color: var(--aria-splash-green); font-style: normal; font-size: .58em; margin-inline: .01em .03em; }
+#aria-splash .aria-splash__wordmark span:nth-child(1) { animation-delay: .36s; }
+#aria-splash .aria-splash__wordmark i:nth-child(2) { animation-delay: .45s; }
+#aria-splash .aria-splash__wordmark span:nth-child(3) { animation-delay: .54s; }
+#aria-splash .aria-splash__wordmark i:nth-child(4) { animation-delay: .63s; }
+#aria-splash .aria-splash__wordmark span:nth-child(5) { animation-delay: .72s; }
+#aria-splash .aria-splash__wordmark i:nth-child(6) { animation-delay: .81s; }
+#aria-splash .aria-splash__wordmark span:nth-child(7) { animation-delay: .9s; }
+#aria-splash .aria-splash__wordmark i:nth-child(8) { animation-delay: .99s; }
+
+#aria-splash .aria-splash__subtitle { position: relative; z-index: 2; max-width: 680px; margin: 28px auto 0; padding: 0 12px; color: #e2f2f4; font-size: clamp(.94rem, 2.4vw, 1.22rem); font-weight: 400; line-height: 1.45; letter-spacing: .025em; text-align: center; opacity: 0; transform: translateY(9px); animation: aria-splash-subtitle-in .45s .95s ease-out forwards; }
+#aria-splash .aria-splash__spectrum { position: relative; z-index: 2; width: min(410px, 66vw); height: 2px; margin-top: 24px; overflow: hidden; border-radius: 99px; background: #ffffff1a; opacity: 0; animation: aria-splash-fade-in .3s 1.18s forwards; }
+#aria-splash .aria-splash__spectrum span { display: block; width: 100%; height: 100%; background: linear-gradient(90deg, #66cdec, #55d6a8 45%, #f0c84c 72%, #ef6b57); transform: scaleX(0); transform-origin: left; animation: aria-splash-scale-line .55s 1.2s ease-out forwards; }
+#aria-splash .aria-splash__signal { position: relative; z-index: 2; margin: 12px 0 0; color: #9ab8bf; font-size: .64rem; letter-spacing: .25em; opacity: 0; animation: aria-splash-fade-in .35s 1.42s forwards; }
+#aria-splash .aria-splash__sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+@keyframes aria-splash-draw-line { to { stroke-dashoffset: 0; } }
+@keyframes aria-splash-letter-in { to { opacity: 1; transform: translateY(0); } }
+@keyframes aria-splash-subtitle-in { to { opacity: 1; transform: translateY(0); } }
+@keyframes aria-splash-fade-in { to { opacity: 1; } }
+@keyframes aria-splash-scale-line { to { transform: scaleX(1); } }
+@keyframes aria-splash-dot-in { 50% { opacity: 1; transform: scale(1.7); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes aria-splash-tree-in { from { opacity: 0; transform: translateY(12px) scale(.85); } to { opacity: .8; transform: none; } }
+@keyframes aria-splash-atmosphere { to { transform: translateX(24%); } }
+@keyframes aria-splash-breathe { from { transform: scale(.92); opacity: .25; } to { transform: scale(1); opacity: 1; } }
+@keyframes aria-splash-out { to { opacity: 0; transform: scale(1.012); } }
+
+@media (max-width: 600px) {
+  #aria-splash .aria-splash__intro { width: 100vw; min-height: 340px; }
+  #aria-splash .aria-splash__wordmark { font-size: clamp(3.25rem, 19vw, 5.8rem); }
+  #aria-splash .aria-splash__subtitle { max-width: 340px; margin-top: 22px; font-size: .94rem; }
+  #aria-splash .aria-splash__environment { transform: scale(1.12); }
+  #aria-splash .aria-splash__signal { font-size: .56rem; letter-spacing: .18em; }
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  #aria-splash .aria-splash__intro { min-height: 270px; transform: scale(.84); }
+  #aria-splash .aria-splash__wordmark { font-size: clamp(3rem, 13vh, 5rem); }
+  #aria-splash .aria-splash__subtitle { margin-top: 18px; }
+  #aria-splash .aria-splash__spectrum { margin-top: 16px; }
+  #aria-splash .aria-splash__skip { top: 10px; right: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #aria-splash::before,
+  #aria-splash .aria-splash__atmosphere,
+  #aria-splash .aria-splash__environment,
+  #aria-splash .aria-splash__wordmark span,
+  #aria-splash .aria-splash__wordmark i,
+  #aria-splash .aria-splash__subtitle,
+  #aria-splash .aria-splash__spectrum,
+  #aria-splash .aria-splash__spectrum span,
+  #aria-splash .aria-splash__signal { animation: none !important; transform: none !important; }
+  #aria-splash .aria-splash__environment { display: none; }
+  #aria-splash .aria-splash__wordmark span,
+  #aria-splash .aria-splash__wordmark i,
+  #aria-splash .aria-splash__subtitle,
+  #aria-splash .aria-splash__spectrum,
+  #aria-splash .aria-splash__signal { opacity: 1; }
+  #aria-splash .aria-splash__spectrum span { transform: scaleX(1) !important; }
+  #aria-splash.aria-splash--leaving { animation-duration: .18s; }
+}

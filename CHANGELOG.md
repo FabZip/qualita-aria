@@ -2,6 +2,25 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.4.7] - 2026-08-26
+
+### Splash screen A.R.I.A.
+
+- Integrata nell'app principale la splash approvata `A.R.I.A. — Analisi e Rappresentazione degli Indicatori Ambientali` senza ricrearne la grafica.
+- Rimossi dall'integrazione mappa simulata, stazioni, controlli di demo, messaggio di rimozione e pulsante `Ripeti`.
+- La splash funziona come overlay mentre MapLibre, interfaccia e dati iniziano a caricarsi normalmente.
+- Aggiunta visualizzazione una sola volta per sessione tramite `sessionStorage` e chiave `ariaSplashShown`.
+- Mantenuti pulsante `Salta`, focus visibile, contenuti accessibili e supporto `prefers-reduced-motion`.
+- Aggiunta chiusura idempotente con rimozione effettiva dal DOM, pulizia di timer e listener e timeout di sicurezza.
+- Isolati tutti gli stili sotto `#aria-splash` e classi `.aria-splash__*`, senza regole globali per `body`, `button` o `main`.
+- Aggiunti alla cache offline esclusivamente `css/aria-splash.css` e `js/aria-splash.js`.
+- Conservata `aria-splash/` come demo separata e non attiva.
+
+### Versioning
+
+- Cache aggiornata da `qualita-aria-v0.4.6` a `qualita-aria-v0.4.7`.
+- App aggiornata alla versione `0.4.7` (build 50); dataset invariato alla revisione 12.
+
 ## [0.4.6] - 2026-08-26
 
 ### Documentazione proxy arboreo

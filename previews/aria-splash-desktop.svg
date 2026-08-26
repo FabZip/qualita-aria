@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+  <defs>
+    <radialGradient id="bg"><stop stop-color="#123f4d"/><stop offset=".45" stop-color="#0a2b37"/><stop offset="1" stop-color="#061923"/></radialGradient>
+    <linearGradient id="air"><stop stop-color="#70d6ff"/><stop offset=".5" stop-color="#55d6a8"/><stop offset="1" stop-color="#f4b942"/></linearGradient>
+    <linearGradient id="heat"><stop stop-color="#56c8ef"/><stop offset=".55" stop-color="#f1c84b"/><stop offset="1" stop-color="#ef6a57"/></linearGradient>
+  </defs>
+  <rect width="1440" height="900" fill="url(#bg)"/>
+  <circle cx="345" cy="340" r="260" fill="#3db5c6" opacity=".07"/><circle cx="1120" cy="560" r="270" fill="#55d6a8" opacity=".06"/>
+  <g transform="translate(260 255)">
+    <path d="M-40 170C110 95 210 220 355 146S615 80 965 142" fill="none" stroke="url(#air)" stroke-width="3.2" stroke-linecap="round" opacity=".9"/>
+    <path d="M-20 212C132 145 228 255 382 192S650 132 950 178" fill="none" stroke="url(#air)" stroke-width="1.2" stroke-linecap="round" opacity=".32"/>
+    <path d="M180 286C265 270 300 295 365 270S474 210 548 240S665 305 764 248" fill="none" stroke="url(#heat)" stroke-width="2" stroke-linecap="round" opacity=".68"/>
+    <circle cx="365" cy="270" r="5" fill="#f3d05c"/><circle cx="548" cy="240" r="5" fill="#ef765e"/>
+    <g transform="translate(705 198)" fill="none" stroke="#55d6a8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".8"><path d="M18 70V109"/><path d="M18 78C-22 64-13 27 12 34C14 5 58 11 53 42C78 47 69 82 18 78Z"/></g>
+  </g>
+  <text x="720" y="465" text-anchor="middle" fill="#f4fbff" font-family="Inter,system-ui,sans-serif" font-size="126" font-weight="300" letter-spacing="6">A<tspan fill="#55d6a8" font-size="72">.</tspan>R<tspan fill="#55d6a8" font-size="72">.</tspan>I<tspan fill="#55d6a8" font-size="72">.</tspan>A<tspan fill="#55d6a8" font-size="72">.</tspan></text>
+  <text x="720" y="535" text-anchor="middle" fill="#e2f2f4" font-family="Inter,system-ui,sans-serif" font-size="21" letter-spacing=".5">Analisi e Rappresentazione degli Indicatori Ambientali</text>
+  <rect x="515" y="570" width="410" height="2" rx="1" fill="url(#heat)"/>
+  <text x="720" y="608" text-anchor="middle" fill="#9ab8bf" font-family="Inter,system-ui,sans-serif" font-size="11" letter-spacing="5">ARIA · TEMPERATURA · ALBERI</text>
+  <rect x="1330" y="18" width="86" height="42" rx="21" fill="#071c25" fill-opacity=".6" stroke="#d8f6ff" stroke-opacity=".33"/><text x="1373" y="45" text-anchor="middle" fill="#effcff" font-family="Inter,system-ui,sans-serif" font-size="15">Salta</text>
+</svg>
