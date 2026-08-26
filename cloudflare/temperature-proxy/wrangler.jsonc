@@ -1,8 +1,15 @@
 {
-  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
-  "name": "qualita-aria-temperature",
-  "main": "src/index.js",
-  "compatibility_date": "2026-08-23",
-  "workers_dev": true,
-  "preview_urls": false
+	"$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+	"name": "qualita-aria-temperature",
+	"main": "src/index.js",
+	"compatibility_date": "2026-08-23",
+	"workers_dev": true,
+	"preview_urls": false,
+	"d1_databases": [
+		{
+			"binding": "qualita_aria_tree_events",
+			"database_name": "qualita-aria-tree-events",
+			"database_id": "3127bec6-abc9-4145-a6c1-3bf1f2bb088e"
+		}
+	]
 }
