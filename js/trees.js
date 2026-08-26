@@ -1,16 +1,41 @@
 (function(){
   let catalogPromise=null;
+  let proxyConfigPromise=null;
   const markerGroups=new Map();
   const scopeMaps=new Set();
   const fmt=n=>Number(n).toLocaleString('it-IT');
   const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
   async function catalog(){
-    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.4.4',{cache:'no-store'}).then(response=>{
+    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.4.5',{cache:'no-store'}).then(response=>{
       if(!response.ok)throw new Error(`Dati arborei: HTTP ${response.status}`);
       return response.json()
     });
     return catalogPromise
+  }
+
+  async function proxyConfig(){
+    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.4.5',{cache:'no-store'})
+      .then(response=>response.ok?response.json():null)
+      .catch(()=>null);
+    return proxyConfigPromise
+  }
+
+  async function dynamicEvents(cityId,year){
+    const config=await proxyConfig();
+    const baseUrl=String(config?.base_url||'').replace(/\/+$/,'');
+    if(!config?.enabled||!baseUrl)return{events:[],lastSync:null,available:false};
+    try{
+      const url=new URL(`${baseUrl}/v1/trees/events`);
+      url.searchParams.set('city',cityId);
+      url.searchParams.set('year',String(year));
+      const response=await fetch(url,{mode:'cors',cache:'no-store',headers:{Accept:'application/json'}});
+      if(!response.ok)throw new Error(`HTTP ${response.status}`);
+      const payload=await response.json();
+      return{events:Array.isArray(payload.events)?payload.events:[],lastSync:payload.lastSync||null,available:true}
+    }catch(error){
+      return{events:[],lastSync:null,available:false,error:String(error?.message||error)}
+    }
   }
 
   function clear(targetMap=null){
@@ -195,9 +220,15 @@
       .filter(event=>String(event.year)===String(selection))
       .map(event=>({...event,dataKind:'official_annual',coverageLabel:'Bilancio ufficiale',source}));
     const aggregate=(city.aggregatePeriods||[]).find(item=>item.selectorValue===selection);
-    const documentedEvents=(city.documentedEvents||[])
+    const localDocumented=(city.documentedEvents||[])
       .filter(event=>String(event.year)===String(selection))
       .map(event=>({...event,source:{publisher:'Roma Capitale',url:event.sourceUrl}}));
+    const dynamic=await dynamicEvents(cityId,selection);
+    const localSourceUrls=new Set(localDocumented.map(event=>event.sourceUrl));
+    const remoteDocumented=dynamic.events
+      .filter(event=>!localSourceUrls.has(event.sourceUrl))
+      .map(event=>({...event,source:{publisher:'Roma Capitale · aggiornamento automatico',url:event.sourceUrl}}));
+    const documentedEvents=[...localDocumented,...remoteDocumented];
     const completed=documentedEvents.filter(event=>
       ['completed','emergency_completed'].includes(event.status)&&Number.isFinite(event.quantity)
     );
@@ -219,7 +250,7 @@
     const record=events[0]||documentedSummary||aggregateRecord||null;
     return{
       city,events,aggregate:aggregateRecord,documentedEvents,documentedSummary,record,
-      diagnostic:{schemaVersion:data.schemaVersion,city:city.name,selection,available:city.available,officialAnnual:events.length,documentedEvents:documentedEvents.length,aggregatePeriod:aggregate?.period||null,dataKind:record?.dataKind||null}
+      diagnostic:{schemaVersion:data.schemaVersion,city:city.name,selection,available:city.available,officialAnnual:events.length,documentedEvents:documentedEvents.length,dynamicEvents:remoteDocumented.length,dynamicAvailable:dynamic.available,lastSync:dynamic.lastSync,aggregatePeriod:aggregate?.period||null,dataKind:record?.dataKind||null}
     }
   }
 

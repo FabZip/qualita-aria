@@ -67,8 +67,8 @@ function corsHeaders(origin){
 
   return{
     'Access-Control-Allow-Origin':origin,
-    'Access-Control-Allow-Methods':'GET,OPTIONS',
-    'Access-Control-Allow-Headers':'Accept,Content-Type',
+    'Access-Control-Allow-Methods':'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers':'Accept,Content-Type,Authorization',
     'Access-Control-Max-Age':'86400',
     'Vary':'Origin'
   }
@@ -1441,7 +1441,217 @@ async function observedResponse(ctx,cors,{pollutantSource,year,bbox}){
   }
 }
 
+const TREE_SOURCE_LISTS=[
+  'https://www.comune.roma.it/web/it/informazioni-di-servizio.page?tem=verde_urbano',
+  'https://www.comune.roma.it/web/it/notizie.page?tem=verde_urbano'
+];
+const TREE_SOURCE_ORIGIN='https://www.comune.roma.it';
+const TREE_MAX_PAGES_PER_RUN=40;
+
+function decodeHtml(value){
+  return String(value||'')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ')
+    .replace(/<[^>]+>/g,' ')
+    .replace(/&nbsp;|&#160;/gi,' ')
+    .replace(/&amp;/gi,'&')
+    .replace(/&quot;/gi,'"')
+    .replace(/&#39;|&apos;/gi,"'")
+    .replace(/\s+/g,' ')
+    .trim()
+}
+
+function treeSourceLinks(html){
+  const links=new Set();
+  const pattern=/href=["']([^"']+(?:informazione-di-servizio|notizia)[^"']+)["']/gi;
+  let match;
+  while((match=pattern.exec(html))&&links.size<TREE_MAX_PAGES_PER_RUN){
+    try{
+      const url=new URL(match[1],TREE_SOURCE_ORIGIN);
+      if(url.origin===TREE_SOURCE_ORIGIN)links.add(url.toString())
+    }catch{}
+  }
+  return[...links]
+}
+
+function italianMonth(value){
+  const months={gennaio:1,febbraio:2,marzo:3,aprile:4,maggio:5,giugno:6,luglio:7,agosto:8,settembre:9,ottobre:10,novembre:11,dicembre:12};
+  return months[String(value||'').toLowerCase()]||null
+}
+
+function sourceDate(text){
+  const match=text.match(/\b(\d{1,2})\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\s+(20\d{2})\b/i);
+  if(!match)return null;
+  return`${match[3]}-${String(italianMonth(match[2])).padStart(2,'0')}-${String(match[1]).padStart(2,'0')}`
+}
+
+function titleFromHtml(html){
+  const h1=html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i);
+  const title=html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
+  return decodeHtml(h1?.[1]||title?.[1]||'Evento arboreo Roma Capitale').slice(0,300)
+}
+
+function treeQuantity(text){
+  const values=[];
+  const numbered=/(?:\bn\.?|n°)\s*(\d{1,5})\s+(?![°^])/gi;
+  let match;
+  while((match=numbered.exec(text)))values.push(Number(match[1]));
+  if(values.length)return values.reduce((sum,value)=>sum+value,0);
+  const plain=text.match(/\b(\d{1,5})\s+(?:nuov[ei]\s+)?(?:alber(?:i|ature)|esemplari)\b/i);
+  return plain?Number(plain[1]):null
+}
+
+function classifyTreePage(html,url){
+  const text=decodeHtml(html);
+  if(!/alber|arbore|piantum|messa a dimora|abbattiment/i.test(text))return null;
+  const published=sourceDate(text);
+  const year=Number(published?.slice(0,4));
+  if(!Number.isInteger(year)||year<2022)return null;
+  const hasPlanting=/piantum|mess[aei]\s+a dimora|nuov[ei]\s+alber/i.test(text);
+  const hasCut=/abbattiment|alber[oi]\s+abbattut/i.test(text);
+  const eventType=hasPlanting&&!hasCut?'planting':hasCut&&!hasPlanting?'decrement':'unknown';
+  const locationMatches=[...text.matchAll(/Ubicazione\s*:\s*([^.;]{2,160})/gi)];
+  const locationName=(locationMatches[0]?.[1]||'Roma').trim().slice(0,180);
+  const planned=/saranno?\s+(?:messi|effettuat|abbattut)|verranno?\s+(?:messi|effettuat|abbattut)|in previsione|programmati?|previsti?/i.test(text);
+  const executed=/sono stati effettuati|intervento eseguito|sono stati messi a dimora|già (?:messi a dimora|piantati)|data di esecuzione/i.test(text);
+  const structuredNotice=/\/informazione-di-servizio\.page/i.test(url);
+  const singleScope=structuredNotice&&locationMatches.length===1&&eventType!=='unknown';
+  const status=planned?'planned':executed&&singleScope?(eventType==='decrement'?'emergency_completed':'completed'):'reported';
+  const quantity=singleScope?treeQuantity(text):null;
+  const validation=executed&&singleScope&&Number.isFinite(quantity)
+    ?'automatic_confirmed'
+    :'automatic_pending';
+  const sourceKey=new URL(url).searchParams.get('contentId')||new URL(url).pathname;
+  return{
+    sourceKey,year,eventDate:published,locationName,eventType,
+    quantity:Number.isFinite(quantity)?quantity:null,status,validation,
+    title:titleFromHtml(html),sourceUrl:url,sourcePublishedAt:published,
+    rawExcerpt:text.slice(0,1000)
+  }
+}
+
+async function discoverTreePages(){
+  const links=new Set();
+  for(const sourceUrl of TREE_SOURCE_LISTS){
+    const response=await fetch(sourceUrl,{headers:{Accept:'text/html','User-Agent':'A.R.I.A. environmental-data-indexer/1.0'}});
+    if(!response.ok)throw new Error(`Fonte Roma Capitale HTTP ${response.status}`);
+    treeSourceLinks(await response.text()).forEach(link=>links.add(link))
+  }
+  return[...links].slice(0,TREE_MAX_PAGES_PER_RUN)
+}
+
+async function upsertTreeEvent(db,event,now){
+  const existing=await db.prepare('SELECT id FROM tree_events WHERE source_key = ?').bind(event.sourceKey).first();
+  await db.prepare(`
+    INSERT INTO tree_events (
+      source_key,city,year,event_date,location_name,event_type,quantity,status,
+      validation,title,source_url,source_published_at,first_seen_at,last_checked_at,
+      raw_excerpt,updated_at
+    ) VALUES (?, 'roma', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(source_key) DO UPDATE SET
+      year=excluded.year,event_date=excluded.event_date,location_name=excluded.location_name,
+      event_type=excluded.event_type,quantity=excluded.quantity,status=excluded.status,
+      validation=CASE
+        WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.validation
+        ELSE excluded.validation
+      END,
+      title=excluded.title,source_url=excluded.source_url,
+      source_published_at=excluded.source_published_at,last_checked_at=excluded.last_checked_at,
+      raw_excerpt=excluded.raw_excerpt,updated_at=excluded.updated_at
+  `).bind(
+    event.sourceKey,event.year,event.eventDate,event.locationName,event.eventType,
+    event.quantity,event.status,event.validation,event.title,event.sourceUrl,
+    event.sourcePublishedAt,now,now,event.rawExcerpt,now
+  ).run();
+  return existing?'updated':'inserted'
+}
+
+async function refreshTreeSources(env){
+  if(!env.TREE_DB)throw new Error('Binding D1 TREE_DB non configurato');
+  const startedAt=new Date().toISOString();
+  const run=await env.TREE_DB.prepare(
+    "INSERT INTO tree_sync_runs(started_at,status) VALUES (?,'running') RETURNING id"
+  ).bind(startedAt).first();
+  let discovered=0,inserted=0,updated=0,errors=0;
+  try{
+    const links=await discoverTreePages();
+    discovered=links.length;
+    for(const link of links){
+      try{
+        const response=await fetch(link,{headers:{Accept:'text/html','User-Agent':'A.R.I.A. environmental-data-indexer/1.0'}});
+        if(!response.ok)throw new Error(`HTTP ${response.status}`);
+        const event=classifyTreePage(await response.text(),link);
+        if(!event)continue;
+        const action=await upsertTreeEvent(env.TREE_DB,event,new Date().toISOString());
+        if(action==='inserted')inserted++;else updated++
+      }catch{errors++}
+    }
+    await env.TREE_DB.prepare(`UPDATE tree_sync_runs SET completed_at=?,status='completed',discovered=?,inserted=?,updated=?,errors=? WHERE id=?`)
+      .bind(new Date().toISOString(),discovered,inserted,updated,errors,run.id).run();
+    return{ok:true,discovered,inserted,updated,errors,startedAt,completedAt:new Date().toISOString()}
+  }catch(error){
+    await env.TREE_DB.prepare(`UPDATE tree_sync_runs SET completed_at=?,status='failed',discovered=?,inserted=?,updated=?,errors=?,detail=? WHERE id=?`)
+      .bind(new Date().toISOString(),discovered,inserted,updated,errors+1,String(error?.message||error).slice(0,500),run.id).run();
+    throw error
+  }
+}
+
+async function treeEventsResponse(env,cors,url){
+  if(!env.TREE_DB)return json({error:'Archivio arboreo dinamico non configurato'},503,{...cors,'Cache-Control':'no-store'});
+  const city=String(url.searchParams.get('city')||'roma').toLowerCase();
+  const year=Number(url.searchParams.get('year'));
+  if(city!=='roma')return badRequest('Città non supportata',cors);
+  if(!Number.isInteger(year)||year<2013||year>new Date().getUTCFullYear())return badRequest('Anno non valido',cors);
+  const result=await env.TREE_DB.prepare(`
+    SELECT source_key,year,event_date,location_name,district,event_type,quantity,
+      status,validation,title,source_url,source_published_at,first_seen_at,last_checked_at
+    FROM tree_events
+    WHERE city=? AND year=? AND validation!='manual_rejected'
+    ORDER BY COALESCE(event_date,source_published_at) DESC, id DESC
+  `).bind(city,year).all();
+  const events=(result.results||[]).map(row=>({
+    id:`dynamic-${row.source_key}`,year:String(row.year),date:row.event_date||row.source_published_at||String(row.year),
+    locationName:row.location_name,district:row.district||undefined,locationPrecision:row.location_name==='Roma'?'city':'address',
+    eventType:row.event_type,status:row.status,quantity:row.quantity,
+    validation:row.validation,title:row.title,sourceUrl:row.source_url,
+    firstSeenAt:row.first_seen_at,lastCheckedAt:row.last_checked_at
+  }));
+  const lastRun=await env.TREE_DB.prepare("SELECT completed_at,status,discovered,inserted,updated,errors FROM tree_sync_runs ORDER BY id DESC LIMIT 1").first();
+  return json({source:'Roma Capitale · aggiornamento automatico mensile',city,year,events,lastSync:lastRun||null},200,{...cors,'Cache-Control':'public, max-age=3600'})
+}
+
+function adminAuthorized(request,env){
+  const expected=String(env.TREE_ADMIN_TOKEN||'');
+  const supplied=String(request.headers.get('Authorization')||'').replace(/^Bearer\s+/i,'');
+  return Boolean(expected)&&supplied===expected
+}
+
+async function reviewTreeEvent(request,env,cors){
+  if(!env.TREE_DB)return json({error:'Archivio arboreo dinamico non configurato'},503,{...cors,'Cache-Control':'no-store'});
+  const body=await request.json().catch(()=>null);
+  const sourceKey=String(body?.sourceKey||'').trim();
+  const validation=String(body?.validation||'').trim();
+  const status=String(body?.status||'').trim();
+  const eventType=String(body?.eventType||'').trim();
+  const quantity=body?.quantity===null?null:Number(body?.quantity);
+  if(!sourceKey)return badRequest('sourceKey obbligatorio',cors);
+  if(!['manual_confirmed','manual_rejected'].includes(validation))return badRequest('validation non valida',cors);
+  if(!['completed','emergency_completed','planned','reported','unknown'].includes(status))return badRequest('status non valido',cors);
+  if(!['planting','decrement','unknown'].includes(eventType))return badRequest('eventType non valido',cors);
+  if(quantity!==null&&(!Number.isInteger(quantity)||quantity<0))return badRequest('quantity non valida',cors);
+  const result=await env.TREE_DB.prepare(`
+    UPDATE tree_events SET validation=?,status=?,event_type=?,quantity=?,
+      location_name=COALESCE(?,location_name),updated_at=? WHERE source_key=?
+  `).bind(validation,status,eventType,quantity,body?.locationName||null,new Date().toISOString(),sourceKey).run();
+  if(!result.meta?.changes)return json({error:'Evento non trovato'},404,{...cors,'Cache-Control':'no-store'});
+  return json({ok:true,sourceKey,validation,status,eventType,quantity},200,{...cors,'Cache-Control':'no-store'})
+}
+
 export default{
+  async scheduled(controller,env,ctx){
+    if(String(env.TREE_SYNC_ENABLED||'true')!=='true')return;
+    ctx.waitUntil(refreshTreeSources(env))
+  },
   async fetch(request,env,ctx){
     const url=new URL(request.url);
     const origin=request.headers.get('Origin')||'';
@@ -1455,6 +1665,17 @@ export default{
       return new Response(null,{status:204,headers:cors})
     }
 
+    if(request.method==='POST'&&url.pathname==='/v1/trees/refresh'){
+      if(!adminAuthorized(request,env))return json({error:'Non autorizzato'},401,{...cors,'Cache-Control':'no-store'});
+      try{return json(await refreshTreeSources(env),200,{...cors,'Cache-Control':'no-store'})}
+      catch(error){return json({error:String(error?.message||error)},502,{...cors,'Cache-Control':'no-store'})}
+    }
+
+    if(request.method==='POST'&&url.pathname==='/v1/trees/review'){
+      if(!adminAuthorized(request,env))return json({error:'Non autorizzato'},401,{...cors,'Cache-Control':'no-store'});
+      return reviewTreeEvent(request,env,cors)
+    }
+
     if(request.method!=='GET'){
       return json({error:'Metodo non consentito'},405,{
         ...cors,
@@ -1466,7 +1687,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.6.0',
+        version:'0.7.0',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,
@@ -1475,6 +1696,8 @@ export default{
         modeledTemperatureAccepted:false,
         stationCoverageThresholdPct:OBSERVED_COVERAGE_MIN*100,
         historicalFrom:1950,
+        treeEventsDynamic:Boolean(env.TREE_DB),
+        treeSyncSchedule:'0 3 1 * *',
         cacheSeconds:CACHE_TTL
       },200,{
         ...cors,
@@ -1520,10 +1743,15 @@ export default{
       })
     }
 
+    if(url.pathname==='/v1/trees/events'){
+      return treeEventsResponse(env,cors,url)
+    }
+
     return json({
       error:'Endpoint non trovato',
       endpoints:[
         '/health',
+        '/v1/trees/events?city=roma&year=2026',
         '/v1/temperature?bbox=12.2,41.7,12.8,42.1&year=2025',
         '/v1/observed?pollutantSource=arpa&bbox=12.1,41.7,12.8,42.1&year=2025',
         '/v1/observed?pollutantSource=eea&bbox=9,45,10,46&year=2025'

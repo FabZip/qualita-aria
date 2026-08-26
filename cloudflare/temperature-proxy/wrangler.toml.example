@@ -1,0 +1,15 @@
+name = "qualita-aria-temperature"
+main = "src/index.js"
+compatibility_date = "2026-08-26"
+
+[[d1_databases]]
+binding = "TREE_DB"
+database_name = "qualita-aria-tree-events"
+database_id = "INSERIRE_DATABASE_ID"
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["0 3 1 * *"]
+
+[vars]
+TREE_SYNC_ENABLED = "true"

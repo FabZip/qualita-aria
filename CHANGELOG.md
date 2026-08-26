@@ -2,6 +2,25 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.4.5] - 2026-08-26
+
+### Alberi · aggiornamento dinamico
+
+- Aggiunto al Worker Cloudflare un processo pianificato mensile per cercare nuovi eventi nelle fonti ufficiali configurate di Roma Capitale.
+- Aggiunto l'archivio strutturato Cloudflare D1 con migrazione SQL, deduplicazione per fonte e storico delle sincronizzazioni.
+- Aggiunto l'endpoint pubblico `GET /v1/trees/events` usato dalla PWA.
+- Aggiunti gli endpoint amministrativi protetti `POST /v1/trees/refresh` e `POST /v1/trees/review`.
+- Gli eventi inequivocabili possono essere confermati automaticamente; pagine multiple o ambigue rimangono `automatic_pending` e sono escluse dai totali.
+- Il frontend unisce eventi dinamici e dataset consolidato senza duplicare le pagine già censite.
+- Aggiunta nell'interfaccia l'indicazione dell'ultima scansione oppure dell'attivazione del fallback locale.
+- `data/trees.json` rimane disponibile per il funzionamento offline e in caso di indisponibilità del proxy.
+- Sanitizzati i campi degli eventi dinamici prima dell'inserimento nell'interfaccia.
+
+### Versioning
+
+- Dataset visibile aggiornato alla revisione 12.
+- App aggiornata alla versione `0.4.5` (build 48).
+
 ## [0.4.4] - 2026-08-26
 
 ### Alberi · eventi 2026

@@ -1,6 +1,6 @@
-# Temperature proxy
+# Proxy ambientale
 
-Worker Cloudflare del modulo temperatura di Qualità aria.
+Worker Cloudflare dei moduli temperatura e aggiornamento eventi arborei di Qualità aria.
 
 La fonte temperatura è indipendente dalla fonte dell'inquinante.
 
@@ -26,6 +26,57 @@ Le statistiche annuali sono:
 Copertura minima delle serie osservate: 75%.
 
 ## Deploy
+
+### Eventi arborei dinamici
+
+Il Worker espone:
+
+- `GET /v1/trees/events?city=roma&year=2026` per il frontend;
+- `POST /v1/trees/refresh` per avviare una scansione manuale autenticata;
+- `POST /v1/trees/review` per confermare, correggere o rifiutare un evento;
+- un `scheduled()` handler eseguito il primo giorno di ogni mese alle 03:00 UTC.
+
+Gli eventi sono conservati in Cloudflare D1. Le pagine con più interventi o formulazioni ambigue vengono archiviate come `automatic_pending` e non incidono sui totali. Soltanto eventi con quantità nota e stato `completed` o `emergency_completed` vengono sommati dal frontend.
+
+Prima del primo deploy:
+
+```bash
+cd cloudflare/temperature-proxy
+cp wrangler.toml.example wrangler.toml
+npx wrangler@latest d1 create qualita-aria-tree-events
+```
+
+Copiare il `database_id` restituito da Wrangler dentro `wrangler.toml`, quindi:
+
+```bash
+npx wrangler@latest d1 migrations apply qualita-aria-tree-events --remote
+npx wrangler@latest secret put TREE_ADMIN_TOKEN
+npx wrangler@latest deploy
+```
+
+Per eseguire subito la prima scansione, senza attendere il cron:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer IL_TOKEN_SCELTO" \
+  https://qualita-aria-temperature.fabzip.workers.dev/v1/trees/refresh
+```
+
+Esempio di revisione manuale:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer IL_TOKEN_SCELTO" \
+  -H "Content-Type: application/json" \
+  -d '{"sourceKey":"IDS1551137","validation":"manual_confirmed","status":"emergency_completed","eventType":"decrement","quantity":8,"locationName":"Roma"}' \
+  https://qualita-aria-temperature.fabzip.workers.dev/v1/trees/review
+```
+
+Il file `data/trees.json` rimane il dataset consolidato di fallback se D1 o il proxy non sono raggiungibili.
+
+Il modulo eventi arborei del Worker è identificato dalla versione proxy `0.7.0`.
+
+### Pubblicazione Worker
 
 ```bash
 cd cloudflare/temperature-proxy

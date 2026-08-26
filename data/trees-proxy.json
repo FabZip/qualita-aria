@@ -1,0 +1,5 @@
+{
+  "enabled": true,
+  "base_url": "https://qualita-aria-temperature.fabzip.workers.dev",
+  "note": "Eventi arborei dinamici dal proxy; trees.json resta il fallback consolidato offline."
+}

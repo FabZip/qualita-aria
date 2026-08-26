@@ -194,7 +194,11 @@ Quando il dato è comunale, la mappa colora il confine amministrativo in base al
 
 Quando saranno disponibili dati territoriali verificati, la stessa rappresentazione potrà essere applicata a Municipi o quartieri. I marker puntuali saranno utilizzati soltanto per interventi associati a coordinate o indirizzi reali. Ogni record dichiara comunque la precisione geografica (`point`, `address`, `district` o `city`). Padova, Bologna e Torino sono predisposte ma non dichiarate disponibili finché non vengono verificate fonti pubbliche di eventi, storici confrontabili o documenti ufficiali sufficienti.
 
-I dati arborei sono pre-elaborati in JSON/GeoJSON; il frontend non interpreta direttamente PDF o grandi portali durante la navigazione.
+I dati arborei consolidati sono pre-elaborati in JSON/GeoJSON; il frontend non interpreta direttamente PDF o grandi portali durante la navigazione.
+
+Dalla versione 0.4.5 il proxy Cloudflare esegue inoltre una scansione mensile delle fonti configurate di Roma Capitale e conserva i nuovi eventi in un database D1. Il frontend unisce questi risultati al dataset consolidato, eliminando i duplicati in base alla pagina ufficiale. Se il proxy o D1 non sono disponibili, l'app continua a funzionare usando `data/trees.json` come fallback.
+
+La classificazione automatica è prudente: un evento viene confermato automaticamente soltanto quando pagina, quantità, tipo e stato di esecuzione sono inequivocabili. Pagine con interventi multipli, lavori futuri o formulazioni miste vengono indicate come `da verificare` e non modificano il totale minimo. Le correzioni manuali sono effettuabili tramite un endpoint amministrativo protetto da token.
 
 La fonte arborea utilizza le stesse tre modalità delle altre fonti:
 
@@ -207,6 +211,8 @@ Un totale pluriennale non viene ripartito artificialmente e quindi non entra nei
 Per il 2023, 2024, 2025 e 2026 l'app include una raccolta iniziale di avvisi e notizie ufficiali con data, luogo, stato e quantità. La loro somma è indicata come **totale minimo documentato**, non come totale annuale completo: gli avvisi pubblicamente reperibili potrebbero non coprire tutti gli interventi. Quantità sconosciute ed eventi soltanto programmati o annunciati sono mostrati nell'elenco ma non vengono sommati al minimo eseguito.
 
 Per il 2026 il minimo iniziale comprende 603 alberi messi a dimora e 19 abbattimenti confermati. Ulteriori quantità comunicate per programmi e interventi non ancora attestati come completati restano visibili con il relativo stato, senza alterare il saldo minimo.
+
+La risposta dinamica espone la data dell'ultima scansione. Nell'interfaccia viene indicato se l'aggiornamento automatico è attivo oppure se è in uso il fallback locale.
 
 La modalità `Differenza` calcola una variazione soltanto quando le due selezioni hanno la stessa natura: bilancio ufficiale con bilancio ufficiale oppure raccolta parziale con raccolta parziale.
 

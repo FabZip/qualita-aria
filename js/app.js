@@ -2825,7 +2825,9 @@ async function renderTemperatureMode(token){
 }
 
 function treeListHtml(result,year,includeAggregate=true){
-  const {city,events,aggregate,documentedEvents=[],documentedSummary}=result;
+  const {city,events,aggregate,documentedEvents=[],documentedSummary,diagnostic={}}=result;
+  const safe=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const safeUrl=value=>{try{const url=new URL(String(value));return url.protocol==='https:'?url.toString():'#'}catch{return'#'}};
   if(!city)return'<div class="empty-state">Città non configurata per le statistiche arboree.</div>';
   if(!city.available)return`<div class="tree-period-note"><strong>${city.name}</strong><br>${city.reason}</div>`;
 
@@ -2841,16 +2843,22 @@ function treeListHtml(result,year,includeAggregate=true){
   const statusLabels={completed:'Eseguito',emergency_completed:'Urgente eseguito',planned:'Programmato',reported:'Comunicazione ufficiale',unknown:'Stato non determinato'};
   const documentedList=documentedEvents.length
     ?`${documentedSummary?balanceRow(documentedSummary):''}<div class="tree-event-list">${documentedEvents.map(event=>{
-      const type=event.eventType==='planting'?'Piantumazione':'Abbattimento';
+      const type=event.eventType==='planting'?'Piantumazione':event.eventType==='decrement'?'Abbattimento':'Tipo da verificare';
       const quantity=Number.isFinite(event.quantity)?`${TreeStats.fmt(event.quantity)} alberi`:'quantità non specificata';
-      return`<div class="tree-event-row"><i class="tree-swatch ${event.eventType==='planting'?'tree-swatch-planted':'tree-swatch-cut'}"></i><div><strong>${event.locationName}</strong><small>${event.date}${event.district?` · ${event.district}`:''}<br>${type} · ${statusLabels[event.status]||event.status} · ${quantity}<br><a href="${event.sourceUrl}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a></small></div></div>`
+      const validation=event.validation==='automatic_pending'?' · da verificare':event.validation==='automatic_confirmed'?' · verifica automatica':'';
+      return`<div class="tree-event-row"><i class="tree-swatch ${event.eventType==='planting'?'tree-swatch-planted':'tree-swatch-cut'}"></i><div><strong>${safe(event.locationName)}</strong><small>${safe(event.date)}${event.district?` · ${safe(event.district)}`:''}<br>${safe(type)} · ${safe(statusLabels[event.status]||event.status)}${safe(validation)} · ${safe(quantity)}<br><a href="${safeUrl(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a></small></div></div>`
     }).join('')}</div>`
     :'';
+
+  const syncDate=diagnostic.lastSync?.completed_at||diagnostic.lastSync?.completedAt||null;
+  const dynamicNote=diagnostic.dynamicAvailable
+    ?`<div class="tree-period-note"><strong>Aggiornamento automatico attivo</strong><br>${syncDate?`Ultima scansione: ${safe(new Date(syncDate).toLocaleString('it-IT'))}. `:''}${diagnostic.dynamicEvents||0} nuovi eventi dinamici non già presenti nel dataset consolidato.</div>`
+    :`<div class="tree-period-note"><strong>Fallback locale</strong><br>L'archivio dinamico non è raggiungibile: sono mostrati i dati consolidati inclusi nell'app.</div>`;
 
   const aggregateNote=includeAggregate&&aggregate
     ?`<div class="tree-period-note"><strong>Totale aggregato del periodo ${aggregate.period}</strong><br>Il periodo è mostrato come selezione autonoma e non viene attribuito ai singoli anni.</div>${balanceRow(aggregate)}`
     :'';
-  return rows+documentedList+aggregateNote||'<div class="empty-state">Nessun totale annuale o evento arboreo documentato disponibile per questa selezione.</div>'
+  return dynamicNote+rows+documentedList+aggregateNote||'<div class="empty-state">Nessun totale annuale o evento arboreo documentato disponibile per questa selezione.</div>'
 }
 
 async function renderTreesMode(token){
@@ -3243,8 +3251,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.4.4',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.4.4',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.4.5',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.4.5',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3259,7 +3267,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.4.4')
+    navigator.serviceWorker.register('./service-worker.js?v=0.4.5')
       .then(reg=>reg.update())
       .catch(console.error)
   }
