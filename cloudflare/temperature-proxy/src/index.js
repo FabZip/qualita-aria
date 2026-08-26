@@ -1727,7 +1727,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.8.0',
+        version:'0.8.1',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,
