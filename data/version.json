@@ -1,45 +1,4 @@
 {
-  "version": 9,
-  "updated_at": "2026-08-19",
-  "sources": {
-    "eea_discodata": {
-      "enabled": true,
-      "type": "station_annual_statistics",
-      "aggregation": "P1Y",
-      "years": "2013-2025",
-      "scopes": [
-        "Roma",
-        "Italia",
-        "Europa"
-      ],
-      "pagination": {
-        "page_size": 1000,
-        "max_pages": 20
-      },
-      "europe_bbox": [
-        -25.0,
-        27.0,
-        45.0,
-        72.0
-      ]
-    },
-    "arpa_lazio_static": {
-      "enabled": true,
-      "type": "municipal_modelled_evaluation",
-      "years": "2013-2025",
-      "runtime_api": false,
-      "formats": {
-        "2013-2020": "CSV",
-        "2021-2025": "XLSX"
-      },
-      "source": "ARPA Lazio official annual files",
-      "xlsx_metric_resolution": "named headers, then positional schema fallback",
-      "scope_geometry": "Comune di Roma ISTAT 058091"
-    },
-    "rome_boundary": {
-      "source": "geojson-italy / ISTAT",
-      "crs": "WGS84",
-      "istat_code": "058091"
-    }
-  }
+  "version": 13,
+  "released_at": "2026-08-26"
 }

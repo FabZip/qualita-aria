@@ -1447,6 +1447,8 @@ const TREE_SOURCE_LISTS=[
 ];
 const TREE_SOURCE_ORIGIN='https://www.comune.roma.it';
 const TREE_MAX_PAGES_PER_RUN=40;
+const TREE_MAX_GEOCODES_PER_RUN=8;
+const ROME_GEOCODE_BBOX={west:12.15,south:41.65,east:12.85,north:42.15};
 
 function decodeHtml(value){
   return String(value||'')
@@ -1566,6 +1568,41 @@ async function upsertTreeEvent(db,event,now){
   return existing?'updated':'inserted'
 }
 
+function wait(milliseconds){
+  return new Promise(resolve=>setTimeout(resolve,milliseconds))
+}
+
+async function geocodePendingTreeEvents(db){
+  const pending=await db.prepare(`
+    SELECT source_key,location_name FROM tree_events
+    WHERE city='roma' AND geocoded_at IS NULL AND location_name!='Roma'
+    ORDER BY first_seen_at ASC LIMIT ?
+  `).bind(TREE_MAX_GEOCODES_PER_RUN).all();
+  let geocoded=0,rejected=0;
+  for(const [index,row] of (pending.results||[]).entries()){
+    if(index)await wait(1100);
+    const query=`${row.location_name}, Roma, Italia`;
+    try{
+      const url=new URL('https://nominatim.openstreetmap.org/search');
+      url.searchParams.set('format','jsonv2');
+      url.searchParams.set('limit','1');
+      url.searchParams.set('countrycodes','it');
+      url.searchParams.set('q',query);
+      const response=await fetch(url,{headers:{Accept:'application/json','User-Agent':'A.R.I.A. environmental-data-indexer/0.8 (https://fabzip.github.io/qualita-aria/)','Referer':'https://fabzip.github.io/qualita-aria/'}});
+      if(!response.ok)throw new Error(`Geocoding HTTP ${response.status}`);
+      const match=(await response.json())?.[0];
+      const latitude=Number(match?.lat),longitude=Number(match?.lon);
+      const inside=Number.isFinite(latitude)&&Number.isFinite(longitude)&&longitude>=ROME_GEOCODE_BBOX.west&&longitude<=ROME_GEOCODE_BBOX.east&&latitude>=ROME_GEOCODE_BBOX.south&&latitude<=ROME_GEOCODE_BBOX.north;
+      await db.prepare(`UPDATE tree_events SET latitude=?,longitude=?,geocode_precision=?,geocode_label=?,geocoded_at=? WHERE source_key=?`)
+        .bind(inside?latitude:null,inside?longitude:null,inside?'address':'unresolved',String(match?.display_name||'').slice(0,300),new Date().toISOString(),row.source_key).run();
+      if(inside)geocoded++;else rejected++
+    }catch{
+      rejected++
+    }
+  }
+  return{geocoded,rejected,pending:(pending.results||[]).length}
+}
+
 async function refreshTreeSources(env){
   if(!env.TREE_DB)throw new Error('Binding D1 TREE_DB non configurato');
   const startedAt=new Date().toISOString();
@@ -1586,9 +1623,10 @@ async function refreshTreeSources(env){
         if(action==='inserted')inserted++;else updated++
       }catch{errors++}
     }
+    const geocoding=await geocodePendingTreeEvents(env.TREE_DB);
     await env.TREE_DB.prepare(`UPDATE tree_sync_runs SET completed_at=?,status='completed',discovered=?,inserted=?,updated=?,errors=? WHERE id=?`)
       .bind(new Date().toISOString(),discovered,inserted,updated,errors,run.id).run();
-    return{ok:true,discovered,inserted,updated,errors,startedAt,completedAt:new Date().toISOString()}
+    return{ok:true,discovered,inserted,updated,errors,geocoding,startedAt,completedAt:new Date().toISOString()}
   }catch(error){
     await env.TREE_DB.prepare(`UPDATE tree_sync_runs SET completed_at=?,status='failed',discovered=?,inserted=?,updated=?,errors=?,detail=? WHERE id=?`)
       .bind(new Date().toISOString(),discovered,inserted,updated,errors+1,String(error?.message||error).slice(0,500),run.id).run();
@@ -1603,7 +1641,7 @@ async function treeEventsResponse(env,cors,url){
   if(city!=='roma')return badRequest('Città non supportata',cors);
   if(!Number.isInteger(year)||year<2013||year>new Date().getUTCFullYear())return badRequest('Anno non valido',cors);
   const result=await env.TREE_DB.prepare(`
-    SELECT source_key,year,event_date,location_name,district,event_type,quantity,
+    SELECT source_key,year,event_date,location_name,district,event_type,quantity,latitude,longitude,geocode_precision,
       status,validation,title,source_url,source_published_at,first_seen_at,last_checked_at
     FROM tree_events
     WHERE city=? AND year=? AND validation!='manual_rejected'
@@ -1613,6 +1651,8 @@ async function treeEventsResponse(env,cors,url){
     id:`dynamic-${row.source_key}`,year:String(row.year),date:row.event_date||row.source_published_at||String(row.year),
     locationName:row.location_name,district:row.district||undefined,locationPrecision:row.location_name==='Roma'?'city':'address',
     eventType:row.event_type,status:row.status,quantity:row.quantity,
+    coordinates:Number.isFinite(row.longitude)&&Number.isFinite(row.latitude)?[row.longitude,row.latitude]:undefined,
+    locationPrecision:row.geocode_precision||undefined,
     validation:row.validation,title:row.title,sourceUrl:row.source_url,
     firstSeenAt:row.first_seen_at,lastCheckedAt:row.last_checked_at
   }));
@@ -1687,7 +1727,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.7.0',
+        version:'0.8.0',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,

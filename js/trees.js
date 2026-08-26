@@ -1,13 +1,15 @@
 (function(){
   let catalogPromise=null;
+  let coordinatesPromise=null;
   let proxyConfigPromise=null;
   const markerGroups=new Map();
+  const eventMarkerGroups=new Map();
   const scopeMaps=new Set();
   const fmt=n=>Number(n).toLocaleString('it-IT');
   const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
   async function catalog(){
-    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.4.7',{cache:'no-store'}).then(response=>{
+    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.4.8',{cache:'no-store'}).then(response=>{
       if(!response.ok)throw new Error(`Dati arborei: HTTP ${response.status}`);
       return response.json()
     });
@@ -15,10 +17,17 @@
   }
 
   async function proxyConfig(){
-    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.4.7',{cache:'no-store'})
+    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.4.8',{cache:'no-store'})
       .then(response=>response.ok?response.json():null)
       .catch(()=>null);
     return proxyConfigPromise
+  }
+
+  async function coordinatesCatalog(){
+    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.4.8',{cache:'no-store'})
+      .then(response=>response.ok?response.json():{events:{}})
+      .catch(()=>({events:{}}));
+    return coordinatesPromise
   }
 
   async function dynamicEvents(cityId,year){
@@ -44,6 +53,7 @@
       const markers=markerGroups.get(map)||[];
       while(markers.length)markers.pop().remove();
       markerGroups.delete(map);
+      eventMarkerGroups.delete(map);
       ['tree-scope-fill','tree-scope-line'].forEach(id=>map.getLayer(id)&&map.setLayoutProperty(id,'visibility','none'));
     })
   }
@@ -211,8 +221,57 @@
     })
   }
 
+  function treeIconSvg(variant){
+    const crown=variant===1
+      ?'<circle cx="22" cy="15" r="10"/><circle cx="14" cy="21" r="9"/><circle cx="29" cy="23" r="10"/>'
+      :variant===2
+        ?'<path d="M22 2 10 19h7L7 31h30L27 19h7z"/>'
+        :'<path d="M22 3c-7 0-11 6-9 12-7 2-8 12-1 15h21c7-4 5-14-2-15 1-7-3-12-9-12z"/>';
+    return`<svg viewBox="0 0 44 52" aria-hidden="true"><g fill="currentColor">${crown}</g><path fill="#6b4423" d="M19 29h6v18h-6z"/><path fill="rgba(255,255,255,.34)" d="M13 18c3-6 8-8 13-7-5 2-8 5-9 10z"/></svg>`
+  }
+
+  function documentedPopupHtml(event){
+    const type=event.eventType==='planting'?'Piantumazione':event.eventType==='decrement'?'Abbattimento':'Evento arboreo';
+    const quantity=Number.isFinite(event.quantity)?`${fmt(event.quantity)} alberi`:'quantità non specificata';
+    const precision=event.locationPrecision==='district'?'Posizione indicativa nell’area di competenza':'Posizione ricavata dall’indirizzo documentato';
+    return`<div class="tree-popup"><strong>${escapeHtml(event.locationName)}</strong><br>${escapeHtml(event.date||event.year)}<br>Tipo: ${type}<br>Quantità: ${quantity}<br>${precision}<br><a href="${escapeHtml(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a></div>`
+  }
+
+  function showDocumentedEvents(map,events=[]){
+    const byId=new Map();
+    events.filter(event=>Array.isArray(event.coordinates)&&event.coordinates.length===2).forEach((event,index)=>{
+      const quantity=Number.isFinite(event.quantity)?event.quantity:1;
+      const size=Math.round(Math.max(28,Math.min(54,27+Math.log10(Math.max(1,quantity))*10)));
+      const el=document.createElement('button');
+      el.type='button';
+      el.className=`tree-event-marker ${event.eventType==='planting'?'is-planted':'is-cut'} ${event.status==='planned'?'is-planned':''}`;
+      el.style.width=`${size}px`;
+      el.style.height=`${Math.round(size*1.18)}px`;
+      el.innerHTML=treeIconSvg(Math.abs([...String(event.id)].reduce((sum,char)=>sum+char.charCodeAt(0),0))%3);
+      el.setAttribute('aria-label',`${event.eventType==='planting'?'Piantumazione':'Abbattimento'}: ${event.locationName}, ${Number.isFinite(event.quantity)?fmt(event.quantity):'quantità non specificata'} alberi`);
+      const marker=new maplibregl.Marker({element:el,anchor:'bottom'})
+        .setLngLat(event.coordinates)
+        .setPopup(new maplibregl.Popup({offset:Math.ceil(size*.65)}).setHTML(documentedPopupHtml(event)))
+        .addTo(map);
+      markerGroups.set(map,[...(markerGroups.get(map)||[]),marker]);
+      byId.set(String(event.id),marker)
+    });
+    eventMarkerGroups.set(map,byId)
+  }
+
+  function focusEvent(map,eventId){
+    const marker=eventMarkerGroups.get(map)?.get(String(eventId));
+    if(!marker)return false;
+    map.flyTo({center:marker.getLngLat(),zoom:15.2,duration:900,essential:true});
+    window.setTimeout(()=>{
+      const popup=marker.getPopup();
+      if(popup&&!popup.isOpen())marker.togglePopup()
+    },650);
+    return true
+  }
+
   async function rows(cityId,selection){
-    const data=await catalog();
+    const [data,coordinateData]=await Promise.all([catalog(),coordinatesCatalog()]);
     const city=data.cities[cityId];
     if(!city)return{city:null,events:[],aggregate:null,diagnostic:{reason:'Città non configurata'}};
     const source=city.source||{};
@@ -222,7 +281,10 @@
     const aggregate=(city.aggregatePeriods||[]).find(item=>item.selectorValue===selection);
     const localDocumented=(city.documentedEvents||[])
       .filter(event=>String(event.year)===String(selection))
-      .map(event=>({...event,source:{publisher:'Roma Capitale',url:event.sourceUrl}}));
+      .map(event=>{
+        const location=coordinateData.events?.[event.id];
+        return{...event,coordinates:location?.coordinates||event.coordinates,locationPrecision:location?.precision||event.locationPrecision,source:{publisher:'Roma Capitale',url:event.sourceUrl}}
+      });
     const dynamic=await dynamicEvents(cityId,selection);
     const localSourceUrls=new Set(localDocumented.map(event=>event.sourceUrl));
     const remoteDocumented=dynamic.events
@@ -254,5 +316,5 @@
     }
   }
 
-  window.TreeStats={rows,show,showScope,showDifferenceScope,clear,fmt,balanceOf};
+  window.TreeStats={rows,show,showScope,showDifferenceScope,showDocumentedEvents,focusEvent,clear,fmt,balanceOf};
 })();

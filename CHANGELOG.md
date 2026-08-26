@@ -2,6 +2,32 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.4.8] - 2026-08-26
+
+### Alberi · eventi sulla mappa
+
+- La selezione della fonte arborea apre ora sempre il primo periodo disponibile, `2026 · eventi documentati`, invece di conservare il 2025 selezionato da un'altra fonte.
+- Impaginato l'elenco degli eventi in pagine da sei elementi con comandi Precedente e Successiva.
+- Reso cliccabile ogni evento localizzato: la mappa si sposta sull'indirizzo, aumenta lo zoom e apre il popup informativo.
+- Visualizzati contemporaneamente sulla mappa tutti gli eventi del periodo dotati di posizione verificata.
+- Sostituiti i marker uniformi con tre sagome arboree; la dimensione varia in scala logaritmica con la quantità documentata.
+- Conservati verde per le piantumazioni e rosso per gli abbattimenti; gli eventi programmati sono resi meno opachi.
+- Aggiunto un catalogo separato di coordinate con precisione `address`, `area` o `district`, per non presentare le posizioni territoriali indicative come punti esatti.
+- Il conteggio riepilogativo indica ora gli eventi visualizzati, non un unico ambito territoriale.
+
+### Proxy e geocodifica
+
+- Aggiunta la migrazione D1 `0002_tree_event_coordinates.sql` per coordinate, precisione, etichetta e data di geocodifica.
+- Il refresh mensile geocodifica al massimo otto nuovi indirizzi per esecuzione, in sequenza e con cache persistente D1.
+- Le coordinate dinamiche vengono restituite dall'endpoint pubblico degli eventi e utilizzate automaticamente dal frontend.
+- Proxy arboreo aggiornato alla versione `0.8.0`.
+
+### Versioning
+
+- App aggiornata alla versione `0.4.8` (build 51).
+- Dataset visibile aggiornato alla revisione 13.
+- Cache offline aggiornata a `qualita-aria-v0.4.8`.
+
 ## [0.4.7] - 2026-08-26
 
 ### Splash screen A.R.I.A.

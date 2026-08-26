@@ -54,6 +54,16 @@ npx wrangler@latest secret put TREE_ADMIN_TOKEN
 npx wrangler@latest deploy
 ```
 
+Per aggiornare un database D1 già esistente dalla versione proxy `0.7.0`, applicare prima la nuova migrazione delle coordinate e poi distribuire il Worker:
+
+```bash
+cd cloudflare/temperature-proxy
+npx wrangler@latest d1 migrations apply qualita-aria-tree-events --remote
+npx wrangler@latest deploy
+```
+
+La migrazione `0002_tree_event_coordinates.sql` non elimina eventi: aggiunge i campi geografici. Durante ogni refresh il Worker geocodifica in sequenza al massimo otto indirizzi ancora privi di coordinate, valida che il risultato ricada nell'area di Roma e salva il risultato in D1. Le richieste sono distanziate di almeno 1,1 secondi; il browser non interroga direttamente il servizio di geocodifica.
+
 ### Forzare manualmente l'aggiornamento arboreo
 
 Il token amministrativo **non serve all'app e non serve al cron mensile**. È richiesto soltanto per avviare manualmente una scansione o revisionare un evento. Conservarlo in un password manager e non inserirlo in Git, `wrangler.toml`, README o script versionati.
@@ -101,7 +111,7 @@ unset ARIA_TREE_TOKEN
 
 Il file `data/trees.json` rimane il dataset consolidato di fallback se D1 o il proxy non sono raggiungibili.
 
-Il modulo eventi arborei del Worker è identificato dalla versione proxy `0.7.0`.
+Il modulo eventi arborei del Worker è identificato dalla versione proxy `0.8.0`.
 
 ### Pubblicazione Worker
 
