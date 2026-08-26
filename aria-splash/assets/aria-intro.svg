@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 220" role="img" aria-labelledby="title desc">
+  <title id="title">Trattamento tipografico provvisorio A.R.I.A.</title>
+  <desc id="desc">La scritta A.R.I.A. attraversata da un flusso ambientale dal blu al verde.</desc>
+  <defs>
+    <linearGradient id="flow" x1="0" x2="1"><stop stop-color="#70d6ff"/><stop offset=".52" stop-color="#55d6a8"/><stop offset="1" stop-color="#f4b942"/></linearGradient>
+  </defs>
+  <rect width="900" height="220" rx="28" fill="#071d2a"/>
+  <path d="M30 118C180 48 270 158 408 99S655 49 870 104" fill="none" stroke="url(#flow)" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+  <text x="450" y="143" fill="#f4fbff" font-family="system-ui, sans-serif" font-size="112" font-weight="300" letter-spacing="8" text-anchor="middle">A.R.I.A.</text>
+</svg>
