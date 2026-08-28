@@ -10,7 +10,7 @@ database_id = "3127bec6-abc9-4145-a6c1-3bf1f2bb088e"
 migrations_dir = "migrations"
 
 [triggers]
-crons = ["0 3 1 * *"]
+crons = ["0 3 * * 1"]
 
 [vars]
 TREE_SYNC_ENABLED = "true"

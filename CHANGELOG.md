@@ -2,12 +2,21 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.5.2] - 2026-08-28
+
+### Alberi · messaggio di aggiornamento
+
+- Accorciato il riepilogo della sincronizzazione automatica in `Aggiornato al [data e ora]. [N] nuovi eventi aggiunti.`.
+- App aggiornata alla versione `0.5.2` (build 55), con cache offline dedicata.
+- Dataset invariato alla revisione 15.
+- La stessa patch aggiorna il Worker alla versione `0.8.2` con scansione settimanale.
+
 ## Proxy arboreo [0.8.2] - 2026-08-28
 
 - Modificata la pianificazione automatica da mensile a settimanale: il refresh viene eseguito ogni lunedì alle 03:00 UTC.
 - Aggiornati il valore diagnostico `treeSyncSchedule`, l'esempio `wrangler.toml.example` e le istruzioni di deploy.
 - Nessuna migrazione D1 e nessuna modifica al token amministrativo sono necessarie.
-- La versione dell'app resta `0.5.1` build 54; il dataset resta alla revisione 15.
+- La versione dell'app è `0.5.2` build 55; il dataset resta alla revisione 15.
 
 ## [0.5.1] - 2026-08-28
 

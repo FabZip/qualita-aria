@@ -2858,7 +2858,7 @@ function treeListHtml(result,year,includeAggregate=true){
 
   const syncDate=diagnostic.lastSync?.completed_at||diagnostic.lastSync?.completedAt||null;
   const dynamicNote=diagnostic.dynamicAvailable
-    ?`<div class="tree-period-note"><strong>Aggiornamento automatico attivo</strong><br>${syncDate?`Ultima scansione: ${safe(new Date(syncDate).toLocaleString('it-IT'))}. `:''}${diagnostic.dynamicEvents||0} nuovi eventi dinamici non già presenti nel dataset consolidato.</div>`
+    ?`<div class="tree-period-note"><strong>Aggiornamento automatico attivo</strong><br>${syncDate?`Aggiornato al ${safe(new Date(syncDate).toLocaleString('it-IT'))}. `:''}${diagnostic.dynamicEvents||0} nuovi eventi aggiunti.</div>`
     :`<div class="tree-period-note"><strong>Fallback locale</strong><br>L'archivio dinamico non è raggiungibile: sono mostrati i dati consolidati inclusi nell'app.</div>`;
 
   const aggregateNote=includeAggregate&&aggregate
@@ -3298,8 +3298,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.5.1',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.5.1',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.5.2',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.5.2',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3314,7 +3314,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.5.1')
+    navigator.serviceWorker.register('./service-worker.js?v=0.5.2')
       .then(reg=>reg.update())
       .catch(console.error)
   }
