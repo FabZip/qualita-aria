@@ -2,6 +2,18 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.5.3] - 2026-08-28
+
+### Alberi · selezione e inquadratura degli eventi
+
+- Rimossa la scritta `Aggiornamento automatico attivo` e ridotto leggermente il testo del riepilogo della sincronizzazione.
+- Il riepilogo usa la forma compatta `Aggiornato al [data e ora]. [N] nuovi eventi aggiunti.`.
+- Corretto il raggruppamento improprio per pagina-fonte: più interventi pubblicati nella stessa pagina di Roma Capitale restano eventi distinti.
+- Selezionando Villa Borghese viene inquadrato soltanto il perimetro del parco; selezionando Via Ludovisi viene inquadrata soltanto la strada associata.
+- Gli eventi realmente multilocalità mantengono tutte le proprie vie nella stessa inquadratura.
+- Durante la selezione, gli alberi estranei diventano grigi e restano colorati soltanto quelli appartenenti all'evento scelto.
+- App aggiornata alla versione `0.5.3` (build 56), con cache offline dedicata; dataset invariato alla revisione 15.
+
 ## [0.5.2] - 2026-08-28
 
 ### Alberi · messaggio di aggiornamento

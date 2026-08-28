@@ -10,7 +10,7 @@
   const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
   async function catalog(){
-    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.5.1',{cache:'no-store'}).then(response=>{
+    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.5.3',{cache:'no-store'}).then(response=>{
       if(!response.ok)throw new Error(`Dati arborei: HTTP ${response.status}`);
       return response.json()
     });
@@ -18,21 +18,21 @@
   }
 
   async function proxyConfig(){
-    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.5.1',{cache:'no-store'})
+    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.5.3',{cache:'no-store'})
       .then(response=>response.ok?response.json():null)
       .catch(()=>null);
     return proxyConfigPromise
   }
 
   async function coordinatesCatalog(){
-    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.5.1',{cache:'no-store'})
+    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.5.3',{cache:'no-store'})
       .then(response=>response.ok?response.json():{events:{}})
       .catch(()=>({events:{}}));
     return coordinatesPromise
   }
 
   async function pathsCatalog(){
-    if(!pathsPromise)pathsPromise=fetch('data/tree-paths.json?v=0.5.1',{cache:'no-store'})
+    if(!pathsPromise)pathsPromise=fetch('data/tree-paths.json?v=0.5.3',{cache:'no-store'})
       .then(response=>response.ok?response.json():{events:{}})
       .catch(()=>({events:{}}));
     return pathsPromise
@@ -243,6 +243,7 @@
       const el=document.createElement('button');
       el.type='button';
       el.className=`tree-event-marker ${event.eventType==='planting'?'is-planted':'is-cut'} ${event.status==='planned'?'is-planned':''}`;
+      el.dataset.treeMarkerId=String(event.id);
       el.style.width=`${size}px`;
       el.style.height=`${Math.round(size*1.18)}px`;
       el.innerHTML=iconSvg(event);
@@ -253,7 +254,7 @@
         .addTo(map);
       el.addEventListener('click',()=>focusEvent(map,event.id));
       markerGroups.set(map,[...(markerGroups.get(map)||[]),marker]);
-      byId.set(String(event.id),{marker,event})
+      byId.set(String(event.id),{marker,event,element:el})
     });
     eventMarkerGroups.set(map,byId)
   }
@@ -324,39 +325,25 @@
     return nearestPathPoint(center,path)?.point||center
   }
 
-  function groupDocumentedPaths(events){
-    const groups=new Map();
-    events.forEach(event=>{
-      const key=event.sourceUrl||event.id;
-      if(!groups.has(key))groups.set(key,[]);
-      groups.get(key).push(event)
-    });
-    groups.forEach(group=>{
-      const withPath=group.filter(event=>event.ownPath?.features?.length);
-      if(!withPath.length)return;
-      const explicit=withPath.map(event=>event.ownPath.properties).filter(Boolean);
-      const locationsExpected=explicit.length?Math.max(...explicit.map(item=>Number(item.locationsExpected||0)),group.length):group.length;
-      const locationsMapped=explicit.length?Math.max(...explicit.map(item=>Number(item.locationsMapped||0)),withPath.length):withPath.length;
-      const sourcePath={
-        type:'FeatureCollection',properties:{locationsExpected,locationsMapped},
-        features:withPath.flatMap(event=>event.ownPath.features.map(feature=>({...feature,properties:{...(feature.properties||{}),eventId:event.id}})))
-      };
-      group.forEach(event=>event.path=sourcePath)
-    });
-    return events
+  function prepareDocumentedPaths(events){
+    return events.map(event=>({...event,path:event.ownPath||event.path||null}))
   }
 
   function focusEvent(map,eventId){
     const selected=eventMarkerGroups.get(map)?.get(String(eventId));
     if(!selected)return false;
     const {marker,event}=selected;
+    eventMarkerGroups.get(map)?.forEach((item,id)=>{
+      item.element?.classList.toggle('is-muted',id!==String(eventId));
+      item.element?.classList.toggle('is-selected',id===String(eventId))
+    });
     addActivePathLayers(map);
     const path=event.path?.features?.length?event.path:{type:'FeatureCollection',features:[]};
     map.getSource('tree-active-path').setData(path);
     const coordinates=pathCoordinates(path);
     if(coordinates.length>1){
       const bounds=coordinates.reduce((box,coordinate)=>box.extend(coordinate),new maplibregl.LngLatBounds(coordinates[0],coordinates[0]));
-      map.fitBounds(bounds,{padding:70,maxZoom:16,duration:900,essential:true})
+      map.fitBounds(bounds,{padding:{top:64,bottom:64,left:48,right:48},maxZoom:16.5,duration:900,essential:true})
     }else map.flyTo({center:marker.getLngLat(),zoom:15.2,duration:900,essential:true});
     window.setTimeout(()=>{
       const popup=marker.getPopup();
@@ -387,7 +374,7 @@
     const remoteDocumented=dynamic.events
       .filter(event=>!localSourceUrls.has(event.sourceUrl))
       .map(event=>({...event,source:{publisher:'Roma Capitale · aggiornamento automatico',url:event.sourceUrl}}));
-    const documentedEvents=groupDocumentedPaths([...localDocumented,...remoteDocumented]);
+    const documentedEvents=prepareDocumentedPaths([...localDocumented,...remoteDocumented]);
     const completed=documentedEvents.filter(event=>
       ['completed','emergency_completed'].includes(event.status)&&Number.isFinite(event.quantity)
     );

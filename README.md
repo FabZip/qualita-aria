@@ -234,7 +234,7 @@ La risposta dinamica espone la data dell'ultima scansione. Nell'interfaccia vien
 
 La procedura per forzare una scansione senza salvare il token nella cronologia del terminale è documentata in `cloudflare/temperature-proxy/README.md`. L'app e il cron settimanale non conoscono e non richiedono il token amministrativo.
 
-Il Worker arboreo corrente è la versione `0.8.2`; questa revisione porta l'aggiornamento automatico degli eventi da mensile a settimanale. L'app è alla versione `0.5.2` build 55 e il dataset resta alla revisione 15. Il riepilogo mostra in forma compatta la data dell'ultimo aggiornamento e il numero di nuovi eventi aggiunti.
+Il Worker arboreo corrente è la versione `0.8.2`; questa revisione porta l'aggiornamento automatico degli eventi da mensile a settimanale. L'app è alla versione `0.5.3` build 56 e il dataset resta alla revisione 15. Il riepilogo mostra in forma compatta la data dell'ultimo aggiornamento e il numero di nuovi eventi aggiunti. Quando si seleziona un evento, le sole geometrie appartenenti a quell'evento determinano l'inquadratura; gli altri marker diventano grigi per rendere immediatamente riconoscibili le località coinvolte.
 
 La modalità `Differenza` calcola una variazione soltanto quando le due selezioni hanno la stessa natura: bilancio ufficiale con bilancio ufficiale oppure raccolta parziale con raccolta parziale.
 
