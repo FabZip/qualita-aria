@@ -1727,7 +1727,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.8.1',
+        version:'0.8.2',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,
@@ -1737,7 +1737,7 @@ export default{
         stationCoverageThresholdPct:OBSERVED_COVERAGE_MIN*100,
         historicalFrom:1950,
         treeEventsDynamic:Boolean(env.TREE_DB),
-        treeSyncSchedule:'0 3 1 * *',
+        treeSyncSchedule:'0 3 * * 1',
         cacheSeconds:CACHE_TTL
       },200,{
         ...cors,

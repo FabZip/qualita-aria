@@ -214,7 +214,7 @@ Ogni record dichiara la precisione geografica (`point`, `address`, `area`, `dist
 
 I dati arborei consolidati sono pre-elaborati in JSON/GeoJSON; il frontend non interpreta direttamente PDF o grandi portali durante la navigazione.
 
-Dalla versione 0.4.5 il proxy Cloudflare esegue inoltre una scansione mensile delle fonti configurate di Roma Capitale e conserva i nuovi eventi in un database D1. Dalla versione 0.4.8 il refresh associa progressivamente le coordinate ai nuovi indirizzi e le conserva in D1: il frontend può quindi aggiungere i nuovi marker senza geocodificare dal browser. Il frontend unisce questi risultati al dataset consolidato, eliminando i duplicati in base alla pagina ufficiale. Se il proxy o D1 non sono disponibili, l'app continua a funzionare usando `data/trees.json` e `data/tree-coordinates.json` come fallback.
+Dalla versione 0.4.5 il proxy Cloudflare esegue inoltre una scansione automatica delle fonti configurate di Roma Capitale e conserva i nuovi eventi in un database D1. Con il Worker `0.8.2` la scansione viene eseguita ogni lunedì alle 03:00 UTC. Dalla versione 0.4.8 il refresh associa progressivamente le coordinate ai nuovi indirizzi e le conserva in D1: il frontend può quindi aggiungere i nuovi marker senza geocodificare dal browser. Il frontend unisce questi risultati al dataset consolidato, eliminando i duplicati in base alla pagina ufficiale. Se il proxy o D1 non sono disponibili, l'app continua a funzionare usando `data/trees.json` e `data/tree-coordinates.json` come fallback.
 
 La classificazione automatica è prudente: un evento viene confermato automaticamente soltanto quando pagina, quantità, tipo e stato di esecuzione sono inequivocabili. Pagine con interventi multipli, lavori futuri o formulazioni miste vengono indicate come `da verificare` e non modificano il totale minimo. Le correzioni manuali sono effettuabili tramite un endpoint amministrativo protetto da token.
 
@@ -232,9 +232,9 @@ Per il 2026 il minimo iniziale comprende 603 alberi messi a dimora e 19 abbattim
 
 La risposta dinamica espone la data dell'ultima scansione. Nell'interfaccia viene indicato se l'aggiornamento automatico è attivo oppure se è in uso il fallback locale.
 
-La procedura per forzare una scansione senza salvare il token nella cronologia del terminale è documentata in `cloudflare/temperature-proxy/README.md`. L'app e il cron mensile non conoscono e non richiedono il token amministrativo.
+La procedura per forzare una scansione senza salvare il token nella cronologia del terminale è documentata in `cloudflare/temperature-proxy/README.md`. L'app e il cron settimanale non conoscono e non richiedono il token amministrativo.
 
-Il Worker arboreo corrente è la versione `0.8.1`; questa revisione elimina la definizione duplicata della precisione geografica nella risposta degli eventi dinamici.
+Il Worker arboreo corrente è la versione `0.8.2`; questa revisione porta l'aggiornamento automatico degli eventi da mensile a settimanale. La versione dell'app resta `0.5.1` build 54 e il dataset resta alla revisione 15.
 
 La modalità `Differenza` calcola una variazione soltanto quando le due selezioni hanno la stessa natura: bilancio ufficiale con bilancio ufficiale oppure raccolta parziale con raccolta parziale.
 
