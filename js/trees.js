@@ -10,7 +10,7 @@
   const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
   async function catalog(){
-    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.5.7',{cache:'no-store'}).then(response=>{
+    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.5.8',{cache:'no-store'}).then(response=>{
       if(!response.ok)throw new Error(`Dati arborei: HTTP ${response.status}`);
       return response.json()
     });
@@ -18,21 +18,21 @@
   }
 
   async function proxyConfig(){
-    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.5.7',{cache:'no-store'})
+    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.5.8',{cache:'no-store'})
       .then(response=>response.ok?response.json():null)
       .catch(()=>null);
     return proxyConfigPromise
   }
 
   async function coordinatesCatalog(){
-    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.5.7',{cache:'no-store'})
+    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.5.8',{cache:'no-store'})
       .then(response=>response.ok?response.json():{events:{}})
       .catch(()=>({events:{}}));
     return coordinatesPromise
   }
 
   async function pathsCatalog(){
-    if(!pathsPromise)pathsPromise=fetch('data/tree-paths.json?v=0.5.7',{cache:'no-store'})
+    if(!pathsPromise)pathsPromise=fetch('data/tree-paths.json?v=0.5.8',{cache:'no-store'})
       .then(response=>response.ok?response.json():{events:{}})
       .catch(()=>({events:{}}));
     return pathsPromise
@@ -225,9 +225,10 @@
 
   function documentedPopupHtml(event){
     const type=event.eventType==='planting'?'Piantumazione':event.eventType==='decrement'?'Abbattimento':'Evento arboreo';
+    const multilocation=Array.isArray(event.markerCoordinates)&&event.markerCoordinates.length>1;
     const quantity=Number.isFinite(event.quantity)?`${fmt(event.quantity)} alberi`:'quantità non specificata';
     const precision=event.locationPrecision==='district'?'Posizione indicativa nell’area di competenza':'Posizione ricavata dall’indirizzo documentato';
-    return`<div class="tree-popup"><strong>${escapeHtml(event.locationName)}</strong><br>${escapeHtml(event.date||event.year)}<br>Tipo: ${type}<br>Quantità: ${quantity}<br>${precision}<br><a href="${escapeHtml(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a></div>`
+    return`<div class="tree-popup"><strong>${escapeHtml(event.locationName)}</strong><br>${escapeHtml(event.date||event.year)}<br>Tipo: ${type}<br>${multilocation?'Quantità complessiva':'Quantità'}: ${quantity}${multilocation?`<br>Punti visualizzati: ${event.markerCoordinates.length}<br>Ripartizione per luogo non specificata.`:''}<br>${precision}<br><a href="${escapeHtml(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a></div>`
   }
 
   function showDocumentedEvents(map,events=[]){
@@ -235,21 +236,30 @@
     events.filter(event=>Array.isArray(event.coordinates)&&event.coordinates.length===2).forEach((event,index)=>{
       const quantity=Number.isFinite(event.quantity)?event.quantity:1;
       const size=Math.round(Math.max(28,Math.min(54,27+Math.log10(Math.max(1,quantity))*10)));
-      const el=document.createElement('button');
-      el.type='button';
-      el.className=`tree-event-marker ${event.eventType==='planting'?'is-planted':'is-cut'} ${event.status==='planned'?'is-planned':''}`;
-      el.dataset.treeMarkerId=String(event.id);
-      el.style.width=`${size}px`;
-      el.style.height=`${Math.round(size*1.18)}px`;
-      el.innerHTML=iconSvg(event);
-      el.setAttribute('aria-label',`${event.eventType==='planting'?'Piantumazione':'Abbattimento'}: ${event.locationName}, ${Number.isFinite(event.quantity)?fmt(event.quantity):'quantità non specificata'} alberi`);
-      const marker=new maplibregl.Marker({element:el,anchor:'bottom'})
-        .setLngLat(event.coordinates)
-        .setPopup(new maplibregl.Popup({offset:Math.ceil(size*.65)}).setHTML(documentedPopupHtml(event)))
-        .addTo(map);
-      el.addEventListener('click',()=>focusEvent(map,event.id));
-      markerGroups.set(map,[...(markerGroups.get(map)||[]),marker]);
-      byId.set(String(event.id),{marker,event,element:el})
+      const markerCoordinates=Array.isArray(event.markerCoordinates)&&event.markerCoordinates.length
+        ?event.markerCoordinates
+        :[event.coordinates];
+      const entry={markers:[],elements:[],event};
+      markerCoordinates.forEach((coordinates,locationIndex)=>{
+        if(!Array.isArray(coordinates)||coordinates.length!==2)return;
+        const el=document.createElement('button');
+        el.type='button';
+        el.className=`tree-event-marker ${event.eventType==='planting'?'is-planted':'is-cut'} ${event.status==='planned'?'is-planned':''}`;
+        el.dataset.treeMarkerId=String(event.id);
+        el.style.width=`${size}px`;
+        el.style.height=`${Math.round(size*1.18)}px`;
+        el.innerHTML=iconSvg({...event,id:`${event.id}-${locationIndex}`});
+        el.setAttribute('aria-label',`${event.eventType==='planting'?'Piantumazione':'Abbattimento'}: ${event.locationName}, località ${locationIndex+1} di ${markerCoordinates.length}, ${Number.isFinite(event.quantity)?fmt(event.quantity):'quantità non specificata'} alberi complessivi`);
+        const marker=new maplibregl.Marker({element:el,anchor:'bottom'})
+          .setLngLat(coordinates)
+          .setPopup(new maplibregl.Popup({offset:Math.ceil(size*.65)}).setHTML(documentedPopupHtml(event)))
+          .addTo(map);
+        el.addEventListener('click',()=>focusEvent(map,event.id,marker));
+        markerGroups.set(map,[...(markerGroups.get(map)||[]),marker]);
+        entry.markers.push(marker);
+        entry.elements.push(el)
+      });
+      if(entry.markers.length)byId.set(String(event.id),entry)
     });
     eventMarkerGroups.set(map,byId)
   }
@@ -324,14 +334,19 @@
     return events.map(event=>({...event,path:event.ownPath||event.path||null}))
   }
 
-  function focusEvent(map,eventId){
+  function focusEvent(map,eventId,preferredMarker=null){
     const selected=eventMarkerGroups.get(map)?.get(String(eventId));
     if(!selected)return false;
-    const {marker,event}=selected;
+    const {markers,event}=selected;
+    const marker=preferredMarker||markers[0];
     eventMarkerGroups.get(map)?.forEach((item,id)=>{
-      if(id!==String(eventId))item.marker.getPopup()?.remove();
-      item.element?.classList.toggle('is-muted',id!==String(eventId));
-      item.element?.classList.toggle('is-selected',id===String(eventId))
+      item.markers.forEach(itemMarker=>{
+        if(itemMarker!==marker)itemMarker.getPopup()?.remove()
+      });
+      item.elements.forEach(element=>{
+        element.classList.toggle('is-muted',id!==String(eventId));
+        element.classList.toggle('is-selected',id===String(eventId))
+      })
     });
     addActivePathLayers(map);
     const path=event.path?.features?.length?event.path:{type:'FeatureCollection',features:[]};
@@ -362,8 +377,9 @@
       .map(event=>{
         const location=coordinateData.events?.[event.id];
         const ownPath=resolveEventPath(pathData,event.id);
-        const coordinates=alignedCoordinates(location?.coordinates||event.coordinates,ownPath);
-        return{...event,coordinates,locationPrecision:location?.precision||event.locationPrecision,ownPath,path:ownPath,source:{publisher:'Roma Capitale',url:event.sourceUrl}}
+        const markerCoordinates=Array.isArray(ownPath?.properties?.markerCoordinates)?ownPath.properties.markerCoordinates:null;
+        const coordinates=markerCoordinates?.[0]||alignedCoordinates(location?.coordinates||event.coordinates,ownPath);
+        return{...event,coordinates,markerCoordinates,locationPrecision:location?.precision||event.locationPrecision,ownPath,path:ownPath,source:{publisher:'Roma Capitale',url:event.sourceUrl}}
       });
     const dynamic=await dynamicEvents(cityId,selection);
     const localSourceUrls=new Set(localDocumented.map(event=>event.sourceUrl));

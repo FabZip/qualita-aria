@@ -1,37 +1,210 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26",
+  "generatedAt": "2026-08-28",
   "attribution": "Geocodifica basata su OpenStreetMap; le coordinate distrettuali sono indicative.",
   "events": {
-    "roma-2026-fori-imperiali": {"coordinates":[12.4909403,41.8912874],"precision":"address"},
-    "roma-2026-villa-borghese-febbraio": {"coordinates":[12.4848439,41.9144111],"precision":"address"},
-    "roma-2026-via-ludovisi": {"coordinates":[12.4951494,41.9086748],"precision":"address"},
-    "roma-2026-vitaliano-rotellini": {"coordinates":[12.4387499,41.7746488],"precision":"address"},
-    "roma-2026-pisana": {"coordinates":[12.4124542,41.8706894],"precision":"address"},
-    "roma-2026-fratelli-bandiera": {"coordinates":[12.5199,41.9302],"precision":"address"},
-    "roma-2026-municipio-iii-completed": {"coordinates":[12.535,41.965],"precision":"district"},
-    "roma-2026-municipio-iii-planned": {"coordinates":[12.556,41.956],"precision":"district"},
-    "roma-2026-colombo-pini": {"coordinates":[12.4618273,41.8163635],"precision":"area"},
-    "roma-2026-santa-petronilla": {"coordinates":[12.4997186,41.8573286],"precision":"address"},
-    "roma-2026-serafico": {"coordinates":[12.4873044,41.8302409],"precision":"address"},
-    "roma-2026-ugo-della-seta": {"coordinates":[12.5257943,41.9624926],"precision":"address"},
-    "roma-2026-via-kobler": {"coordinates":[12.562,41.913],"precision":"area"},
-    "roma-2026-villa-borghese": {"coordinates":[12.4848439,41.9144111],"precision":"address"},
-    "roma-2026-castel-sant-angelo": {"coordinates":[12.4663427,41.9031178],"precision":"address"},
-    "roma-2026-parco-scipioni": {"coordinates":[12.5011835,41.8760379],"precision":"address"},
-    "roma-2026-viale-giotto": {"coordinates":[12.4876539,41.8774575],"precision":"address"},
-    "roma-2026-via-meropia": {"coordinates":[12.5105106,41.8552128],"precision":"address"},
-    "roma-2023-paola-falconieri": {"coordinates":[12.4508368,41.8748373],"precision":"address"},
-    "roma-2023-fabiola": {"coordinates":[12.4503208,41.8762622],"precision":"address"},
-    "roma-2023-algardi": {"coordinates":[12.4476343,41.8849311],"precision":"address"},
-    "roma-2023-via-mario": {"coordinates":[12.4521,41.884],"precision":"area"},
-    "roma-2023-serafico": {"coordinates":[12.4873044,41.8302409],"precision":"area"},
-    "roma-2023-quattro-venti": {"coordinates":[12.458535,41.8845917],"precision":"address"},
-    "roma-2023-gianicolense": {"coordinates":[12.4586371,41.8713861],"precision":"address"},
-    "roma-2023-vascello": {"coordinates":[12.4567,41.8855],"precision":"address"},
-    "roma-2023-san-giovanni-dio": {"coordinates":[12.449,41.874],"precision":"address"},
-    "roma-2023-laurentina": {"coordinates":[12.4806103,41.8302573],"precision":"area"},
-    "roma-2024-piazza-venezia": {"coordinates":[12.4823,41.8958],"precision":"area"},
-    "roma-2025-togliatti": {"coordinates":[12.5742054,41.9032968],"precision":"area"}
+    "roma-2026-fori-imperiali": {
+      "coordinates": [
+        12.4909403,
+        41.8912874
+      ],
+      "precision": "address"
+    },
+    "roma-2026-villa-borghese-febbraio": {
+      "coordinates": [
+        12.4848439,
+        41.9144111
+      ],
+      "precision": "address"
+    },
+    "roma-2026-via-ludovisi": {
+      "coordinates": [
+        12.4951494,
+        41.9086748
+      ],
+      "precision": "address"
+    },
+    "roma-2026-vitaliano-rotellini": {
+      "coordinates": [
+        12.4387499,
+        41.7746488
+      ],
+      "precision": "address"
+    },
+    "roma-2026-pisana": {
+      "coordinates": [
+        12.4124542,
+        41.8706894
+      ],
+      "precision": "address"
+    },
+    "roma-2026-fratelli-bandiera": {
+      "coordinates": [
+        12.5199,
+        41.9302
+      ],
+      "precision": "address"
+    },
+    "roma-2026-municipio-iii-completed": {
+      "coordinates": [
+        12.535,
+        41.965
+      ],
+      "precision": "district"
+    },
+    "roma-2026-municipio-iii-planned": {
+      "coordinates": [
+        12.556,
+        41.956
+      ],
+      "precision": "district"
+    },
+    "roma-2026-colombo-pini": {
+      "coordinates": [
+        12.4618273,
+        41.8163635
+      ],
+      "precision": "area"
+    },
+    "roma-2026-santa-petronilla": {
+      "coordinates": [
+        12.4997186,
+        41.8573286
+      ],
+      "precision": "address"
+    },
+    "roma-2026-serafico": {
+      "coordinates": [
+        12.4873044,
+        41.8302409
+      ],
+      "precision": "address"
+    },
+    "roma-2026-ugo-della-seta": {
+      "coordinates": [
+        12.5257943,
+        41.9624926
+      ],
+      "precision": "address"
+    },
+    "roma-2026-via-kobler": {
+      "coordinates": [
+        12.562,
+        41.913
+      ],
+      "precision": "area"
+    },
+    "roma-2026-villa-borghese": {
+      "coordinates": [
+        12.4848439,
+        41.9144111
+      ],
+      "precision": "address"
+    },
+    "roma-2026-castel-sant-angelo": {
+      "coordinates": [
+        12.4663427,
+        41.9031178
+      ],
+      "precision": "address"
+    },
+    "roma-2026-parco-scipioni": {
+      "coordinates": [
+        12.5011835,
+        41.8760379
+      ],
+      "precision": "address"
+    },
+    "roma-2026-viale-giotto": {
+      "coordinates": [
+        12.4876539,
+        41.8774575
+      ],
+      "precision": "address"
+    },
+    "roma-2026-via-meropia": {
+      "coordinates": [
+        12.5105106,
+        41.8552128
+      ],
+      "precision": "address"
+    },
+    "roma-2023-paola-falconieri": {
+      "coordinates": [
+        12.4508368,
+        41.8748373
+      ],
+      "precision": "address"
+    },
+    "roma-2023-fabiola": {
+      "coordinates": [
+        12.4503208,
+        41.8762622
+      ],
+      "precision": "address"
+    },
+    "roma-2023-algardi": {
+      "coordinates": [
+        12.4573329,
+        41.8851608
+      ],
+      "precision": "address"
+    },
+    "roma-2023-serafico": {
+      "coordinates": [
+        12.4873044,
+        41.8302409
+      ],
+      "precision": "area"
+    },
+    "roma-2023-quattro-venti": {
+      "coordinates": [
+        12.458535,
+        41.8845917
+      ],
+      "precision": "address"
+    },
+    "roma-2023-gianicolense": {
+      "coordinates": [
+        12.449968,
+        41.8711644
+      ],
+      "precision": "address"
+    },
+    "roma-2023-vascello": {
+      "coordinates": [
+        12.4597054,
+        41.8852847
+      ],
+      "precision": "address"
+    },
+    "roma-2023-san-giovanni-dio": {
+      "coordinates": [
+        12.4470765,
+        41.8747521
+      ],
+      "precision": "address"
+    },
+    "roma-2023-laurentina": {
+      "coordinates": [
+        12.4806103,
+        41.8302573
+      ],
+      "precision": "area"
+    },
+    "roma-2024-piazza-venezia": {
+      "coordinates": [
+        12.4823,
+        41.8958
+      ],
+      "precision": "area"
+    },
+    "roma-2025-togliatti": {
+      "coordinates": [
+        12.57445,
+        41.90405
+      ],
+      "precision": "address"
+    }
   }
 }

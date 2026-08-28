@@ -2,6 +2,21 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.5.8] - 2026-08-28
+
+### Alberi · geometrie storiche 2023–2025
+
+- Aggiunte geometrie verificate per 9 dei 10 eventi del 2023, per l'evento multilocalità del 2024 e per il tratto documentato del 2025.
+- Viale Palmiro Togliatti evidenzia il tratto compreso fra i civici 1493 e 1091 e mostra due marker agli estremi.
+- L'evento 2024 mostra tre marker e tre aree distinte per Piazza Venezia, Piazza San Marco e Piazza d'Aracoeli; gli 11 alberi restano una quantità complessiva non ripartita.
+- Circonvallazione Gianicolense mostra separatamente i civici 35 e 161.
+- Esteso il rendering a più marker appartenenti allo stesso evento: selezione, popup esclusivo, grigio degli eventi estranei e inquadratura restano sincronizzati.
+- Corretto il marker di Via Algardi, precedentemente associato per errore a Via del Casino Algardi: ora usa Via Alessandro Algardi.
+- Corretti anche i riferimenti puntuali di Via del Vascello e Piazza San Giovanni di Dio.
+- `Via Mario` resta senza geometria: la fonte non specifica il nome completo e non è stato scelto arbitrariamente uno degli omonimi cartografici.
+- Dataset aggiornato alla revisione 16 e schema dei percorsi alla versione 3.
+- App aggiornata alla versione `0.5.8` (build 61); Worker invariato alla versione `0.8.2`.
+
 ## [0.5.7] - 2026-08-28
 
 ### Alberi · legenda unica
