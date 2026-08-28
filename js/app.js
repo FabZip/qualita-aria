@@ -37,14 +37,15 @@ const TEMPERATURE_METRICS={
   mean:{label:'Temperatura media annuale',short:'MEDIA'},
   max:{label:'Massima media annuale',short:'MAX'}
 };
-const TREE_YEARS=Array.from({length:14},(_,index)=>String(2026-index));
+// Only expose tree years backed by annual statistics or documented events.
+// 2016 is a partial May–December period, while 2022 has no usable record.
+const TREE_YEARS=['2026','2025','2024','2023','2021','2020','2019','2018','2017'];
 const TREE_MAP_PERIODS=[
   {value:'2026',label:'2026 · eventi documentati'},
   {value:'2025',label:'2025 · eventi documentati'},
   {value:'2024',label:'2024 · eventi documentati'},
   {value:'season-2024-2025',label:'stagione 2024–mar 2025 · aggregato'},
   {value:'2023',label:'2023 · eventi documentati'},
-  {value:'2022',label:'2022 · nessun totale annuale'},
   {value:'period-2021-2025',label:'nov 2021–dic 2025 · aggregato'},
   ...TREE_YEARS.filter(year=>Number(year)<=2021).map(year=>({value:year,label:year}))
 ];
@@ -3297,8 +3298,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.5.8',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.5.8',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.5.9',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.5.9',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3313,7 +3314,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.5.8')
+    navigator.serviceWorker.register('./service-worker.js?v=0.5.9')
       .then(reg=>reg.update())
       .catch(console.error)
   }

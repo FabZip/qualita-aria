@@ -2,6 +2,16 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.5.9] - 2026-08-28
+
+### Alberi · annualità disponibili
+
+- Rimossi dalle select Alberi gli anni 2013, 2014, 2015 e 2016, che erano generati dall'interfaccia ma non disponevano di statistiche annuali confrontabili.
+- Rimosso anche il 2022, privo di statistiche, aggregati ed eventi visualizzati nell'app.
+- Il dato ufficiale del 2016 copre soltanto maggio–dicembre e non viene quindi presentato come un totale annuale; la prima annualità omogenea resta il 2017.
+- Le annualità delle altre fonti ambientali restano invariate.
+- App aggiornata alla versione `0.5.9` (build 62); dataset invariato alla revisione 16 e Worker invariato alla versione `0.8.2`.
+
 ## [0.5.8] - 2026-08-28
 
 ### Alberi · geometrie storiche 2023–2025
