@@ -395,7 +395,7 @@ function configureSourceUI(){
   const trees=isTrees();
   if(trees){
     configureTreeCityOptions(true);
-    $('sourceDescription').innerHTML='<strong>Alberi:</strong> eventi e bilanci arborei documentati da fonti comunali. Le statistiche non descrivono lo stato fitosanitario, la vitalità o la condizione degli alberi esistenti. Censimenti, posti pianta e manutenzioni non vengono convertiti in piantumazioni o abbattimenti.';
+    $('sourceDescription').innerHTML='<strong>Alberi:</strong> eventi e bilanci arborei documentati da fonti comunali. Le statistiche non descrivono lo stato fitosanitario, la vitalità o la condizione degli alberi esistenti.';
     $('pollutantSourceField')?.classList.remove('hidden');
     $('eeaScopeField').classList.add('hidden');
     $('eeaCityField')?.classList.remove('hidden');
@@ -2956,7 +2956,7 @@ async function renderTreesMode(token){
     TreeStats.clear(state.mapBefore);
     TreeStats.clear(state.mapAfter);
     const scopeRecord=resultA.record||null;
-    TreeStats.showScope(state.map,scopeRecord,boundary);
+    TreeStats.showScope(state.map,scopeRecord,boundary,false);
     TreeStats.showDocumentedEvents(state.map,resultA.documentedEvents);
     $('stations').innerHTML=treeListHtml(resultA,yearA);
     bindTreeEventLists([{events:resultA.documentedEvents,map:state.map}]);
@@ -2973,10 +2973,8 @@ async function renderTreesMode(token){
   $('countUnit').textContent=isTrees()?'visualizzati':'visualizzate';
   $('periodValue').textContent=yearB?`${yearA}↔${yearB}`:(TREE_PERIOD_LABELS.get(yearA)||yearA);
   $('sourceValue').textContent=resultA.city?.available?'Fonte comunale ufficiale':'Dati non ancora verificati';
-  $('dataNotice').textContent=displayed?(partialRecord?'Copertura parziale · totale minimo documentato':`${displayed} ambito/i territoriale/i`):'Dati annuali non disponibili';
-  $('mapHint').textContent=partialRecord
-    ?'Il territorio mostra il saldo minimo con un riempimento leggero. Gli alberi verdi indicano piantumazioni e quelli rossi abbattimenti. Clicca un evento nell\'elenco: la strada o il tratto disponibile viene evidenziato in azzurro sotto il nome della via.'
-    :'Il colore copre l’intero ambito amministrativo: verde indica saldo positivo, rosso saldo negativo. Il riepilogo sotto la mappa confronta piantati, tagliati/decrementi e totale documentato.';
+  $('dataNotice').textContent=displayed?(partialRecord?'':`${displayed} ambito/i territoriale/i`):'Dati annuali non disponibili';
+  $('mapHint').innerHTML=`<span class="tree-map-legend-vertical"><span><i class="tree-map-legend-icon is-planted">${TreeStats.iconSvg({id:'legend-planting'})}</i>piantumazioni</span><span><i class="tree-map-legend-icon is-cut">${TreeStats.iconSvg({id:'legend-decrement'})}</i>abbattimenti</span></span>`;
   diagnostics({source:'Statistiche arboree',mode:state.mode,yearA,yearB,city:resultA.city?.name||null,available:resultA.city?.available||false,displayed});
 
   if(resultA.city?.center){
@@ -3298,8 +3296,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.5.4',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.5.4',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.5.5',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.5.5',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3314,7 +3312,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.5.4')
+    navigator.serviceWorker.register('./service-worker.js?v=0.5.5')
       .then(reg=>reg.update())
       .catch(console.error)
   }

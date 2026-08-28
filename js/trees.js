@@ -10,7 +10,7 @@
   const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
   async function catalog(){
-    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.5.4',{cache:'no-store'}).then(response=>{
+    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.5.5',{cache:'no-store'}).then(response=>{
       if(!response.ok)throw new Error(`Dati arborei: HTTP ${response.status}`);
       return response.json()
     });
@@ -18,21 +18,21 @@
   }
 
   async function proxyConfig(){
-    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.5.4',{cache:'no-store'})
+    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.5.5',{cache:'no-store'})
       .then(response=>response.ok?response.json():null)
       .catch(()=>null);
     return proxyConfigPromise
   }
 
   async function coordinatesCatalog(){
-    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.5.4',{cache:'no-store'})
+    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.5.5',{cache:'no-store'})
       .then(response=>response.ok?response.json():{events:{}})
       .catch(()=>({events:{}}));
     return coordinatesPromise
   }
 
   async function pathsCatalog(){
-    if(!pathsPromise)pathsPromise=fetch('data/tree-paths.json?v=0.5.4',{cache:'no-store'})
+    if(!pathsPromise)pathsPromise=fetch('data/tree-paths.json?v=0.5.5',{cache:'no-store'})
       .then(response=>response.ok?response.json():{events:{}})
       .catch(()=>({events:{}}));
     return pathsPromise
@@ -71,15 +71,6 @@
     return Number(event?.plantings||0)-Number(event?.decrements||0)
   }
 
-  function scopePopupHtml(event){
-    const source=event.source||{};
-    const balance=balanceOf(event);
-    const extra=event.falls?`<br>Di cui schianti: ${fmt(event.falls)}`:'';
-    const forests=event.forestations?`<br>Forestazioni separate: ${fmt(event.forestations)}`:'';
-    const partial=event.dataKind==='documented_partial';
-    return `<div class="tree-popup"><strong>${escapeHtml(event.locationName)} — ${escapeHtml(event.period)}</strong><br>${partial?'Piantati documentati':'Piantati'}: ${fmt(event.plantings)}<br>${escapeHtml(event.decrementLabel||'Decrementi')}: ${fmt(event.decrements)}${extra}${forests}<br><strong>${partial?'Saldo minimo documentato':'Saldo'}: ${balance>0?'+':''}${fmt(balance)}</strong><br>${partial?'Copertura parziale: non è un totale annuale completo.<br>':''}Ambito: intero Comune<br>Localizzazione puntuale non disponibile<br>Fonte: ${escapeHtml(source.publisher)}<br><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">Documento ufficiale</a></div>`
-  }
-
   function addScopeLayers(map){
     if(map.getSource('tree-scope-source'))return;
     map.addSource('tree-scope-source',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
@@ -99,6 +90,7 @@
       const feature=event.features?.[0];
       if(!feature)return;
       const p=feature.properties||{};
+      if(p.popupEnabled===false||p.popupEnabled===0||p.popupEnabled==='false')return;
       const balance=Number(p.balance||0);
       if(p.viewKind==='difference'){
         const partial=p.dataKind==='documented_partial';
@@ -113,11 +105,14 @@
         .setHTML(`<div class="tree-popup"><strong>${escapeHtml(p.locationName)} — ${escapeHtml(p.period)}</strong><br>${p.dataKind==='documented_partial'?'Piantati documentati':'Piantati'}: ${fmt(p.plantings)}<br>${escapeHtml(p.decrementLabel)}: ${fmt(p.decrements)}<br><strong>${p.dataKind==='documented_partial'?'Saldo minimo documentato':'Saldo'}: ${balance>0?'+':''}${fmt(balance)}</strong><br>${p.dataKind==='documented_partial'?'Copertura parziale: non è un totale annuale completo.<br>':''}Ambito: intero Comune<br>Localizzazione puntuale non disponibile<br><a href="${escapeHtml(p.sourceUrl)}" target="_blank" rel="noopener noreferrer">Documento ufficiale</a></div>`)
         .addTo(map)
     });
-    map.on('mouseenter','tree-scope-fill',()=>map.getCanvas().style.cursor='pointer');
-    map.on('mouseleave','tree-scope-fill',()=>map.getCanvas().style.cursor='')
+    map.on('mousemove','tree-scope-fill',event=>{
+      const p=event.features?.[0]?.properties||{};
+      map.getCanvas().style.cursor=(p.popupEnabled===false||p.popupEnabled===0||p.popupEnabled==='false')?'':'pointer'
+    });
+    map.on('mouseleave','tree-scope-fill',()=>map.getCanvas().style.cursor='');
   }
 
-  function showScope(map,event,boundary){
+  function showScope(map,event,boundary,popupEnabled=true){
     clear(map);
     addScopeLayers(map);
     scopeMaps.add(map);
@@ -133,7 +128,7 @@
     const scoped={
       ...boundary,
       features:boundary.features.map(feature=>({...feature,properties:{
-        ...(feature.properties||{}),balance,balanceIntensity,
+        ...(feature.properties||{}),balance,balanceIntensity,popupEnabled,
         locationName:event.locationName,period:event.period,
         plantings:Number(event.plantings||0),decrements:Number(event.decrements||0),
         decrementLabel:event.decrementLabel||'Decrementi',sourceUrl:event.source?.url||'',dataKind:event.dataKind||'official_period'
@@ -158,7 +153,7 @@
     const difference=balanceB-balanceA;
     const balanceIntensity=Math.min(1,Math.abs(difference)/Math.max(1,Math.abs(balanceA),Math.abs(balanceB)));
     const scoped={...boundary,features:boundary.features.map(feature=>({...feature,properties:{
-      ...(feature.properties||{}),viewKind:'difference',balance:difference,balanceIntensity,
+      ...(feature.properties||{}),viewKind:'difference',balance:difference,balanceIntensity,popupEnabled:true,
       balanceA,balanceB,dataKind:recordA.dataKind,locationName:recordB.locationName,period:`${yearA} → ${yearB}`
     }}))};
     map.getSource('tree-scope-source').setData(scoped);

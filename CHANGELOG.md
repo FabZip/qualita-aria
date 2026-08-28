@@ -2,6 +2,16 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.5.5] - 2026-08-28
+
+### Alberi · interfaccia semplificata
+
+- Rimossa l'apertura del popup cliccando sul riempimento territoriale generale di Roma nella sola modalità Mappa; il popup resta disponibile in Confronto e Differenza.
+- Rimossa dalla descrizione la frase relativa a censimenti, posti pianta e manutenzioni.
+- Sostituito il lungo testo sotto la mappa con una legenda verticale compatta: albero verde `piantumazioni`, albero rosso `abbattimenti`.
+- Rimossa la dicitura `Copertura parziale · totale minimo documentato` dal riepilogo.
+- App aggiornata alla versione `0.5.5` (build 58), con cache offline dedicata; dataset invariato alla revisione 15.
+
 ## [0.5.4] - 2026-08-28
 
 ### Alberi · popup evento esclusivo
