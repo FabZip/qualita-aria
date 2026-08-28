@@ -9,4 +9,3 @@
 .tree-event-marker.is-muted{color:#64748b;opacity:.48;filter:grayscale(1) drop-shadow(0 2px 2px rgba(0,0,0,.28));z-index:0}
 .tree-event-marker.is-selected{opacity:1;filter:drop-shadow(0 3px 4px rgba(0,0,0,.55));z-index:2}
 .tree-sync-note{font-size:.78rem;line-height:1.35;padding:9px 11px}
-.tree-map-legend-vertical{display:grid;gap:3px}.tree-map-legend-vertical>span{display:flex;align-items:center;gap:7px;font-size:.82rem;line-height:1.2;color:#cbd5e1}.tree-map-legend-icon{display:block;width:17px;height:20px;color:#16a34a;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}.tree-map-legend-icon.is-cut{color:#dc2626}.tree-map-legend-icon svg{display:block;width:100%;height:100%}

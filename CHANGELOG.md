@@ -2,6 +2,15 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.5.7] - 2026-08-28
+
+### Alberi · legenda unica
+
+- Rimossa la legenda verticale duplicata sotto la mappa.
+- Mantenuta soltanto la legenda già presente sopra la mappa.
+- Nascosto il contenitore della guida nella fonte Alberi, evitando spazio vuoto residuo.
+- App aggiornata alla versione `0.5.7` (build 60); dataset invariato alla revisione 15 e Worker invariato alla versione `0.8.2`.
+
 ## [0.5.6] - 2026-08-28
 
 ### Intestazione · logo A.R.I.A.

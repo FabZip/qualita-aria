@@ -2974,7 +2974,7 @@ async function renderTreesMode(token){
   $('periodValue').textContent=yearB?`${yearA}↔${yearB}`:(TREE_PERIOD_LABELS.get(yearA)||yearA);
   $('sourceValue').textContent=resultA.city?.available?'Fonte comunale ufficiale':'Dati non ancora verificati';
   $('dataNotice').textContent=displayed?(partialRecord?'':`${displayed} ambito/i territoriale/i`):'Dati annuali non disponibili';
-  $('mapHint').innerHTML=`<span class="tree-map-legend-vertical"><span><i class="tree-map-legend-icon is-planted">${TreeStats.iconSvg({id:'legend-planting'})}</i>piantumazioni</span><span><i class="tree-map-legend-icon is-cut">${TreeStats.iconSvg({id:'legend-decrement'})}</i>abbattimenti</span></span>`;
+  $('mapHint').textContent='';
   diagnostics({source:'Statistiche arboree',mode:state.mode,yearA,yearB,city:resultA.city?.name||null,available:resultA.city?.available||false,displayed});
 
   if(resultA.city?.center){
@@ -2992,7 +2992,8 @@ async function render(){
 
   const periodComparison=['compare','difference'].includes(state.mode);
   document.documentElement.classList.toggle('trees-source',isTrees());
-  $('mapHint').classList.toggle('tree-map-hint',isTrees());
+  $('mapHint').classList.remove('tree-map-hint');
+  $('mapHint').classList.toggle('hidden',isTrees());
 
   $('comparePanel').classList.toggle('hidden',!periodComparison);
   $('singleYearField').classList.toggle(
@@ -3296,8 +3297,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.5.6',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.5.6',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.5.7',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.5.7',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3312,7 +3313,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.5.6')
+    navigator.serviceWorker.register('./service-worker.js?v=0.5.7')
       .then(reg=>reg.update())
       .catch(console.error)
   }
