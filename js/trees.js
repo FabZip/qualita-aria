@@ -10,7 +10,7 @@
   const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
   async function catalog(){
-    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.5.0',{cache:'no-store'}).then(response=>{
+    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.5.1',{cache:'no-store'}).then(response=>{
       if(!response.ok)throw new Error(`Dati arborei: HTTP ${response.status}`);
       return response.json()
     });
@@ -18,21 +18,21 @@
   }
 
   async function proxyConfig(){
-    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.5.0',{cache:'no-store'})
+    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.5.1',{cache:'no-store'})
       .then(response=>response.ok?response.json():null)
       .catch(()=>null);
     return proxyConfigPromise
   }
 
   async function coordinatesCatalog(){
-    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.5.0',{cache:'no-store'})
+    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.5.1',{cache:'no-store'})
       .then(response=>response.ok?response.json():{events:{}})
       .catch(()=>({events:{}}));
     return coordinatesPromise
   }
 
   async function pathsCatalog(){
-    if(!pathsPromise)pathsPromise=fetch('data/tree-paths.json?v=0.5.0',{cache:'no-store'})
+    if(!pathsPromise)pathsPromise=fetch('data/tree-paths.json?v=0.5.1',{cache:'no-store'})
       .then(response=>response.ok?response.json():{events:{}})
       .catch(()=>({events:{}}));
     return pathsPromise
@@ -251,6 +251,7 @@
         .setLngLat(event.coordinates)
         .setPopup(new maplibregl.Popup({offset:Math.ceil(size*.65)}).setHTML(documentedPopupHtml(event)))
         .addTo(map);
+      el.addEventListener('click',()=>focusEvent(map,event.id));
       markerGroups.set(map,[...(markerGroups.get(map)||[]),marker]);
       byId.set(String(event.id),{marker,event})
     });
@@ -275,6 +276,74 @@
 
   function pathCoordinates(path){
     return(path?.features||[]).flatMap(feature=>feature.geometry?.type==='LineString'?feature.geometry.coordinates:[])
+  }
+
+  function resolveEventPath(pathData,eventId){
+    const value=pathData.events?.[eventId];
+    return value?.ref?pathData.shared?.[value.ref]||null:value||null
+  }
+
+  function distanceKm(a,b){
+    const rad=value=>value*Math.PI/180;
+    const dLat=rad(b[1]-a[1]),dLon=rad(b[0]-a[0]);
+    const h=Math.sin(dLat/2)**2+Math.cos(rad(a[1]))*Math.cos(rad(b[1]))*Math.sin(dLon/2)**2;
+    return 12742*Math.asin(Math.sqrt(h))
+  }
+
+  function nearestPathPoint(coordinates,path){
+    let nearest=null;
+    (path?.features||[]).forEach(feature=>{
+      const points=feature.geometry?.type==='LineString'?feature.geometry.coordinates:[];
+      for(let index=1;index<points.length;index+=1){
+        const start=points[index-1],end=points[index];
+        const scale=Math.cos((coordinates[1]+start[1]+end[1])/3*Math.PI/180);
+        const dx=(end[0]-start[0])*scale,dy=end[1]-start[1];
+        const px=(coordinates[0]-start[0])*scale,py=coordinates[1]-start[1];
+        const length=dx*dx+dy*dy;
+        const ratio=length?Math.max(0,Math.min(1,(px*dx+py*dy)/length)):0;
+        const point=[start[0]+(end[0]-start[0])*ratio,start[1]+(end[1]-start[1])*ratio];
+        const distance=distanceKm(coordinates,point);
+        if(!nearest||distance<nearest.distance)nearest={point,distance}
+      }
+    });
+    return nearest
+  }
+
+  function alignedCoordinates(coordinates,path){
+    const points=pathCoordinates(path);
+    if(!Array.isArray(coordinates)||coordinates.length!==2||!points.length)return coordinates;
+    const bounds=points.reduce((result,point)=>({
+      west:Math.min(result.west,point[0]),east:Math.max(result.east,point[0]),
+      south:Math.min(result.south,point[1]),north:Math.max(result.north,point[1])
+    }),{west:points[0][0],east:points[0][0],south:points[0][1],north:points[0][1]});
+    const isArea=path.features.some(feature=>feature.properties?.precision==='area-outline');
+    if(isArea&&coordinates[0]>=bounds.west&&coordinates[0]<=bounds.east&&coordinates[1]>=bounds.south&&coordinates[1]<=bounds.north)return coordinates;
+    const current=nearestPathPoint(coordinates,path);
+    if(current?.distance<=.15)return coordinates;
+    const center=[(bounds.west+bounds.east)/2,(bounds.south+bounds.north)/2];
+    return nearestPathPoint(center,path)?.point||center
+  }
+
+  function groupDocumentedPaths(events){
+    const groups=new Map();
+    events.forEach(event=>{
+      const key=event.sourceUrl||event.id;
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push(event)
+    });
+    groups.forEach(group=>{
+      const withPath=group.filter(event=>event.ownPath?.features?.length);
+      if(!withPath.length)return;
+      const explicit=withPath.map(event=>event.ownPath.properties).filter(Boolean);
+      const locationsExpected=explicit.length?Math.max(...explicit.map(item=>Number(item.locationsExpected||0)),group.length):group.length;
+      const locationsMapped=explicit.length?Math.max(...explicit.map(item=>Number(item.locationsMapped||0)),withPath.length):withPath.length;
+      const sourcePath={
+        type:'FeatureCollection',properties:{locationsExpected,locationsMapped},
+        features:withPath.flatMap(event=>event.ownPath.features.map(feature=>({...feature,properties:{...(feature.properties||{}),eventId:event.id}})))
+      };
+      group.forEach(event=>event.path=sourcePath)
+    });
+    return events
   }
 
   function focusEvent(map,eventId){
@@ -309,14 +378,16 @@
       .filter(event=>String(event.year)===String(selection))
       .map(event=>{
         const location=coordinateData.events?.[event.id];
-        return{...event,coordinates:location?.coordinates||event.coordinates,locationPrecision:location?.precision||event.locationPrecision,path:pathData.events?.[event.id]||null,source:{publisher:'Roma Capitale',url:event.sourceUrl}}
+        const ownPath=resolveEventPath(pathData,event.id);
+        const coordinates=alignedCoordinates(location?.coordinates||event.coordinates,ownPath);
+        return{...event,coordinates,locationPrecision:location?.precision||event.locationPrecision,ownPath,path:ownPath,source:{publisher:'Roma Capitale',url:event.sourceUrl}}
       });
     const dynamic=await dynamicEvents(cityId,selection);
     const localSourceUrls=new Set(localDocumented.map(event=>event.sourceUrl));
     const remoteDocumented=dynamic.events
       .filter(event=>!localSourceUrls.has(event.sourceUrl))
       .map(event=>({...event,source:{publisher:'Roma Capitale · aggiornamento automatico',url:event.sourceUrl}}));
-    const documentedEvents=[...localDocumented,...remoteDocumented];
+    const documentedEvents=groupDocumentedPaths([...localDocumented,...remoteDocumented]);
     const completed=documentedEvents.filter(event=>
       ['completed','emergency_completed'].includes(event.status)&&Number.isFinite(event.quantity)
     );

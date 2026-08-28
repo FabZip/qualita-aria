@@ -2,6 +2,25 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.5.1] - 2026-08-28
+
+### Alberi · percorsi multilocalità e marker coerenti
+
+- Collegati gli eventi appartenenti alla stessa pagina ufficiale: selezionando una delle località vengono evidenziate e inquadrate insieme tutte le geometrie disponibili della fonte.
+- Aggiunto il contorno verificato di Villa Borghese agli eventi che interessano il parco.
+- Corretto il marker di via Ludovisi, che era posizionato a circa 458 metri dalla strada evidenziata.
+- Aggiunto un controllo geometrico generale: se il punto di un evento dista più di 150 metri dalla propria strada o area verificata, il marker viene riallineato automaticamente alla geometria.
+- Il controllo corregge anche le anomalie individuate per Fratelli Bandiera, l'evento programmato del Municipio III e via Kobler.
+- Reso attivo il percorso anche cliccando direttamente sull'alberello della mappa, oltre che sull'evento nell'elenco.
+- Conservato il conteggio delle località mappate rispetto a quelle documentate per le fonti ancora parzialmente georeferenziate.
+
+### Versioning
+
+- App aggiornata alla versione `0.5.1` (build 54).
+- Dataset geografico aggiornato alla revisione 15.
+- Cache offline aggiornata a `qualita-aria-v0.5.1`.
+- Worker invariato alla versione `0.8.1`: non è richiesto un nuovo deploy del proxy.
+
 ## [0.5.0] - 2026-08-26
 
 ### Alberi · evidenziazione geografica degli eventi

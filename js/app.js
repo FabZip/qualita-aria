@@ -2851,7 +2851,7 @@ function treeListHtml(result,year,includeAggregate=true){
       const located=Array.isArray(event.coordinates)&&event.coordinates.length===2;
       const mapped=Number(event.path?.properties?.locationsMapped||0);
       const expected=Number(event.path?.properties?.locationsExpected||0);
-      const pathDetail=expected?`<br>${mapped} località evidenziate su ${expected} documentate; ripartizione delle quantità non specificata.`:'';
+      const pathDetail=expected>1?`<br>${mapped} località evidenziate su ${expected} documentate; ripartizione delle quantità non specificata.`:'';
       return`<div class="tree-event-row" data-tree-event-index="${index}" data-tree-event-id="${safe(event.id)}"><button class="tree-event-focus" type="button" data-tree-focus="${safe(event.id)}" ${located?'':`disabled title="Coordinate non ancora disponibili"`}><i class="tree-list-icon ${event.eventType==='planting'?'is-planted':'is-cut'} ${event.status==='planned'?'is-planned':''}">${TreeStats.iconSvg(event)}</i><span><strong>${safe(event.locationName)}</strong><small>${safe(event.date)}${event.district?` · ${safe(event.district)}`:''}<br>${safe(type)} · ${safe(statusLabels[event.status]||event.status)}${safe(validation)} · ${safe(quantity)}${located?' · mostra sulla mappa':' · posizione in verifica'}${pathDetail}</small></span></button><a href="${safeUrl(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a></div>`
     }).join('')}</div>${documentedEvents.length>TREE_EVENTS_PER_PAGE?`<nav class="tree-pagination" data-tree-pagination aria-label="Pagine degli eventi"><button type="button" data-tree-page="prev">Precedente</button><span data-tree-page-status></span><button type="button" data-tree-page="next">Successiva</button></nav>`:''}`
     :'';
@@ -3298,8 +3298,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.5.0',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.5.0',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.5.1',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.5.1',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3314,7 +3314,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.5.0')
+    navigator.serviceWorker.register('./service-worker.js?v=0.5.1')
       .then(reg=>reg.update())
       .catch(console.error)
   }
