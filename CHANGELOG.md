@@ -2,6 +2,15 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.5.6] - 2026-08-28
+
+### Intestazione · logo A.R.I.A.
+
+- Sostituiti l'eyebrow `DATI PUBBLICI REALI · EUROPA E MONDO` e il titolo `Qualità dell'aria` con il logo orizzontale A.R.I.A.
+- Aggiunto `assets/branding/aria-logo-header.svg`, mantenendo il testo alternativo completo per l'accessibilità.
+- Incluso il logo nella cache offline della PWA.
+- App aggiornata alla versione `0.5.6` (build 59); dataset invariato alla revisione 15 e Worker invariato alla versione `0.8.2`.
+
 ## [0.5.5] - 2026-08-28
 
 ### Alberi · interfaccia semplificata
