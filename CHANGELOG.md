@@ -2,6 +2,14 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.5.4] - 2026-08-28
+
+### Alberi · popup evento esclusivo
+
+- Selezionando un evento vengono chiusi automaticamente i popup degli eventi precedentemente aperti.
+- Rimane visibile al massimo un popup evento alla volta, senza modificare evidenziazione, colori o inquadratura geografica.
+- App aggiornata alla versione `0.5.4` (build 57), con cache offline dedicata; dataset invariato alla revisione 15.
+
 ## [0.5.3] - 2026-08-28
 
 ### Alberi · selezione e inquadratura degli eventi
