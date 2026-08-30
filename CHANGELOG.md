@@ -2,6 +2,27 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.5.11] - 2026-08-30
+
+### Interfaccia · installazione e periodi Alberi
+
+- Applicato il nuovo stile richiesto al pulsante `Installa app` tramite un foglio di override caricato dopo gli stili principali.
+- Corretto il riuso accidentale delle etichette Alberi nelle altre fonti: le loro select mostrano nuovamente soltanto l'anno.
+- Abbreviate le annualità arboree documentate in `2026 eventi`, `2025 eventi`, `2024 eventi` e `2023 eventi`.
+- Abbreviati gli aggregati in `nov. 2021 – dic. 2025` e `2024 – mar. 2025`, eliminando le diciture `stagione` e `aggregato`.
+- La fonte del secondo periodo non specifica il mese iniziale del 2024; non è stato quindi trasformato arbitrariamente in gennaio.
+- Collegato il periodo `2024 – mar. 2025` alla notizia ufficiale specifica da cui provengono le quantità.
+- App aggiornata alla versione `0.5.11` (build 64), dataset alla revisione 17 e Worker invariato alla versione `0.8.2`.
+
+## [0.5.10] - 2026-08-28
+
+### Alberi · messaggi e fonti degli aggregati
+
+- Rimosso l'avviso introduttivo sul totale aggregato novembre 2021–dicembre 2025.
+- Rimosso l'avviso `Fallback locale`; i dati consolidati restano disponibili quando l'archivio dinamico non risponde.
+- Aggiunto il collegamento `Fonte ufficiale` ai riepiloghi di entrambi i periodi aggregati.
+- App aggiornata alla versione `0.5.10` (build 63); dataset invariato alla revisione 16 e Worker invariato alla versione `0.8.2`.
+
 ## [0.5.9] - 2026-08-28
 
 ### Alberi · annualità disponibili

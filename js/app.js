@@ -41,12 +41,12 @@ const TEMPERATURE_METRICS={
 // 2016 is a partial May–December period, while 2022 has no usable record.
 const TREE_YEARS=['2026','2025','2024','2023','2021','2020','2019','2018','2017'];
 const TREE_MAP_PERIODS=[
-  {value:'2026',label:'2026 · eventi documentati'},
-  {value:'2025',label:'2025 · eventi documentati'},
-  {value:'2024',label:'2024 · eventi documentati'},
-  {value:'season-2024-2025',label:'stagione 2024–mar 2025 · aggregato'},
-  {value:'2023',label:'2023 · eventi documentati'},
-  {value:'period-2021-2025',label:'nov 2021–dic 2025 · aggregato'},
+  {value:'2026',label:'2026 eventi'},
+  {value:'2025',label:'2025 eventi'},
+  {value:'2024',label:'2024 eventi'},
+  {value:'season-2024-2025',label:'2024 – mar. 2025'},
+  {value:'2023',label:'2023 eventi'},
+  {value:'period-2021-2025',label:'nov. 2021 – dic. 2025'},
   ...TREE_YEARS.filter(year=>Number(year)<=2021).map(year=>({value:year,label:year}))
 ];
 const TREE_PERIOD_LABELS=new Map(TREE_MAP_PERIODS.map(item=>[item.value,item.label]));
@@ -285,7 +285,7 @@ function fillYears(){
       ?TREE_MAP_PERIODS.map(item=>item.value)
       :years;
     const old=$(id).value;
-    $(id).innerHTML=options.map(y=>`<option value="${y}">${TREE_PERIOD_LABELS.get(y)||y}</option>`).join('');
+    $(id).innerHTML=options.map(y=>`<option value="${y}">${isTrees()?(TREE_PERIOD_LABELS.get(y)||y):y}</option>`).join('');
     if(old&&options.includes(old))$(id).value=old;
   }
   if(!(isTrees()?TREE_MAP_PERIODS.some(item=>item.value===$('yearSelect').value):years.includes($('yearSelect').value)))$('yearSelect').value=latest;
@@ -2839,7 +2839,10 @@ function treeListHtml(result,year,includeAggregate=true){
     const max=Math.max(Number(event.plantings),Number(event.decrements),1);
     const prefix=event.dataKind==='documented_partial'?'Saldo minimo documentato':'Saldo';
     const plantedLabel=event.dataKind==='documented_partial'?'Piantati documentati':'Piantati';
-    return`<div class="tree-balance-row"><div class="tree-balance-head"><strong>${event.locationName} · ${event.period}</strong><b>${prefix} ${saldo>0?'+':''}${TreeStats.fmt(saldo)}</b></div><div class="tree-compare"><span>${plantedLabel}</span><i class="tree-compare-bar tree-compare-planted" style="width:${Math.max(8,event.plantings/max*100)}%"><b>${TreeStats.fmt(event.plantings)}</b></i><span>${event.decrementLabel}</span><i class="tree-compare-bar tree-compare-cut" style="width:${Math.max(8,event.decrements/max*100)}%"><b>${TreeStats.fmt(event.decrements)}</b></i><span>Totale</span><strong class="tree-compare-total">${TreeStats.fmt(total)} interventi documentati</strong></div><small>${event.coverageLabel?`${event.coverageLabel}. `:''}${event.notes}</small></div>`
+    const sourceLink=event.dataKind==='official_period'&&event.source?.url
+      ?` <a href="${safeUrl(event.source.url)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a>`
+      :'';
+    return`<div class="tree-balance-row"><div class="tree-balance-head"><strong>${event.locationName} · ${event.period}</strong><b>${prefix} ${saldo>0?'+':''}${TreeStats.fmt(saldo)}</b></div><div class="tree-compare"><span>${plantedLabel}</span><i class="tree-compare-bar tree-compare-planted" style="width:${Math.max(8,event.plantings/max*100)}%"><b>${TreeStats.fmt(event.plantings)}</b></i><span>${event.decrementLabel}</span><i class="tree-compare-bar tree-compare-cut" style="width:${Math.max(8,event.decrements/max*100)}%"><b>${TreeStats.fmt(event.decrements)}</b></i><span>Totale</span><strong class="tree-compare-total">${TreeStats.fmt(total)} interventi documentati</strong></div><small>${event.coverageLabel?`${event.coverageLabel}. `:''}${event.notes}${sourceLink}</small></div>`
   };
   const rows=events.map(balanceRow).join('');
 
@@ -2860,10 +2863,10 @@ function treeListHtml(result,year,includeAggregate=true){
   const syncDate=diagnostic.lastSync?.completed_at||diagnostic.lastSync?.completedAt||null;
   const dynamicNote=diagnostic.dynamicAvailable
     ?`<div class="tree-period-note tree-sync-note">${syncDate?`Aggiornato al ${safe(new Date(syncDate).toLocaleString('it-IT'))}. `:''}${diagnostic.dynamicEvents||0} nuovi eventi aggiunti.</div>`
-    :`<div class="tree-period-note"><strong>Fallback locale</strong><br>L'archivio dinamico non è raggiungibile: sono mostrati i dati consolidati inclusi nell'app.</div>`;
+    :'';
 
   const aggregateNote=includeAggregate&&aggregate
-    ?`<div class="tree-period-note"><strong>Totale aggregato del periodo ${aggregate.period}</strong><br>Il periodo è mostrato come selezione autonoma e non viene attribuito ai singoli anni.</div>${balanceRow(aggregate)}`
+    ?balanceRow(aggregate)
     :'';
   return dynamicNote+rows+documentedList+aggregateNote||'<div class="empty-state">Nessun totale annuale o evento arboreo documentato disponibile per questa selezione.</div>'
 }
@@ -3298,8 +3301,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.5.9',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.5.9',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.5.11',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.5.11',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3314,7 +3317,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.5.9')
+    navigator.serviceWorker.register('./service-worker.js?v=0.5.11')
       .then(reg=>reg.update())
       .catch(console.error)
   }
