@@ -254,7 +254,7 @@ async function loadEeaCities(){
   let cities=fallback;
 
   try{
-    const response=await fetch('data/italian-capitals.json?v=0.5.14',{cache:'no-store'});
+    const response=await fetch('data/italian-capitals.json?v=0.5.15',{cache:'no-store'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
     const payload=await response.json();
     if(Array.isArray(payload?.cities)&&payload.cities.length){
@@ -1836,19 +1836,15 @@ function addAirLayers(map,prefix='air'){
   });
 
   map.addLayer({
-    id:`${prefix}-heat`,type:'heatmap',source:`${prefix}-source`,
+    id:`${prefix}-heat`,type:'circle',source:`${prefix}-source`,
     filter:['==',['get','kind'],'station'],
     maxzoom:15,
     paint:{
-      'heatmap-weight':['interpolate',['linear'],['get','value'],0,0,40,1],
-      'heatmap-intensity':['interpolate',['linear'],['zoom'],3,.55,5,.7,7,.95,10,1.55,13,1.85],
-      'heatmap-radius':['interpolate',['linear'],['zoom'],3,8,5,18,7,40,9,86,10.5,128,13,178],
-      'heatmap-opacity':['interpolate',['linear'],['zoom'],3,.48,5,.58,7,.68,10,.78,13,.62,15,.34],
-      'heatmap-color':['interpolate',['linear'],['heatmap-density'],
-        0,'rgba(53,208,127,0)',.035,'rgba(53,208,127,.42)',
-        .18,'rgba(53,208,127,.72)',.38,'rgba(230,207,67,.82)',
-        .62,'rgba(255,145,77,.86)',.84,'rgba(255,88,100,.92)',
-        1,'rgba(174,22,31,.96)']
+      'circle-radius':['interpolate',['linear'],['zoom'],3,8,5,18,7,40,9,86,10.5,128,13,178],
+      'circle-color':['step',['get','value'],'#35d07f',10,'#e6cf43',20,'#ff914d',30,'#ff5864'],
+      'circle-opacity':['interpolate',['linear'],['zoom'],3,.42,5,.5,7,.58,10,.66,13,.54,15,.3],
+      'circle-blur':.72,
+      'circle-pitch-alignment':'map'
     }
   });
 
@@ -3363,8 +3359,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.5.14',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.5.14',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.5.15',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.5.15',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3379,7 +3375,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.5.14')
+    navigator.serviceWorker.register('./service-worker.js?v=0.5.15')
       .then(reg=>reg.update())
       .catch(console.error)
   }

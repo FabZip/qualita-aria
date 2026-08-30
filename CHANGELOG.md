@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.15] - 2026-08-30
+
+- Corretta la discordanza cromatica EEA tra elenco e mappa: la superficie non usa più la densità della heatmap per determinare il colore.
+- La superficie sfumata usa ora le stesse soglie del valore riportato nell'elenco (`<10`, `10–19,9`, `20–29,9`, `≥30 µg/m³`).
+- La correzione vale per la mappa singola e per entrambe le mappe della modalità Confronto.
+- App aggiornata alla versione `0.5.15` (build 68); dataset invariato alla revisione 18 e Worker invariato alla versione `0.8.2`.
+
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
 ## [0.5.14] - 2026-08-30
