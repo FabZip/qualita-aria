@@ -69,9 +69,9 @@
 
     return(
       `<strong>${row.name} — ${context.year}</strong>`+
-      `<br>Minima media annuale: ${fmt(row.min)} °C`+
+      `<br>Minima assoluta annuale: ${fmt(row.min)} °C`+
       `<br>Temperatura media annuale: ${fmt(row.mean)} °C`+
-      `<br>Massima media annuale: ${fmt(row.max)} °C`+
+      `<br>Massima assoluta annuale: ${fmt(row.max)} °C`+
       `<br>Tipo: Misurato`+
       `<br>Fonte temperatura: ${providerHtml}`+
       `${row.wmo?`<br>Codice WMO: ${row.wmo}`:''}`+

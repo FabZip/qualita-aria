@@ -1,5 +1,5 @@
 {
   "enabled": true,
   "base_url": "https://qualita-aria-temperature.fabzip.workers.dev",
-  "note": "ARPA/EEA: temperature solo da stazioni fisiche. Priorità ARPA Lazio, poi NOAA/NCEI GSOY e fallback Meteostat limitato a provider osservativi con copertura minima 75%. OpenAQ senza temperatura; modalità ERA5-Land rimossa."
+  "note": "ARPA/EEA: temperature solo da stazioni fisiche. MIN e MAX sono gli estremi assoluti annuali; MEDIA è la media delle temperature medie giornaliere. Priorità ARPA Lazio, poi NOAA/NCEI GSOY e fallback Meteostat limitato a provider osservativi con copertura minima 75%. OpenAQ senza temperatura; modalità ERA5-Land rimossa."
 }

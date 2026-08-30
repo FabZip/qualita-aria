@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.18] - 2026-08-30
+
+- Corretto il calcolo delle temperature annuali: `MIN` è ora il minimo assoluto dell'anno e `MAX` il massimo assoluto dell'anno.
+- `MEDIA` resta l'unica aggregazione media annuale ed è calcolata sulle temperature medie giornaliere.
+- Aggiornate tutte le fonti: ARPA Lazio, NOAA/NCEI GSOY (`EMNT`, `TAVG`, `EMXT`), fallback Meteostat ed ERA5-Land/Open-Meteo.
+- Aggiornate le etichette in mappa da “minima/massima media annuale” a “minima/massima assoluta annuale”.
+- App aggiornata alla versione `0.5.18` (build 71), dataset invariato alla revisione 18 e Worker aggiornato alla versione `0.8.3`.
+
 ## [0.5.17] - 2026-08-30
 
 - Il pulsante `Installa app` viene mostrato soltanto durante la navigazione nel browser.

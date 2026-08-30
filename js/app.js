@@ -34,9 +34,9 @@ const TEMPERATURE_YEARS=Array.from(
   (_,index)=>String(TEMPERATURE_LAST_COMPLETE_YEAR-index)
 );
 const TEMPERATURE_METRICS={
-  min:{label:'Minima media annuale',short:'MIN'},
+  min:{label:'Minima assoluta annuale',short:'MIN'},
   mean:{label:'Temperatura media annuale',short:'MEDIA'},
-  max:{label:'Massima media annuale',short:'MAX'}
+  max:{label:'Massima assoluta annuale',short:'MAX'}
 };
 // Only expose tree years backed by annual statistics or documented events.
 // 2016 is a partial May–December period, while 2022 has no usable record.
@@ -125,7 +125,7 @@ const SOURCE_INFO={
   temperature:{
     name:'ERA5-Land · Open-Meteo',
     years:TEMPERATURE_YEARS,
-    description:'<strong>Temperatura:</strong> modalità indipendente dalle fonti inquinanti. Usa Copernicus ERA5-Land tramite <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>; puoi colorare la superficie con minima media annuale, temperatura media annuale o massima media annuale.',
+    description:'<strong>Temperatura:</strong> modalità indipendente dalle fonti inquinanti. Usa Copernicus ERA5-Land tramite <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>; puoi colorare la superficie con minima assoluta annuale, temperatura media annuale o massima assoluta annuale.',
     hint:'ERA5-Land è una rielaborazione climatica a celle, non una rete di stazioni. La superficie usa MIN / MEDIA / MAX selezionato; cliccando una cella vengono mostrati tutti e tre. Risoluzione circa 9 km.'
   }
 };
@@ -2032,9 +2032,9 @@ function addTemperatureLayers(map){
       .setLngLat(feature.geometry.coordinates)
       .setHTML(
         `<strong>Temperatura ${$('yearSelect')?.value||''}</strong>`+
-        `<br>Minima media annuale: ${fmt(p.min)} °C`+
+        `<br>Minima assoluta annuale: ${fmt(p.min)} °C`+
         `<br>Temperatura media annuale: ${fmt(p.mean)} °C`+
-        `<br>Massima media annuale: ${fmt(p.max)} °C`+
+        `<br>Massima assoluta annuale: ${fmt(p.max)} °C`+
         `<br><small>Cella ERA5-Land · Rielaborazione climatica · circa 9 km</small>`
       )
       .addTo(map)
@@ -3407,8 +3407,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.5.17',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.5.17',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.5.18',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.5.18',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3424,7 +3424,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.5.17')
+    navigator.serviceWorker.register('./service-worker.js?v=0.5.18')
       .then(reg=>reg.update())
       .catch(console.error)
   }

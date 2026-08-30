@@ -19,9 +19,9 @@ NOAA/NCEI GSOD. I dump giornalieri vengono accettati soltanto quando `temp`,
 Provider modellistici, previsioni e interpolazioni vengono scartati.
 
 Le statistiche annuali sono:
-- MIN = media delle minime giornaliere;
+- MIN = temperatura minima assoluta registrata nell'anno;
 - MEDIA = media delle medie giornaliere;
-- MAX = media delle massime giornaliere.
+- MAX = temperatura massima assoluta registrata nell'anno.
 
 Copertura minima delle serie osservate: 75%.
 
@@ -111,7 +111,7 @@ unset ARIA_TREE_TOKEN
 
 Il file `data/trees.json` rimane il dataset consolidato di fallback se D1 o il proxy non sono raggiungibili.
 
-Il modulo eventi arborei del Worker è identificato dalla versione proxy `0.8.2`.
+Il Worker è identificato dalla versione proxy `0.8.3`.
 
 ### Pubblicazione Worker
 
@@ -131,11 +131,19 @@ npx wrangler@latest deploy
 
 Al termine Wrangler deve mostrare `schedule: 0 3 * * 1`. Non sono richieste migrazioni D1 né modifiche a `TREE_ADMIN_TOKEN`.
 
+## 0.8.3
+
+Le temperature annuali espongono il minimo assoluto, la media delle temperature
+medie giornaliere e il massimo assoluto. NOAA/NCEI GSOY usa `EMNT`, `TAVG` ed
+`EMXT`; ARPA Lazio, Meteostat ed ERA5-Land applicano la stessa semantica ai
+valori giornalieri. Le chiavi cache includono la versione dell'aggregazione per
+non riutilizzare risposte calcolate con la precedente media degli estremi.
+
 
 ## 0.3.8
 
 Per EEA fuori dal Lazio il Worker usa il layer stazioni ufficiale NCEI
-Global Summary of the Year e legge direttamente TMIN, TAVG e TMAX annuali.
+Global Summary of the Year e legge direttamente EMNT, TAVG ed EMXT annuali.
 Quando GSOY non copre una stazione fisica, usa Meteostat solo con dati
 osservativi e copertura annuale di almeno il 75%. OpenAQ non usa alcun overlay
 temperatura.

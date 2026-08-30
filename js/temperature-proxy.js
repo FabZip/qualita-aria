@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const CONFIG_URL='data/temperature-proxy.json?v=0.3.8';
+  const CONFIG_URL='data/temperature-proxy.json?v=0.3.9';
   const OPEN_METEO_ARCHIVE='https://archive-api.open-meteo.com/v1/archive';
   const NATIVE_RESOLUTION_DEG=.1;
   const MAX_GRID_POINTS=25;
@@ -176,9 +176,9 @@
       values.reduce((sum,value)=>sum+value,0)/values.length;
 
     return{
-      min:Number(avg(mins).toFixed(2)),
+      min:Number(Math.min(...mins).toFixed(2)),
       mean:Number(avg(means).toFixed(2)),
-      max:Number(avg(maxs).toFixed(2)),
+      max:Number(Math.max(...maxs).toFixed(2)),
       observations:Math.min(mins.length,means.length,maxs.length)
     }
   }

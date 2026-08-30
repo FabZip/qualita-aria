@@ -14,6 +14,7 @@ const MAX_BBOX_WIDTH=12;
 const MAX_BBOX_HEIGHT=9;
 const CACHE_TTL=2592000;
 const OBSERVED_COVERAGE_MIN=.75;
+const TEMPERATURE_AGGREGATION_VERSION='annual-extremes-v1';
 
 const METEOSTAT_OBSERVED_SOURCES=new Set([
   'isd_lite','metar','ghcnd','climat',
@@ -286,9 +287,9 @@ function annualStatsFromDaily(daily){
   if(!means.length||!mins.length||!maxs.length)return null;
 
   return{
-    min:fixed(average(mins)),
+    min:fixed(Math.min(...mins)),
     mean:fixed(average(means)),
-    max:fixed(average(maxs)),
+    max:fixed(Math.max(...maxs)),
     observations:Math.min(mins.length,means.length,maxs.length)
   }
 }
@@ -401,6 +402,7 @@ async function eraViewportResponse(ctx,cors,{bbox,year}){
 
   const grid=gridForBbox(bbox);
   const key=cacheRequest('era-year',{
+    aggregation:TEMPERATURE_AGGREGATION_VERSION,
     year,
     points:grid.points
       .map(point=>`${point.latitude.toFixed(2)},${point.longitude.toFixed(2)}`)
@@ -419,7 +421,7 @@ async function eraViewportResponse(ctx,cors,{bbox,year}){
         source:'Copernicus ERA5-Land via Open-Meteo',
         type:'climate-reanalysis',
         variable:'temperature_2m',
-        aggregation:'annual averages of daily min / mean / max',
+        aggregation:'annual absolute minimum / mean of daily means / absolute maximum',
         nativeResolutionDegrees:NATIVE_RESOLUTION_DEG,
         nativeResolutionApproxKm:'9–11',
         sampleStepDegrees:grid.sampleStepDegrees,
@@ -775,9 +777,9 @@ function aggregateArpaCsv(text,year){
       latitude:station.latitude,
       longitude:station.longitude,
       elevation:station.elevation,
-      min:fixed(average(dailyMin)),
+      min:fixed(Math.min(...dailyMin)),
       mean:fixed(average(dailyMean)),
-      max:fixed(average(dailyMax)),
+      max:fixed(Math.max(...dailyMax)),
       validDays,
       coverage:fixed(validDays/daysInYear(year)*100,1),
       type:'measured',
@@ -809,7 +811,10 @@ async function fetchArpaObserved(year,ctx){
     }
   }
 
-  const key=cacheRequest('arpa-observed',{year});
+  const key=cacheRequest('arpa-observed',{
+    aggregation:TEMPERATURE_AGGREGATION_VERSION,
+    year
+  });
   const cached=await cacheGet(key);
 
   if(cached){
@@ -865,9 +870,9 @@ async function fetchArpaObserved(year,ctx){
 /* ================================================================
  * NOAA/NCEI Global Summary of the Year — physical stations
  *
- * TMIN = Mean Min Temp
+ * EMNT = Extreme Min Temp
  * TAVG = Annual Mean Temp
- * TMAX = Mean Max Temp
+ * EMXT = Extreme Max Temp
  * ================================================================ */
 
 function normalizeNceiStationId(value){
@@ -985,7 +990,7 @@ async function fetchNceiGsoy(year,stations){
   );
   url.searchParams.set('startDate',`${year}-01-01`);
   url.searchParams.set('endDate',`${year}-12-31`);
-  url.searchParams.set('dataTypes','TAVG,TMIN,TMAX');
+  url.searchParams.set('dataTypes','TAVG,EMNT,EMXT');
   url.searchParams.set('includeStationName','true');
   url.searchParams.set('includeStationLocation','true');
   url.searchParams.set('units','metric');
@@ -1016,9 +1021,9 @@ function aggregateNceiGsoy(year,stationMeta,records){
     const meta=metaById.get(id);
     if(!meta)continue;
 
-    const min=finiteNumber(record.TMIN??record.tmin);
+    const min=finiteNumber(record.EMNT??record.emnt);
     const mean=finiteNumber(record.TAVG??record.tavg);
-    const max=finiteNumber(record.TMAX??record.tmax);
+    const max=finiteNumber(record.EMXT??record.emxt);
 
     if(min===null||mean===null||max===null)continue;
 
@@ -1080,7 +1085,7 @@ async function fetchNceiObserved(year,bbox){
       stationsDiscovered:discovery.stations.length,
       stationsWithAnnualTemperature:results.length,
       annualRows:records.length,
-      annualElements:['TMIN','TAVG','TMAX'],
+      annualElements:['EMNT','TAVG','EMXT'],
       upstreamMs:Date.now()-started,
       generatedAt:new Date().toISOString()
     },
@@ -1094,6 +1099,7 @@ async function fetchNceiObserved(year,bbox){
  * I dump Meteostat possono contenere dati modellati. Per questo vengono
  * accettati soltanto i giorni nei quali TEMP, TMIN e TMAX dichiarano
  * esclusivamente provider osservativi presenti nella allowlist.
+ * TMIN e TMAX giornalieri vengono ridotti agli estremi assoluti annuali.
  * ================================================================ */
 
 function compactDateCoversYear(value,year,side){
@@ -1237,9 +1243,9 @@ async function fetchMeteostatStationYear(station,year){
     latitude:station.latitude,
     longitude:station.longitude,
     elevation:station.elevation,
-    min:fixed(average(valid.map(record=>finiteNumber(record.tmin)))),
+    min:fixed(Math.min(...valid.map(record=>finiteNumber(record.tmin)))),
     mean:fixed(average(valid.map(record=>finiteNumber(record.temp)))),
-    max:fixed(average(valid.map(record=>finiteNumber(record.tmax)))),
+    max:fixed(Math.max(...valid.map(record=>finiteNumber(record.tmax)))),
     validDays,
     coverage:fixed(coverage*100,1),
     type:'measured',
@@ -1317,6 +1323,7 @@ function mergeObservedSources(...groups){
 
 async function observedResponse(ctx,cors,{pollutantSource,year,bbox}){
   const key=cacheRequest('observed',{
+    aggregation:TEMPERATURE_AGGREGATION_VERSION,
     pollutantSource,
     year,
     bbox:bbox.map(value=>value.toFixed(2)).join(',')
@@ -1727,7 +1734,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.8.2',
+        version:'0.8.3',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,
