@@ -17,6 +17,10 @@
   box-shadow: 0 5px 20px rgba(34, 95, 232, .2);
 }
 
+.install-btn[hidden] {
+  display: none !important;
+}
+
 #sourceSelect,
 #sourceSelect option {
   font-weight: 400 !important;

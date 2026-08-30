@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.17] - 2026-08-30
+
+- Il pulsante `Installa app` viene mostrato soltanto durante la navigazione nel browser.
+- Il pulsante resta nascosto quando la PWA è avviata dalla schermata Home su Android o iOS/iPadOS.
+- Gestiti anche l'evento di installazione e il cambio dinamico della modalità di visualizzazione, senza lampeggio iniziale del pulsante.
+- App aggiornata alla versione `0.5.17` (build 70); dataset invariato alla revisione 18 e Worker invariato alla versione `0.8.2`.
+
 ## [0.5.16] - 2026-08-30
 
 - Corretta la select dei comuni in OpenAQ: il cambio città ora sposta immediatamente la mappa sul centro geografico selezionato.

@@ -3285,8 +3285,21 @@ function showToast(text){
   state.toastTimer=setTimeout(()=>$('toast').classList.add('hidden'),6200)
 }
 
+function runsAsInstalledApp(){
+  return window.matchMedia('(display-mode: standalone)').matches
+    ||window.matchMedia('(display-mode: fullscreen)').matches
+    ||navigator.standalone===true
+}
+
+function updateInstallButtonVisibility(forceInstalled=false){
+  const button=$('installBtn');
+  if(!button)return;
+  button.hidden=forceInstalled||runsAsInstalledApp()
+}
+
 async function installApp(){
-  if(window.matchMedia('(display-mode: standalone)').matches){
+  if(runsAsInstalledApp()){
+    updateInstallButtonVisibility();
     showToast('L’app è già installata sul dispositivo.');
     return
   }
@@ -3372,8 +3385,21 @@ function bind(){
 
   window.addEventListener('beforeinstallprompt',e=>{
     e.preventDefault();
-    state.deferredPrompt=e
+    state.deferredPrompt=e;
+    updateInstallButtonVisibility()
   });
+
+  window.addEventListener('appinstalled',()=>{
+    state.deferredPrompt=null;
+    updateInstallButtonVisibility(true)
+  });
+
+  const displayMode=window.matchMedia('(display-mode: standalone)');
+  if(typeof displayMode.addEventListener==='function'){
+    displayMode.addEventListener('change',()=>updateInstallButtonVisibility())
+  }else if(typeof displayMode.addListener==='function'){
+    displayMode.addListener(()=>updateInstallButtonVisibility())
+  }
 
   $('installBtn').addEventListener('click',installApp);
   bindSwipe()
@@ -3381,14 +3407,15 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.5.16',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.5.16',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.5.17',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.5.17',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
 }
 
 async function boot(){
+  updateInstallButtonVisibility();
   await loadEeaCities();
   fillYears();
   configureSourceUI();
@@ -3397,7 +3424,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.5.16')
+    navigator.serviceWorker.register('./service-worker.js?v=0.5.17')
       .then(reg=>reg.update())
       .catch(console.error)
   }
