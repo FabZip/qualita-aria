@@ -929,7 +929,10 @@ function arpaRecordIdentity(record){
   const entries=Object.entries(record||{});
   const istatEntry=entries.find(([k])=>normalizeArpaKey(k).includes('istat'));
   const raw=String(istatEntry?.[1]??'').replace(/\D/g,'');
-  const code=raw.padStart(6,'0');
+  // ARPA 2025 prefixes the six-digit municipality code with Lazio's
+  // two-digit regional code (12): Roma is 12058091 instead of 058091.
+  const municipalCode=raw.length===8&&raw.startsWith('12')?raw.slice(2):raw;
+  const code=municipalCode.padStart(6,'0');
 
   const nameEntry=entries.find(([k])=>{
     const n=normalizeArpaKey(k);
@@ -3360,8 +3363,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.5.12',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.5.12',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.5.13',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.5.13',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3376,7 +3379,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.5.12')
+    navigator.serviceWorker.register('./service-worker.js?v=0.5.13')
       .then(reg=>reg.update())
       .catch(console.error)
   }

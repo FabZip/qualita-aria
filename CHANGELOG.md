@@ -2,6 +2,16 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.5.13] - 2026-08-30
+
+### ARPA Lazio · elenco completo dei comuni
+
+- Corretta la normalizzazione dei codici ISTAT ARPA a otto cifre: il prefisso regionale `12` viene rimosso prima del confronto con i confini comunali.
+- Il file ufficiale 2025 ora popola la select con tutti i 376 comuni presenti, invece della sola voce iniziale Roma.
+- Verificata la presenza dei cinque capoluoghi Frosinone, Latina, Rieti, Roma e Viterbo, oltre agli altri comuni regionali.
+- Rinominata la voce della fonte da `ARPA Lazio · comune` a `ARPA Lazio`.
+- App aggiornata alla versione `0.5.13` (build 66); dataset invariato alla revisione 17 e Worker invariato alla versione `0.8.2`.
+
 ## [0.5.12] - 2026-08-30
 
 ### ARPA Lazio · selezione del comune
