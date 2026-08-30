@@ -254,7 +254,7 @@ async function loadEeaCities(){
   let cities=fallback;
 
   try{
-    const response=await fetch('data/italian-capitals.json?v=0.3.6',{cache:'no-store'});
+    const response=await fetch('data/italian-capitals.json?v=0.5.14',{cache:'no-store'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
     const payload=await response.json();
     if(Array.isArray(payload?.cities)&&payload.cities.length){
@@ -3363,8 +3363,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.5.13',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.5.13',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.5.14',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.5.14',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3379,7 +3379,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.5.13')
+    navigator.serviceWorker.register('./service-worker.js?v=0.5.14')
       .then(reg=>reg.update())
       .catch(console.error)
   }

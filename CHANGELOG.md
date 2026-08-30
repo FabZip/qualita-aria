@@ -2,6 +2,17 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.5.14] - 2026-08-30
+
+### EEA · puntamento dei capoluoghi
+
+- Corretto il punto di Pavia da `45.321817, 8.846624` a `45.19205, 9.15917`.
+- Verificato l'intero catalogo EEA: 55 dei 118 punti precedenti risultavano esterni al rispettivo territorio comunale.
+- Sostituite tutte le coordinate con i centri abitati GeoNames e verificata la loro inclusione nei confini comunali ISTAT 2026.
+- Tutti i 118 capoluoghi e co-capoluoghi superano ora il controllo geografico.
+- Incrementata la versione del catalogo `data/italian-capitals.json` da 1 a 2.
+- App aggiornata alla versione `0.5.14` (build 67), dataset alla revisione 18 e Worker invariato alla versione `0.8.2`.
+
 ## [0.5.13] - 2026-08-30
 
 ### ARPA Lazio · elenco completo dei comuni

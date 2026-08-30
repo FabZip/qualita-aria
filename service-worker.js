@@ -1,10 +1,10 @@
-const CACHE='qualita-aria-v0.5.13';
+const CACHE='qualita-aria-v0.5.14';
 const CORE=[
   './','./index.html',
-  './css/app.css?v=0.2.0','./css/aria-splash.css?v=0.5.13','./css/header-overrides.css?v=0.5.13','./css/trees.css?v=0.5.13','./js/aria-splash.js?v=0.5.13','./js/app.js?v=0.5.13','./js/trees.js?v=0.5.13','./data/trees.json?v=0.5.13','./data/tree-coordinates.json?v=0.5.13','./data/tree-paths.json?v=0.5.13','./data/trees-proxy.json?v=0.5.13','./assets/branding/aria-logo-header.svg','./js/eea-utd.js?v=0.2.14',
+  './css/app.css?v=0.2.0','./css/aria-splash.css?v=0.5.14','./css/header-overrides.css?v=0.5.14','./css/trees.css?v=0.5.14','./js/aria-splash.js?v=0.5.14','./js/app.js?v=0.5.14','./js/trees.js?v=0.5.14','./data/trees.json?v=0.5.14','./data/tree-coordinates.json?v=0.5.14','./data/tree-paths.json?v=0.5.14','./data/trees-proxy.json?v=0.5.14','./assets/branding/aria-logo-header.svg','./js/eea-utd.js?v=0.2.14',
   './css/station-list.css?v=0.2.2','./css/openaq-world.css?v=0.2.4','./js/station-list.js?v=0.2.11',
   './js/openaq-proxy.js?v=0.2.11','./js/eea-proxy.js?v=0.2.14','./data/eea-proxy.json?v=0.2.14','./js/temperature-proxy.js?v=0.3.8','./js/temperature-overlay.js?v=0.3.8','./data/temperature-proxy.json?v=0.3.8','./css/temperature.css?v=0.3.8','./js/openaq-world.js?v=0.3.8',
-  './manifest.json?v=0.2.0','./version.json?v=0.5.13','./data/version.json?v=0.5.13','./data/italian-capitals.json?v=0.5.13',
+  './manifest.json?v=0.2.0','./version.json?v=0.5.14','./data/version.json?v=0.5.14','./data/italian-capitals.json?v=0.5.14',
   './assets/icons/icon.svg','./assets/icons/icon-192.png','./assets/icons/icon-512.png'
 ];
 
