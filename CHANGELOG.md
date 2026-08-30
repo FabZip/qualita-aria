@@ -2,6 +2,17 @@
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
+## [0.5.12] - 2026-08-30
+
+### ARPA Lazio · selezione del comune
+
+- Confermato che i file `Standard comunali` comprendono i comuni del Lazio e non soltanto Roma.
+- Aggiunta una select `Comune`, popolata con i record disponibili nel file ARPA dell'anno selezionato; Roma resta il valore iniziale.
+- Il record, il valore MIN/MED/MAX, il riepilogo storico, il centro e il confine amministrativo ora seguono il comune selezionato.
+- Aggiunto il caricamento dei confini comunali delle cinque province del Lazio tramite codice ISTAT.
+- Rimosso il grassetto dal selettore della fonte, compresa la voce OpenAQ.
+- App aggiornata alla versione `0.5.12` (build 65); dataset invariato alla revisione 17 e Worker invariato alla versione `0.8.2`.
+
 ## [0.5.11] - 2026-08-30
 
 ### Interfaccia · installazione e periodi Alberi

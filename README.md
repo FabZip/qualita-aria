@@ -29,9 +29,9 @@ I dati UTD sono sempre marcati con **◐ Preliminare UTD** e non vengono present
 
 La visualizzazione sfumata attorno alle stazioni è una rappresentazione grafica dei punti misurati e non una superficie modellata continua.
 
-## ARPA Lazio · comune
+## ARPA Lazio · comuni
 
-La fonte ARPA Lazio utilizza le valutazioni comunali annuali ufficiali per il Comune di Roma.
+La fonte ARPA Lazio utilizza le valutazioni comunali annuali ufficiali per i comuni dell'intera regione. Una select dedicata viene popolata direttamente con i comuni presenti nel file annuale; Roma resta selezionata per impostazione predefinita.
 
 L'app legge direttamente i file annuali pubblicati da ARPA Lazio e ricava, quando disponibili:
 
@@ -45,7 +45,7 @@ per:
 - PM10
 - NO₂
 
-Il colore applicato al perimetro del Comune indica l'ambito territoriale della valutazione. Non implica che la concentrazione sia uniforme in ogni punto del territorio.
+Il colore applicato al perimetro del comune selezionato indica l'ambito territoriale della valutazione. Non implica che la concentrazione sia uniforme in ogni punto del territorio.
 
 ## OpenAQ · area visibile
 
@@ -79,7 +79,7 @@ Mostra i dati della fonte, dell'inquinante e del periodo selezionati.
 
 Le stazioni sono ricercabili e l'elenco è paginato. Selezionando una stazione dall'elenco, la mappa viene centrata sulla relativa posizione.
 
-Gli aggiornamenti provocati da pan e zoom sono centralizzati: l'app aspetta **2 secondi dopo l'ultimo movimento** prima di ricaricare. Questo evita richieste ripetute mentre l'utente sta ancora esplorando la mappa. Per EEA e OpenAQ la nuova richiesta usa l'area visibile; ARPA Lazio mantiene invece il proprio ambito comunale perché la fonte attuale riguarda Roma.
+Gli aggiornamenti provocati da pan e zoom sono centralizzati: l'app aspetta **2 secondi dopo l'ultimo movimento** prima di ricaricare. Questo evita richieste ripetute mentre l'utente sta ancora esplorando la mappa. Per EEA e OpenAQ la nuova richiesta usa l'area visibile; ARPA Lazio mantiene invece il confine amministrativo del comune selezionato.
 
 Per ridurre la latenza EEA, le richieste passano da un **Worker Cloudflare dedicato**. Le statistiche annuali E1a vengono memorizzate nella Cache API del Worker e quindi possono essere riutilizzate anche dopo un reload o da un'altra sessione. Il browser mantiene inoltre una cache spaziale locale: piccoli spostamenti dentro la stessa cella non generano una nuova richiesta.
 
@@ -234,7 +234,7 @@ La risposta dinamica espone la data dell'ultima scansione. Nell'interfaccia vien
 
 La procedura per forzare una scansione senza salvare il token nella cronologia del terminale è documentata in `cloudflare/temperature-proxy/README.md`. L'app e il cron settimanale non conoscono e non richiedono il token amministrativo.
 
-Il Worker arboreo corrente è la versione `0.8.2`; questa revisione porta l'aggiornamento automatico degli eventi da mensile a settimanale. L'app è alla versione `0.5.11` build 64 e il dataset è alla revisione 17. Le select Alberi espongono soltanto annualità o periodi dotati di statistiche, aggregati o eventi documentati: sono stati rimossi il 2013–2016 e il 2022. Le annualità con eventi usano etichette compatte come `2025 eventi`; gli aggregati sono indicati soltanto dall'intervallo temporale. Le select delle altre fonti mostrano sempre il solo anno. Il dato ufficiale del 2016 copre soltanto maggio–dicembre e non viene presentato impropriamente come totale annuale; la prima annualità omogenea resta il 2017. Gli aggregati mostrano direttamente il riepilogo e il collegamento alla fonte ufficiale, senza avviso introduttivo ridondante. Se l'archivio dinamico non è raggiungibile, l'app continua a usare silenziosamente i dati consolidati senza mostrare un avviso di fallback. L'intestazione usa il logo orizzontale A.R.I.A. incluso tra gli asset offline. Il riepilogo mostra in forma compatta la data dell'ultimo aggiornamento e il numero di nuovi eventi aggiunti. Quando si seleziona un evento, le sole geometrie appartenenti a quell'evento determinano l'inquadratura; gli altri marker diventano grigi per rendere immediatamente riconoscibili le località coinvolte. Gli eventi multilocalità possono mostrare più marker collegati alla stessa quantità complessiva e vengono inquadrati insieme. L'apertura di un nuovo evento chiude automaticamente il popup precedente. In modalità Mappa il riempimento territoriale generale non apre popup; il riepilogo territoriale resta cliccabile in Confronto e Differenza. Per la fonte Alberi viene mostrata soltanto la legenda sopra la mappa, senza duplicazioni sotto la cartografia.
+Il Worker arboreo corrente è la versione `0.8.2`; questa revisione porta l'aggiornamento automatico degli eventi da mensile a settimanale. L'app è alla versione `0.5.12` build 65 e il dataset è alla revisione 17. La fonte ARPA Lazio consente di scegliere il comune presente nei file annuali e visualizza il relativo confine amministrativo; Roma resta il valore predefinito. Il selettore delle fonti usa peso tipografico normale anche quando è selezionata OpenAQ. Le select Alberi espongono soltanto annualità o periodi dotati di statistiche, aggregati o eventi documentati: sono stati rimossi il 2013–2016 e il 2022. Le annualità con eventi usano etichette compatte come `2025 eventi`; gli aggregati sono indicati soltanto dall'intervallo temporale. Le select delle altre fonti mostrano sempre il solo anno. Il dato ufficiale del 2016 copre soltanto maggio–dicembre e non viene presentato impropriamente come totale annuale; la prima annualità omogenea resta il 2017. Gli aggregati mostrano direttamente il riepilogo e il collegamento alla fonte ufficiale, senza avviso introduttivo ridondante. Se l'archivio dinamico non è raggiungibile, l'app continua a usare silenziosamente i dati consolidati senza mostrare un avviso di fallback. L'intestazione usa il logo orizzontale A.R.I.A. incluso tra gli asset offline. Il riepilogo mostra in forma compatta la data dell'ultimo aggiornamento e il numero di nuovi eventi aggiunti. Quando si seleziona un evento, le sole geometrie appartenenti a quell'evento determinano l'inquadratura; gli altri marker diventano grigi per rendere immediatamente riconoscibili le località coinvolte. Gli eventi multilocalità possono mostrare più marker collegati alla stessa quantità complessiva e vengono inquadrati insieme. L'apertura di un nuovo evento chiude automaticamente il popup precedente. In modalità Mappa il riempimento territoriale generale non apre popup; il riepilogo territoriale resta cliccabile in Confronto e Differenza. Per la fonte Alberi viene mostrata soltanto la legenda sopra la mappa, senza duplicazioni sotto la cartografia.
 
 Le geometrie storiche consolidate coprono 9 eventi su 10 del 2023, tutte le tre località dell'evento 2024 e il tratto Togliatti 1493–1091 del 2025. `Via Mario` non viene georeferenziata perché la denominazione pubblicata non consente di scegliere in modo attendibile fra gli omonimi presenti nella cartografia.
 

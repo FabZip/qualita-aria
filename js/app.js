@@ -4,6 +4,7 @@ const state={
   deferredPrompt:null,swipe:50,syncing:false,
   toastTimer:null,renderToken:0,
   eeaCache:new Map(),arpaCache:new Map(),
+  arpaBoundaryCache:new Map(),
   eeaCities:new Map(),
   temperatureCache:new Map(),
   temperatureInflight:new Map(),
@@ -87,11 +88,16 @@ const ARPA_STATIC_FILES={
 };
 
 /*
- * Geographic scope for the Comune di Roma.
- * The file contains municipality boundaries in WGS84 derived from ISTAT limits.
- * We download the Rome-province collection once and retain only ISTAT 058091.
+ * Municipal boundaries in WGS84 derived from ISTAT limits.
+ * The selected ARPA municipality determines which Lazio province file is loaded.
  */
-const ROME_BOUNDARY_URL='https://raw.githubusercontent.com/guglielmo/geojson-italy/main/geojson/limits_P_58_municipalities.geojson';
+const ARPA_BOUNDARY_URLS={
+  '056':'https://raw.githubusercontent.com/guglielmo/geojson-italy/main/geojson/limits_P_56_municipalities.geojson',
+  '057':'https://raw.githubusercontent.com/guglielmo/geojson-italy/main/geojson/limits_P_57_municipalities.geojson',
+  '058':'https://raw.githubusercontent.com/guglielmo/geojson-italy/main/geojson/limits_P_58_municipalities.geojson',
+  '059':'https://raw.githubusercontent.com/guglielmo/geojson-italy/main/geojson/limits_P_59_municipalities.geojson',
+  '060':'https://raw.githubusercontent.com/guglielmo/geojson-italy/main/geojson/limits_P_60_municipalities.geojson'
+};
 
 const POLLUTANTS={
   'PM2.5':{eeaCode:6001,label:'PM2.5',arpaPrefix:'PM2.5 media annua'},
@@ -114,7 +120,7 @@ const SOURCE_INFO={
     name:'ARPA Lazio',
     years:ARPA_YEARS,
     description:'<strong>ARPA Lazio:</strong> stime comunali ufficiali. I dati sono letti dai file annuali pubblicati da ARPA, senza dipendere dal Data API CKAN.',
-    hint:'Il colore copre il territorio amministrativo di Roma per mostrare a quale area si riferisce il dato comunale. Non significa che la concentrazione sia uniforme in ogni punto del Comune.'
+    hint:'Il colore copre il territorio amministrativo del comune selezionato per mostrare a quale area si riferisce il dato. Non significa che la concentrazione sia uniforme in ogni punto del territorio.'
   },
   temperature:{
     name:'ERA5-Land · Open-Meteo',
@@ -129,6 +135,7 @@ function isTemperature(){return state.mode==='temperature'}
 function isTrees(){return source()==='trees'}
 function eeaScope(){return $('eeaScopeSelect')?.value||'italy'}
 function eeaCity(){return $('eeaCitySelect')?.value||EEA_DEFAULT_CITY}
+function arpaMunicipality(){return $('arpaCitySelect')?.value||'058091'}
 
 function eeaSelectedScope(){
   if(eeaScope()==='europe')return EEA_SCOPES.europe;
@@ -400,6 +407,7 @@ function configureSourceUI(){
     $('pollutantSourceField')?.classList.remove('hidden');
     $('eeaScopeField').classList.add('hidden');
     $('eeaCityField')?.classList.remove('hidden');
+    $('arpaCityField')?.classList.add('hidden');
     $('pollutantField')?.classList.add('hidden');
     $('monthField')?.classList.add('hidden');
     $('treeLegend')?.classList.remove('hidden');
@@ -426,11 +434,13 @@ function configureSourceUI(){
     :SOURCE_INFO[source()];
 
   const isEea=!temperature&&source()==='eea';
+  const isArpa=!temperature&&source()==='arpa';
   const isItaly=isEea&&eeaScope()==='italy';
 
   $('sourceDescription').innerHTML=info.description;
   $('eeaScopeField').classList.toggle('hidden',!isEea);
   $('eeaCityField')?.classList.toggle('hidden',!isItaly);
+  $('arpaCityField')?.classList.toggle('hidden',!isArpa);
   $('pollutantField')?.classList.toggle('hidden',temperature);
   $('temperatureMetricField')?.classList.toggle('hidden',!temperature);
   setTemperatureModeLock(temperature);
@@ -457,9 +467,10 @@ function configureSourceUI(){
     $('countUnit').textContent='visualizzate';
     $('listTitle').textContent='Stazioni visualizzate';
   }else{
+    const municipality=$('arpaCitySelect')?.selectedOptions?.[0]?.textContent||'Roma';
     $('avgLabel').textContent='Valore MED';
     $('countLabel').textContent='Ambito';
-    $('countUnit').textContent='Comune di Roma';
+    $('countUnit').textContent=`Comune di ${municipality}`;
     $('listTitle').textContent='Valutazione visualizzata';
   }
 }
@@ -914,56 +925,91 @@ function arpaPositionalMetric(record,headers,pollutant){
   }
 }
 
-function isRomeRecord(record){
+function arpaRecordIdentity(record){
   const entries=Object.entries(record||{});
   const istatEntry=entries.find(([k])=>normalizeArpaKey(k).includes('istat'));
   const raw=String(istatEntry?.[1]??'').replace(/\D/g,'');
   const code=raw.padStart(6,'0');
-  if(code==='058091')return true;
 
   const nameEntry=entries.find(([k])=>{
     const n=normalizeArpaKey(k);
     return n==='nome'||n.includes('comune')||n.includes('denominazione')
   });
-  const name=normalizeText(nameEntry?.[1]??'');
-  return name==='roma'||name==='roma capitale'
+  const name=String(nameEntry?.[1]??'').trim();
+  return{code,name}
 }
 
-async function fetchRomeBoundary(){
-  if(state.romeBoundary)return state.romeBoundary;
+function isRomeRecord(record){
+  const identity=arpaRecordIdentity(record);
+  const name=normalizeText(identity.name);
+  return identity.code==='058091'||name==='roma'||name==='roma capitale'
+}
+
+function populateArpaMunicipalities(records){
+  const select=$('arpaCitySelect');
+  if(!select)return;
+  const municipalities=records
+    .map(arpaRecordIdentity)
+    .filter(item=>/^0(?:56|57|58|59|60)\d{3}$/.test(item.code)&&item.name)
+    .filter((item,index,all)=>all.findIndex(other=>other.code===item.code)===index)
+    .sort((a,b)=>a.name.localeCompare(b.name,'it'));
+  if(!municipalities.length)return;
+  const signature=municipalities.map(item=>item.code).join(',');
+  if(select.dataset.optionSignature===signature)return;
+  const old=select.value||'058091';
+  select.replaceChildren(...municipalities.map(item=>{
+    const option=document.createElement('option');
+    option.value=item.code;
+    option.textContent=item.name;
+    return option
+  }));
+  select.value=municipalities.some(item=>item.code===old)?old:'058091';
+  select.dataset.optionSignature=signature
+}
+
+async function fetchArpaBoundary(code,name){
+  const normalized=String(code).padStart(6,'0');
+  if(state.arpaBoundaryCache.has(normalized))return state.arpaBoundaryCache.get(normalized);
+  const url=ARPA_BOUNDARY_URLS[normalized.slice(0,3)];
+  if(!url)throw new Error(`Provincia ISTAT non riconosciuta per ${name}.`);
 
   try{
-    const response=await fetch(ROME_BOUNDARY_URL,{cache:'force-cache'});
+    const response=await fetch(url,{cache:'force-cache'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
 
     const collection=await response.json();
     const feature=(collection.features||[]).find(f=>{
       const p=f.properties||{};
-      return String(p.com_istat_code||'')==='058091'
-        || Number(p.com_istat_code_num)===58091
-        || normalizeText(p.name)==='roma'
+      return String(p.com_istat_code||'').padStart(6,'0')===normalized
+        || String(Number(p.com_istat_code_num)||'').padStart(6,'0')===normalized
+        || normalizeText(p.name)===normalizeText(name)
     });
 
-    if(!feature?.geometry)throw new Error('confine del Comune di Roma non trovato');
+    if(!feature?.geometry)throw new Error(`confine del Comune di ${name} non trovato`);
 
-    state.romeBoundary={
+    const boundary={
       type:'FeatureCollection',
       features:[{
         type:'Feature',
         properties:{
           ...(feature.properties||{}),
-          scope:'Comune di Roma',
+          scope:`Comune di ${name}`,
           source:'ISTAT / geojson-italy'
         },
         geometry:feature.geometry
       }]
     };
 
-    return state.romeBoundary
+    state.arpaBoundaryCache.set(normalized,boundary);
+    return boundary
   }catch(err){
-    console.error('Perimetro Roma non disponibile',err);
-    throw new Error(`Perimetro Roma non disponibile: ${err.message||err}`)
+    console.error(`Perimetro ${name} non disponibile`,err);
+    throw new Error(`Perimetro ${name} non disponibile: ${err.message||err}`)
   }
+}
+
+function fetchRomeBoundary(){
+  return fetchArpaBoundary('058091','Roma')
 }
 
 
@@ -1380,26 +1426,11 @@ function fitArpaScope(map,rows){
 
 async function fetchArpaRows(year,pollutant,silent=false){
   const report=silent?()=>{}:diagnostics;
-  const cacheKey=`${year}:${pollutant}`;
+  const cacheKey=`${arpaMunicipality()}:${year}:${pollutant}`;
   if(state.arpaCache.has(cacheKey)){
     const cached=state.arpaCache.get(cacheKey);
     report({...cached.diagnostic,cache:'memory'});
     return cached.rows
-  }
-
-  // Load the geographical scope independently, so a data failure can be
-  // distinguished from a map/geometry failure in diagnostics.
-  let boundary=null;
-  try{
-    boundary=await fetchRomeBoundary()
-  }catch(err){
-    report({
-      source:'ARPA Lazio',
-      year,pollutant,
-      geometry:'FAILED',
-      geometryError:String(err.message||err)
-    });
-    throw err
   }
 
   let loaded;
@@ -1409,8 +1440,6 @@ async function fetchArpaRows(year,pollutant,silent=false){
     report({
       source:'ARPA Lazio · file statico ufficiale',
       year,pollutant,
-      geometry:'OK',
-      boundaryFeatures:boundary?.features?.length||0,
       data:'FAILED',
       error:String(err.message||err),
       attempts:err.attempts||null
@@ -1419,21 +1448,33 @@ async function fetchArpaRows(year,pollutant,silent=false){
   }
 
   const records=loaded.records||[];
-  const record=records.find(isRomeRecord);
+  const selectedCode=arpaMunicipality();
+  if(!silent)populateArpaMunicipalities(records);
+  const record=records.find(item=>arpaRecordIdentity(item).code===selectedCode);
+  const identity=arpaRecordIdentity(record);
+  const municipalityName=identity.name||$('arpaCitySelect')?.selectedOptions?.[0]?.textContent||selectedCode;
 
   if(!record){
     report({
       source:'ARPA Lazio · file statico ufficiale',
       year,pollutant,
-      geometry:'OK',
       data:'OK',
       file:loaded.url,
       format:loaded.format,
       rowsReceived:records.length,
-      romaRecordFound:false,
+      municipalityCode:selectedCode,
+      municipalityRecordFound:false,
       firstColumns:Object.keys(records[0]||{}).slice(0,12)
     });
-    throw new Error(`ARPA Lazio: record del Comune di Roma non trovato nel file ${year}.`)
+    throw new Error(`ARPA Lazio: record del Comune selezionato non trovato nel file ${year}.`)
+  }
+
+  let boundary=null;
+  try{
+    boundary=await fetchArpaBoundary(selectedCode,municipalityName)
+  }catch(err){
+    report({source:'ARPA Lazio',year,pollutant,municipalityCode:selectedCode,municipalityName,geometry:'FAILED',geometryError:String(err.message||err)});
+    throw err
   }
 
   const prefix=POLLUTANTS[pollutant].arpaPrefix;
@@ -1474,7 +1515,9 @@ async function fetchArpaRows(year,pollutant,silent=false){
       file:loaded.url,
       format:loaded.format,
       rowsReceived:records.length,
-      romaRecordFound:true,
+      municipalityCode:selectedCode,
+      municipalityName,
+      municipalityRecordFound:true,
       metricResolution,
       positional,
       fields:{
@@ -1490,14 +1533,20 @@ async function fetchArpaRows(year,pollutant,silent=false){
       parsedHeaders:loaded.parsedHeaders||Object.keys(record),
       workbookInspection:loaded.workbookInspection||null
     });
-    throw new Error(`ARPA Lazio: valore MED ${pollutant} non disponibile per Roma nel ${year}.`)
+    throw new Error(`ARPA Lazio: valore MED ${pollutant} non disponibile per ${municipalityName} nel ${year}.`)
   }
 
+  const boundaryBounds=boundsFromGeoJSON(boundary);
+  const center=boundaryBounds
+    ?[(boundaryBounds[0][0]+boundaryBounds[1][0])/2,(boundaryBounds[0][1]+boundaryBounds[1][1])/2]
+    :ROME.center;
+
   const rows=[{
-    id:'ARPA-ROMA-058091',
-    name:'Roma · valutazione comunale',
-    lat:ROME.center[1],
-    lon:ROME.center[0],
+    id:`ARPA-${selectedCode}`,
+    name:`${municipalityName} · valutazione comunale`,
+    municipalityName,
+    lat:center[1],
+    lon:center[0],
     value:med,min,max,
     zone:String(record.zona||record.Zona||''),
     kind:'municipal',
@@ -1509,6 +1558,8 @@ async function fetchArpaRows(year,pollutant,silent=false){
     source:'ARPA Lazio · file statico ufficiale',
     runtimeApi:false,
     year,pollutant,
+    municipalityCode:selectedCode,
+    municipalityName,
     file:loaded.url,
     format:loaded.format,
     contentType:loaded.contentType||null,
@@ -1521,7 +1572,7 @@ async function fetchArpaRows(year,pollutant,silent=false){
     workbookInspection:loaded.workbookInspection||null,
     parsedHeaders:(loaded.parsedHeaders||Object.keys(record)).slice(0,30),
     rowsReceived:records.length,
-    romaRecordFound:true,
+    municipalityRecordFound:true,
     metric:'MED',
     metricResolution,
     positional:positional?{
@@ -1537,7 +1588,7 @@ async function fetchArpaRows(year,pollutant,silent=false){
     },
     geometry:'OK',
     boundaryFeatures:boundary?.features?.length||0,
-    boundarySource:'ISTAT municipality limits · geojson-italy · ISTAT 058091',
+    boundarySource:`ISTAT municipality limits · geojson-italy · ISTAT ${selectedCode}`,
     note:'Nessuna chiamata CKAN DataStore viene eseguita a runtime.'
   };
 
@@ -2190,7 +2241,7 @@ function renderList(rows,isDiff=false){
 
     const detail=r.kind==='station'
       ?`${r.country?`${r.country} · `:''}${r.id}${r.coverage!==null&&r.coverage!==undefined?` · copertura ${fmt(r.coverage)}%`:''}`
-      :`Comune di Roma${r.zone?` · zona ${r.zone}`:''}`;
+      :`Comune di ${r.municipalityName||r.name?.split(' · ')[0]||'Roma'}${r.zone?` · zona ${r.zone}`:''}`;
 
     return `<div class="station-row">
       <i style="background:${isDiff?(r.value<=0?'#35d07f':'#ff5864'):colorFor(r.value)}"></i>
@@ -2436,7 +2487,8 @@ async function loadArpaHistorySeries(renderToken){
   panel.classList.remove('hidden');
   chart.setAttribute('aria-busy','true');
   chart.innerHTML='<div class="arpa-history-loading">Caricamento storico ARPA…</div>';
-  $('arpaHistorySubtitle').textContent=`${POLLUTANTS[$('pollutantSelect').value].label} · MIN, MED e MAX annuali · Comune di Roma`;
+  const municipality=$('arpaCitySelect')?.selectedOptions?.[0]?.textContent||'Roma';
+  $('arpaHistorySubtitle').textContent=`${POLLUTANTS[$('pollutantSelect').value].label} · MIN, MED e MAX annuali · Comune di ${municipality}`;
   $('arpaHistoryDetail').textContent='Caricamento dei valori annuali…';
 
   const pollutant=$('pollutantSelect').value;
@@ -3073,14 +3125,15 @@ async function render(){
         'single'
       );
 
-      $('mapBadge').textContent=`${POLLUTANTS[$('pollutantSelect').value].label} · ${$('yearSelect').value}`;
+      const municipality=source()==='arpa'?` · ${$('arpaCitySelect')?.selectedOptions?.[0]?.textContent||'Roma'}`:'';
+      $('mapBadge').textContent=`${POLLUTANTS[$('pollutantSelect').value].label} · ${$('yearSelect').value}${municipality}`;
       $('avgLabel').textContent=source()==='arpa'?'Valore MED':'Media stazioni';
       $('avgValue').textContent=rows.length?fmt(avg(rows)):'—';
       $('periodValue').textContent=$('yearSelect').value;
     }
 
     if($('avgUnit'))$('avgUnit').textContent='µg/m³';
-    $('stationCount').textContent=source()==='arpa'?'Roma':rows.length;
+    $('stationCount').textContent=source()==='arpa'?($('arpaCitySelect')?.selectedOptions?.[0]?.textContent||'Roma'):rows.length;
     $('sourceValue').textContent=source()==='eea'?`EEA · ${currentEeaScope().label}`:SOURCE_INFO[source()].name;
     $('dataNotice').textContent=sourceNotice(rows);
 $('mapHint').textContent=SOURCE_INFO[source()].hint;
@@ -3287,6 +3340,12 @@ function bind(){
     render()
   });
 
+  $('arpaCitySelect')?.addEventListener('change',()=>{
+    if(source()!=='arpa')return;
+    configureSourceUI();
+    render()
+  });
+
   ['pollutantSelect','yearSelect','compareYearA','compareYearB']
     .forEach(id=>$(id)?.addEventListener('change',render));
 
@@ -3301,8 +3360,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.5.11',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.5.11',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.5.12',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.5.12',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3317,7 +3376,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.5.11')
+    navigator.serviceWorker.register('./service-worker.js?v=0.5.12')
       .then(reg=>reg.update())
       .catch(console.error)
   }

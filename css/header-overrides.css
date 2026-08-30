@@ -16,3 +16,8 @@
   font-size: .78rem;
   box-shadow: 0 5px 20px rgba(34, 95, 232, .2);
 }
+
+#sourceSelect,
+#sourceSelect option {
+  font-weight: 400 !important;
+}
