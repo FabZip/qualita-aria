@@ -2617,6 +2617,22 @@ function focusSelectedEeaScope(){
   })
 }
 
+function focusSelectedOpenAqCity(){
+  if(source()!=='openaq'||!state.map)return;
+
+  const city=state.eeaCities.get(eeaCity())
+    ||state.eeaCities.get(EEA_DEFAULT_CITY);
+  if(!city)return;
+
+  const scope=eeaCityScope(city);
+  state.openaqCache?.clear?.();
+  state.openaqLastViewportKey='';
+  state.openaqSuppressMove=true;
+  state.map.jumpTo({center:scope.center,zoom:scope.zoom});
+  state.lastMapViewportKey=viewportRefreshKey(state.map);
+  setTimeout(()=>{state.openaqSuppressMove=false},0)
+}
+
 function activeViewportMap(){
   return state.mode==='compare'
     ?state.mapBefore
@@ -3316,6 +3332,7 @@ function bind(){
       $('compareYearB').value='2020'
     }
     configureSourceUI();
+    if(source()==='openaq')$('eeaCityField')?.classList.remove('hidden');
     if(source()==='eea')focusSelectedEeaScope();
     render()
   });
@@ -3330,6 +3347,11 @@ function bind(){
 
   $('eeaCitySelect')?.addEventListener('change',()=>{
     if(isTrees()){
+      render();
+      return
+    }
+    if(source()==='openaq'){
+      focusSelectedOpenAqCity();
       render();
       return
     }
@@ -3359,8 +3381,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.5.15',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.5.15',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.5.16',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.5.16',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3375,7 +3397,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.5.15')
+    navigator.serviceWorker.register('./service-worker.js?v=0.5.16')
       .then(reg=>reg.update())
       .catch(console.error)
   }

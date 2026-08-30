@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.16] - 2026-08-30
+
+- Corretta la select dei comuni in OpenAQ: il cambio città ora sposta immediatamente la mappa sul centro geografico selezionato.
+- Il cambio comune azzera l'area visibile precedente e richiede subito le stazioni OpenAQ della nuova inquadratura.
+- Soppressa la richiesta duplicata che poteva essere generata dall'evento `moveend` durante il riposizionamento automatico.
+- App aggiornata alla versione `0.5.16` (build 69); dataset invariato alla revisione 18 e Worker invariato alla versione `0.8.2`.
+
 ## [0.5.15] - 2026-08-30
 
 - Corretta la discordanza cromatica EEA tra elenco e mappa: la superficie non usa più la densità della heatmap per determinare il colore.
