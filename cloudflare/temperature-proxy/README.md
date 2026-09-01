@@ -111,7 +111,7 @@ unset ARIA_TREE_TOKEN
 
 Il file `data/trees.json` rimane il dataset consolidato di fallback se D1 o il proxy non sono raggiungibili.
 
-Il Worker è identificato dalla versione proxy `0.8.4`.
+Il Worker è identificato dalla versione proxy `0.8.5`.
 
 ### Pubblicazione Worker
 
@@ -130,6 +130,14 @@ npx wrangler@latest deploy
 ```
 
 Al termine Wrangler deve mostrare `schedule: 0 3 * * 1`. Non sono richieste migrazioni D1 né modifiche a `TREE_ADMIN_TOKEN`.
+
+## 0.8.5
+
+Ogni avviso arboreo conserva tutte le ubicazioni documentate nella pagina e le
+relative coordinate. Il client riceve un unico evento con più marker e può
+inquadrarli insieme senza suddividere artificialmente la quantità complessiva.
+La migrazione `0003_tree_event_locations.sql` aggiunge i campi JSON necessari.
+Una nuova scansione corregge anche i vecchi luoghi troncati a `P`.
 
 ## 0.8.4
 

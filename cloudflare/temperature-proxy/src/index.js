@@ -1518,11 +1518,11 @@ function treeQuantity(text){
 }
 
 function treeLocations(text){
-  return[...text.matchAll(
+  return[...new Set([...text.matchAll(
     /Ubicazione\s*:\s*(.{2,180}?)(?=\s+(?:Caratteristiche botaniche|Ragioni che hanno condotto|Data di esecuzione|Ubicazione\s*:)|$)/gi
   )]
     .map(match=>String(match[1]||'').trim().replace(/[,:;\s]+$/,''))
-    .filter(Boolean)
+    .filter(Boolean))]
 }
 
 function treeGeocodeQuery(locationName){
@@ -1533,12 +1533,23 @@ function treeGeocodeQuery(locationName){
     .replace(/\bP\.?\s*le\b/gi,'Piazzale')
     .replace(/\bV\.?\s*le\b/gi,'Viale')
     .replace(/\bL\.?\s*go\b/gi,'Largo')
+    .replace(/\bpiazza Cinquecento\b/gi,'Piazza dei Cinquecento')
+    .replace(/\bMacchiaveli\b/gi,'Machiavelli')
+    .replace(/\bvia C\.\s*Colombo\b/gi,'Via Cristoforo Colombo')
+    .replace(/\bviale Marconi\b/gi,'Viale Guglielmo Marconi')
 }
 
 function treeGeocodeQueries(locationName){
   const expanded=treeGeocodeQuery(locationName);
   const stripped=expanded.replace(/^(?:Parco|Piazza|Piazzale|Viale|Largo)\s+/i,'').trim();
-  return[...new Set([expanded,stripped].filter(Boolean))]
+  const parts=expanded.split(/\s+[–—]\s+/).map(value=>value.trim()).filter(Boolean);
+  const areaStripped=expanded.replace(/^area verde\s+(?:svincolo\s+)?/i,'').trim();
+  const intersection=areaStripped.match(/^(.+?)\s+incrocio\s+(.+)$/i);
+  const aliases=[];
+  if(/^Parco Corto Maltese$/i.test(expanded))aliases.push('Parco Corto Maltese, Via Gianluigi Bonelli');
+  if(/^Parco Agnelli$/i.test(expanded))aliases.push('Parco Agnelli, Via Elio Vittorini');
+  if(intersection)aliases.push(`${intersection[1]} & ${intersection[2]}`,`${intersection[1]}, ${intersection[2]}`,intersection[1],intersection[2]);
+  return[...new Set([expanded,...aliases,...parts,areaStripped,stripped].filter(Boolean))]
 }
 
 function classifyTreePage(html,url){
@@ -1552,18 +1563,18 @@ function classifyTreePage(html,url){
   const eventType=hasPlanting&&!hasCut?'planting':hasCut&&!hasPlanting?'decrement':'unknown';
   const locations=treeLocations(text);
   const locationName=(locations[0]||'Roma').slice(0,180);
-  const planned=/saranno?\s+(?:messi|effettuat|abbattut)|verranno?\s+(?:messi|effettuat|abbattut)|in previsione|programmati?|previsti?/i.test(text);
+  const planned=/saranno?\s+(?:messi|effettuat|abbattut)|(?:sarà|verrà|verranno?)\s+(?:mess[oa]|effettuat[oa]|abbattut[oa])|in previsione|programmati?|previsti?/i.test(text);
   const executed=/sono stati effettuati|intervento eseguito|sono stati messi a dimora|già (?:messi a dimora|piantati)|data di esecuzione/i.test(text);
   const structuredNotice=/\/informazione-di-servizio\.page/i.test(url);
-  const singleScope=structuredNotice&&locations.length===1&&eventType!=='unknown';
-  const status=planned?'planned':executed&&singleScope?(eventType==='decrement'?'emergency_completed':'completed'):'reported';
-  const quantity=singleScope?treeQuantity(text):null;
-  const validation=executed&&singleScope&&Number.isFinite(quantity)
+  const documentedScope=structuredNotice&&locations.length>=1&&eventType!=='unknown';
+  const status=planned?'planned':executed&&documentedScope?(eventType==='decrement'?'emergency_completed':'completed'):'reported';
+  const quantity=documentedScope?treeQuantity(text):null;
+  const validation=executed&&documentedScope&&Number.isFinite(quantity)
     ?'automatic_confirmed'
     :'automatic_pending';
   const sourceKey=new URL(url).searchParams.get('contentId')||new URL(url).pathname;
   return{
-    sourceKey,year,eventDate:published,locationName,eventType,
+    sourceKey,year,eventDate:published,locationName,locations,eventType,
     quantity:Number.isFinite(quantity)?quantity:null,status,validation,
     title:titleFromHtml(html),sourceUrl:url,sourcePublishedAt:published,
     rawExcerpt:text.slice(0,1000)
@@ -1584,18 +1595,20 @@ async function upsertTreeEvent(db,event,now){
   const existing=await db.prepare('SELECT id FROM tree_events WHERE source_key = ?').bind(event.sourceKey).first();
   await db.prepare(`
     INSERT INTO tree_events (
-      source_key,city,year,event_date,location_name,event_type,quantity,status,
+      source_key,city,year,event_date,location_name,locations_json,event_type,quantity,status,
       validation,title,source_url,source_published_at,first_seen_at,last_checked_at,
       raw_excerpt,updated_at
-    ) VALUES (?, 'roma', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, 'roma', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(source_key) DO UPDATE SET
       year=excluded.year,event_date=excluded.event_date,
-      latitude=CASE WHEN tree_events.location_name!=excluded.location_name THEN NULL ELSE tree_events.latitude END,
-      longitude=CASE WHEN tree_events.location_name!=excluded.location_name THEN NULL ELSE tree_events.longitude END,
-      geocode_precision=CASE WHEN tree_events.location_name!=excluded.location_name THEN NULL ELSE tree_events.geocode_precision END,
-      geocode_label=CASE WHEN tree_events.location_name!=excluded.location_name THEN NULL ELSE tree_events.geocode_label END,
-      geocoded_at=CASE WHEN tree_events.location_name!=excluded.location_name THEN NULL ELSE tree_events.geocoded_at END,
+      latitude=CASE WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.latitude END,
+      longitude=CASE WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.longitude END,
+      geocode_precision=CASE WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.geocode_precision END,
+      geocode_label=CASE WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.geocode_label END,
+      geocoded_at=CASE WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.geocoded_at END,
+      location_points_json=CASE WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.location_points_json END,
       location_name=excluded.location_name,
+      locations_json=excluded.locations_json,
       event_type=excluded.event_type,quantity=excluded.quantity,status=excluded.status,
       validation=CASE
         WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.validation
@@ -1605,7 +1618,7 @@ async function upsertTreeEvent(db,event,now){
       source_published_at=excluded.source_published_at,last_checked_at=excluded.last_checked_at,
       raw_excerpt=excluded.raw_excerpt,updated_at=excluded.updated_at
   `).bind(
-    event.sourceKey,event.year,event.eventDate,event.locationName,event.eventType,
+    event.sourceKey,event.year,event.eventDate,event.locationName,JSON.stringify(event.locations),event.eventType,
     event.quantity,event.status,event.validation,event.title,event.sourceUrl,
     event.sourcePublishedAt,now,now,event.rawExcerpt,now
   ).run();
@@ -1618,37 +1631,48 @@ function wait(milliseconds){
 
 async function geocodePendingTreeEvents(db){
   const pending=await db.prepare(`
-    SELECT source_key,location_name FROM tree_events
+    SELECT source_key,location_name,locations_json,location_points_json FROM tree_events
     WHERE city='roma' AND geocoded_at IS NULL AND location_name!='Roma'
     ORDER BY first_seen_at ASC LIMIT ?
   `).bind(TREE_MAX_GEOCODES_PER_RUN).all();
-  let geocoded=0,rejected=0;
+  let geocoded=0,rejected=0,attempted=0;
   for(const [index,row] of (pending.results||[]).entries()){
-    if(index)await wait(1100);
-    try{
-      let match=null,latitude=null,longitude=null,inside=false;
-      for(const [candidateIndex,candidate] of treeGeocodeQueries(row.location_name).entries()){
-        if(candidateIndex)await wait(1100);
-        const url=new URL('https://nominatim.openstreetmap.org/search');
-        url.searchParams.set('format','jsonv2');
-        url.searchParams.set('limit','1');
-        url.searchParams.set('countrycodes','it');
-        url.searchParams.set('q',`${candidate}, Roma, Italia`);
-        const response=await fetch(url,{headers:{Accept:'application/json','User-Agent':'A.R.I.A. environmental-data-indexer/0.8 (https://fabzip.github.io/qualita-aria/)','Referer':'https://fabzip.github.io/qualita-aria/'}});
-        if(!response.ok)throw new Error(`Geocoding HTTP ${response.status}`);
-        match=(await response.json())?.[0]||null;
-        latitude=Number(match?.lat);longitude=Number(match?.lon);
-        inside=Number.isFinite(latitude)&&Number.isFinite(longitude)&&longitude>=ROME_GEOCODE_BBOX.west&&longitude<=ROME_GEOCODE_BBOX.east&&latitude>=ROME_GEOCODE_BBOX.south&&latitude<=ROME_GEOCODE_BBOX.north;
-        if(inside)break
+    const locations=JSON.parse(row.locations_json||'null')||[row.location_name];
+    const points=JSON.parse(row.location_points_json||'null')||Array(locations.length).fill(null);
+    for(let locationIndex=0;locationIndex<locations.length&&attempted<TREE_MAX_GEOCODES_PER_RUN;locationIndex+=1){
+      if(points[locationIndex])continue;
+      if(attempted||index)await wait(1100);
+      attempted+=1;
+      try{
+        let match=null,latitude=null,longitude=null,inside=false;
+        for(const [candidateIndex,candidate] of treeGeocodeQueries(locations[locationIndex]).entries()){
+          if(candidateIndex)await wait(1100);
+          const url=new URL('https://nominatim.openstreetmap.org/search');
+          url.searchParams.set('format','jsonv2');
+          url.searchParams.set('limit','1');
+          url.searchParams.set('countrycodes','it');
+          url.searchParams.set('q',`${candidate}, Roma, Italia`);
+          const response=await fetch(url,{headers:{Accept:'application/json','User-Agent':'A.R.I.A. environmental-data-indexer/0.8 (https://fabzip.github.io/qualita-aria/)','Referer':'https://fabzip.github.io/qualita-aria/'}});
+          if(!response.ok)throw new Error(`Geocoding HTTP ${response.status}`);
+          match=(await response.json())?.[0]||null;
+          latitude=Number(match?.lat);longitude=Number(match?.lon);
+          inside=Number.isFinite(latitude)&&Number.isFinite(longitude)&&longitude>=ROME_GEOCODE_BBOX.west&&longitude<=ROME_GEOCODE_BBOX.east&&latitude>=ROME_GEOCODE_BBOX.south&&latitude<=ROME_GEOCODE_BBOX.north;
+          if(inside)break
+        }
+        points[locationIndex]={coordinates:inside?[longitude,latitude]:null,precision:inside?'address':'unresolved',label:String(match?.display_name||'').slice(0,300)};
+        if(inside)geocoded++;else rejected++
+      }catch{
+        points[locationIndex]={coordinates:null,precision:'unresolved',label:''};
+        rejected++
       }
-      await db.prepare(`UPDATE tree_events SET latitude=?,longitude=?,geocode_precision=?,geocode_label=?,geocoded_at=? WHERE source_key=?`)
-        .bind(inside?latitude:null,inside?longitude:null,inside?'address':'unresolved',String(match?.display_name||'').slice(0,300),new Date().toISOString(),row.source_key).run();
-      if(inside)geocoded++;else rejected++
-    }catch{
-      rejected++
     }
+    const complete=points.length===locations.length&&points.every(Boolean);
+    const firstResolved=points.find(point=>Array.isArray(point?.coordinates));
+    await db.prepare(`UPDATE tree_events SET latitude=?,longitude=?,geocode_precision=?,geocode_label=?,location_points_json=?,geocoded_at=? WHERE source_key=?`)
+      .bind(firstResolved?.coordinates?.[1]??null,firstResolved?.coordinates?.[0]??null,firstResolved?.precision||'unresolved',firstResolved?.label||'',JSON.stringify(points),complete?new Date().toISOString():null,row.source_key).run();
+    if(attempted>=TREE_MAX_GEOCODES_PER_RUN)break
   }
-  return{geocoded,rejected,pending:(pending.results||[]).length}
+  return{geocoded,rejected,attempted,pending:(pending.results||[]).length}
 }
 
 async function refreshTreeSources(env){
@@ -1689,23 +1713,28 @@ async function treeEventsResponse(env,cors,url){
   if(city!=='roma')return badRequest('Città non supportata',cors);
   if(!Number.isInteger(year)||year<2013||year>new Date().getUTCFullYear())return badRequest('Anno non valido',cors);
   const result=await env.TREE_DB.prepare(`
-    SELECT source_key,year,event_date,location_name,district,event_type,quantity,latitude,longitude,geocode_precision,
+    SELECT source_key,year,event_date,location_name,locations_json,location_points_json,district,event_type,quantity,latitude,longitude,geocode_precision,
       status,validation,title,source_url,source_published_at,first_seen_at,last_checked_at
     FROM tree_events
     WHERE city=? AND year=? AND validation!='manual_rejected'
     ORDER BY COALESCE(event_date,source_published_at) DESC, id DESC
   `).bind(city,year).all();
-  const events=(result.results||[]).map(row=>({
+  const events=(result.results||[]).map(row=>{
+    const locations=JSON.parse(row.locations_json||'null')||[row.location_name];
+    const points=JSON.parse(row.location_points_json||'null')||[];
+    const markerCoordinates=points.map(point=>point?.coordinates).filter(coordinates=>Array.isArray(coordinates));
+    return{
     id:`dynamic-${row.source_key}`,year:String(row.year),date:row.event_date||row.source_published_at||String(row.year),
-    locationName:row.location_name,district:row.district||undefined,
+    locationName:locations.join(' · '),locations,district:row.district||undefined,
     eventType:row.event_type,status:row.status,quantity:row.quantity,
-    coordinates:Number.isFinite(row.longitude)&&Number.isFinite(row.latitude)?[row.longitude,row.latitude]:undefined,
+    coordinates:markerCoordinates[0]||(Number.isFinite(row.longitude)&&Number.isFinite(row.latitude)?[row.longitude,row.latitude]:undefined),
+    markerCoordinates:markerCoordinates.length?markerCoordinates:undefined,
     locationPrecision:row.geocode_precision||(row.location_name==='Roma'?'city':'address'),
     validation:row.validation,title:row.title,sourceUrl:row.source_url,
     firstSeenAt:row.first_seen_at,lastCheckedAt:row.last_checked_at
-  }));
+  }});
   const lastRun=await env.TREE_DB.prepare("SELECT completed_at,status,discovered,inserted,updated,errors FROM tree_sync_runs ORDER BY id DESC LIMIT 1").first();
-  return json({source:'Roma Capitale · aggiornamento automatico mensile',city,year,events,lastSync:lastRun||null},200,{...cors,'Cache-Control':'public, max-age=3600'})
+  return json({source:'Roma Capitale · aggiornamento automatico settimanale',city,year,events,lastSync:lastRun||null},200,{...cors,'Cache-Control':'public, max-age=3600'})
 }
 
 function adminAuthorized(request,env){
@@ -1775,7 +1804,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.8.4',
+        version:'0.8.5',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,

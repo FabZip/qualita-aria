@@ -1,5 +1,12 @@
 # Changelog
 
+## [Proxy 0.8.5] - 2026-09-01
+
+- Gli avvisi dinamici conservano tutte le ubicazioni riportate dalla stessa pagina ufficiale e le espongono come marker appartenenti a un unico evento.
+- Corretti definitivamente i luoghi abbreviati già archiviati come `P`: una nuova scansione sostituisce il dato precedente e annulla le coordinate obsolete.
+- La geocodifica procede per singola ubicazione, conserva i risultati parziali e mantiene il limite di otto nuovi luoghi per esecuzione.
+- Aggiunta la migrazione D1 `0003_tree_event_locations.sql`; app invariata alla `0.5.19` build 72, dataset invariato alla revisione 18.
+
 ## [0.5.19] - 2026-09-01
 
 - Corretta l'estrazione degli indirizzi nelle nuove schede di Roma Capitale: abbreviazioni come `P.co`, `P.za` e le entità HTML non interrompono più il nome del luogo.
