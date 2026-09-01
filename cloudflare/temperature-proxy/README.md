@@ -111,7 +111,7 @@ unset ARIA_TREE_TOKEN
 
 Il file `data/trees.json` rimane il dataset consolidato di fallback se D1 o il proxy non sono raggiungibili.
 
-Il Worker è identificato dalla versione proxy `0.9.3`.
+Il Worker è identificato dalla versione proxy `0.9.4`.
 
 ### Pubblicazione Worker
 
@@ -130,6 +130,16 @@ npx wrangler@latest deploy
 ```
 
 Al termine Wrangler deve mostrare entrambi gli schedule: `0 3 * * 1` e `30 3 * * *`. Non sono richieste migrazioni D1 né modifiche a `TREE_ADMIN_TOKEN`.
+
+## 0.9.4
+
+Il filtro delle fonti richiede una chiara azione di piantumazione o abbattimento.
+Per le pagine di tipo notizia è necessaria anche una quantità esplicitamente
+associata agli alberi: semplici riferimenti al verde, alle alberature accessorie
+o a progetti generali non vengono importati. Al primo refresh vengono eliminati
+anche i due falsi positivi già individuati relativi alle chiusure di via del Foro
+Italico/viale Newton e al PUI Tor Bella Monaca. Il campo `excludedRemoved` nella
+risposta indica quanti record sono stati rimossi. Non serve una migrazione D1.
 
 ## 0.9.3
 

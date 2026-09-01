@@ -1,5 +1,12 @@
 # Changelog
 
+## [Proxy 0.9.4] - 2026-09-01
+
+- Rafforzata la classificazione delle pagine Roma Capitale: i contenuti senza una chiara azione di piantumazione o abbattimento vengono esclusi.
+- Le normali notizie sono acquisite soltanto quando riportano anche una quantità arborea esplicita; i progetti generici che citano il verde non diventano eventi Alberi.
+- Escluse e rimosse da D1 le false classificazioni sulle chiusure notturne di via del Foro Italico/viale Newton e sul progetto PUI Tor Bella Monaca.
+- Il risultato del refresh espone `excludedRemoved`; non sono richieste migrazioni D1 e l’app resta alla versione `0.6.3` build 76.
+
 ## [Proxy 0.9.3] - 2026-09-01
 
 - Separata la scansione settimanale delle fonti dallo smaltimento quotidiano della coda geografica.

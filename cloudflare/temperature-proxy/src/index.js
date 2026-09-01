@@ -1456,6 +1456,14 @@ const TREE_SOURCE_ORIGIN='https://www.comune.roma.it';
 const TREE_MAX_PAGES_PER_RUN=40;
 const TREE_MAX_GEOCODES_PER_RUN=8;
 const ROME_GEOCODE_BBOX={west:12.15,south:41.65,east:12.85,north:42.15};
+const TREE_EXCLUDED_SOURCE_PATHS=new Set([
+  '/web/it/notizia/chiusure-notturne-via-foro-italico-e-viale-newton.page',
+  '/web/it/notizia/pui-tor-bella-monaca-cantiere-ciclabili-verde.page'
+]);
+
+function excludedTreeSource(url){
+  try{return TREE_EXCLUDED_SOURCE_PATHS.has(new URL(url,TREE_SOURCE_ORIGIN).pathname)}catch{return false}
+}
 
 function decodeHtml(value){
   return String(value||'')
@@ -1484,7 +1492,7 @@ function treeSourceLinks(html){
   while((match=pattern.exec(html))&&links.size<TREE_MAX_PAGES_PER_RUN){
     try{
       const url=new URL(match[1],TREE_SOURCE_ORIGIN);
-      if(url.origin===TREE_SOURCE_ORIGIN)links.add(url.toString())
+      if(url.origin===TREE_SOURCE_ORIGIN&&!excludedTreeSource(url))links.add(url.toString())
     }catch{}
   }
   return[...links]
@@ -1554,6 +1562,7 @@ function treeGeocodeQueries(locationName){
 }
 
 function classifyTreePage(html,url){
+  if(excludedTreeSource(url))return null;
   const text=decodeHtml(html);
   if(!/alber|arbore|piantum|messa a dimora|abbattiment/i.test(text))return null;
   const published=sourceDate(text);
@@ -1562,14 +1571,17 @@ function classifyTreePage(html,url){
   const hasPlanting=/piantum|mess[aei]\s+a dimora|nuov[ei]\s+alber/i.test(text);
   const hasCut=/abbattiment|alber[oi]\s+abbattut/i.test(text);
   const eventType=hasPlanting&&!hasCut?'planting':hasCut&&!hasPlanting?'decrement':'unknown';
+  if(eventType==='unknown')return null;
+  const structuredNotice=/\/informazione-di-servizio\.page/i.test(url);
+  const detectedQuantity=treeQuantity(text);
+  if(!structuredNotice&&!Number.isFinite(detectedQuantity))return null;
   const locations=treeLocations(text);
   const locationName=(locations[0]||'Roma').slice(0,180);
   const planned=/saranno?\s+(?:messi|effettuat|abbattut)|(?:sarà|verrà|verranno?)\s+(?:mess[oa]|effettuat[oa]|abbattut[oa])|in previsione|programmati?|previsti?/i.test(text);
   const executed=/sono stati effettuati|intervento eseguito|sono stati messi a dimora|già (?:messi a dimora|piantati)|data di esecuzione/i.test(text);
-  const structuredNotice=/\/informazione-di-servizio\.page/i.test(url);
   const documentedScope=structuredNotice&&locations.length>=1&&eventType!=='unknown';
   const status=planned?'planned':executed&&documentedScope?(eventType==='decrement'?'emergency_completed':'completed'):'reported';
-  const quantity=documentedScope?treeQuantity(text):null;
+  const quantity=documentedScope||!structuredNotice?detectedQuantity:null;
   const validation=executed&&documentedScope&&Number.isFinite(quantity)
     ?'automatic_confirmed'
     :'automatic_pending';
@@ -1580,6 +1592,18 @@ function classifyTreePage(html,url){
     title:titleFromHtml(html),sourceUrl:url,sourcePublishedAt:published,
     rawExcerpt:text.slice(0,1000)
   }
+}
+
+async function removeExcludedTreeEvents(db){
+  const paths=[...TREE_EXCLUDED_SOURCE_PATHS];
+  const statements=[];
+  for(const path of paths){
+    statements.push(db.prepare('DELETE FROM tree_location_overrides WHERE source_key=?').bind(path));
+    statements.push(db.prepare('DELETE FROM tree_location_reports WHERE source_key=?').bind(path));
+    statements.push(db.prepare('DELETE FROM tree_events WHERE source_key=? OR source_url=?').bind(path,`${TREE_SOURCE_ORIGIN}${path}`))
+  }
+  const results=statements.length?await db.batch(statements):[];
+  return results.reduce((sum,result,index)=>index%3===2?sum+Number(result?.meta?.changes||0):sum,0)
 }
 
 async function discoverTreePages(){
@@ -1693,8 +1717,9 @@ async function refreshTreeSources(env){
   const run=await env.TREE_DB.prepare(
     "INSERT INTO tree_sync_runs(started_at,status) VALUES (?,'running') RETURNING id"
   ).bind(startedAt).first();
-  let discovered=0,inserted=0,updated=0,errors=0;
+  let discovered=0,inserted=0,updated=0,errors=0,excludedRemoved=0;
   try{
+    excludedRemoved=await removeExcludedTreeEvents(env.TREE_DB);
     const [currentLinks,staleLinks]=await Promise.all([discoverTreePages(),staleTreePages(env.TREE_DB,20)]);
     const links=[...new Set([...currentLinks,...staleLinks])].slice(0,TREE_MAX_PAGES_PER_RUN);
     discovered=links.length;
@@ -1711,7 +1736,7 @@ async function refreshTreeSources(env){
     const geocoding=await geocodePendingTreeEvents(env.TREE_DB);
     await env.TREE_DB.prepare(`UPDATE tree_sync_runs SET completed_at=?,status='completed',discovered=?,inserted=?,updated=?,errors=? WHERE id=?`)
       .bind(new Date().toISOString(),discovered,inserted,updated,errors,run.id).run();
-    return{ok:true,discovered,inserted,updated,errors,geocoding,startedAt,completedAt:new Date().toISOString()}
+    return{ok:true,discovered,inserted,updated,excludedRemoved,errors,geocoding,startedAt,completedAt:new Date().toISOString()}
   }catch(error){
     await env.TREE_DB.prepare(`UPDATE tree_sync_runs SET completed_at=?,status='failed',discovered=?,inserted=?,updated=?,errors=?,detail=? WHERE id=?`)
       .bind(new Date().toISOString(),discovered,inserted,updated,errors+1,String(error?.message||error).slice(0,500),run.id).run();
@@ -1965,7 +1990,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.9.3',
+        version:'0.9.4',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,
