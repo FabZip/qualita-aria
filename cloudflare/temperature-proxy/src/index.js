@@ -1592,6 +1592,15 @@ async function discoverTreePages(){
   return[...links].slice(0,TREE_MAX_PAGES_PER_RUN)
 }
 
+async function staleTreePages(db,limit=20){
+  const result=await db.prepare(`
+    SELECT source_url FROM tree_events
+    WHERE source_url LIKE 'https://www.comune.roma.it/web/it/%'
+    ORDER BY last_checked_at ASC, id ASC LIMIT ?
+  `).bind(limit).all();
+  return(result.results||[]).map(row=>row.source_url).filter(Boolean)
+}
+
 async function upsertTreeEvent(db,event,now){
   const existing=await db.prepare('SELECT id FROM tree_events WHERE source_key = ?').bind(event.sourceKey).first();
   await db.prepare(`
@@ -1686,7 +1695,8 @@ async function refreshTreeSources(env){
   ).bind(startedAt).first();
   let discovered=0,inserted=0,updated=0,errors=0;
   try{
-    const links=await discoverTreePages();
+    const [currentLinks,staleLinks]=await Promise.all([discoverTreePages(),staleTreePages(env.TREE_DB,20)]);
+    const links=[...new Set([...currentLinks,...staleLinks])].slice(0,TREE_MAX_PAGES_PER_RUN);
     discovered=links.length;
     for(const link of links){
       try{
@@ -1950,7 +1960,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.9.1',
+        version:'0.9.2',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,

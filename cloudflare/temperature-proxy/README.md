@@ -111,7 +111,7 @@ unset ARIA_TREE_TOKEN
 
 Il file `data/trees.json` rimane il dataset consolidato di fallback se D1 o il proxy non sono raggiungibili.
 
-Il Worker è identificato dalla versione proxy `0.9.1`.
+Il Worker è identificato dalla versione proxy `0.9.2`.
 
 ### Pubblicazione Worker
 
@@ -130,6 +130,14 @@ npx wrangler@latest deploy
 ```
 
 Al termine Wrangler deve mostrare `schedule: 0 3 * * 1`. Non sono richieste migrazioni D1 né modifiche a `TREE_ADMIN_TOKEN`.
+
+## 0.9.2
+
+Il refresh combina le pagine correnti del portale con un massimo di venti
+avvisi già presenti in D1, scelti a partire dal `last_checked_at` più vecchio.
+Questo impedisce che gli avvisi usciti dalla prima pagina conservino per sempre
+un parsing precedente o incompleto. Il limite complessivo resta di quaranta
+pagine per esecuzione. Non sono richieste migrazioni D1.
 
 ## 0.9.1
 

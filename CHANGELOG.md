@@ -1,5 +1,11 @@
 # Changelog
 
+## [Proxy 0.9.2] - 2026-09-01
+
+- Il refresh arboreo ricontrolla anche gli avvisi già archiviati, ordinandoli dal meno recente, oltre alle pagine presenti nell’elenco corrente di Roma Capitale.
+- I record storici rimasti con indirizzi troncati, come `IDS1631055` e `IDS1630638`, vengono così riprocessati dal parser corretto.
+- Il limite complessivo resta di 40 pagine per esecuzione; non sono richieste migrazioni D1 e l’app resta alla versione `0.6.1` build 74.
+
 ## [0.6.1] - 2026-09-01
 
 - La mappa delle segnalazioni usa una vista satellitare con attribuzione Esri.
