@@ -111,7 +111,7 @@ unset ARIA_TREE_TOKEN
 
 Il file `data/trees.json` rimane il dataset consolidato di fallback se D1 o il proxy non sono raggiungibili.
 
-Il Worker è identificato dalla versione proxy `0.8.3`.
+Il Worker è identificato dalla versione proxy `0.8.4`.
 
 ### Pubblicazione Worker
 
@@ -130,6 +130,15 @@ npx wrangler@latest deploy
 ```
 
 Al termine Wrangler deve mostrare `schedule: 0 3 * * 1`. Non sono richieste migrazioni D1 né modifiche a `TREE_ADMIN_TOKEN`.
+
+## 0.8.4
+
+Il parser degli eventi arborei riconosce correttamente indirizzi abbreviati come
+`P.co` e `P.za`, le entità HTML tipografiche e le quantità espresse con `n°`.
+Quando una nuova scansione corregge il luogo di un evento già presente, le
+coordinate precedenti vengono annullate e ricalcolate. La geocodifica prova
+anche una variante senza il tipo di luogo e accetta soltanto risultati entro
+l'area di Roma. Non sono richieste nuove migrazioni D1.
 
 ## 0.8.3
 

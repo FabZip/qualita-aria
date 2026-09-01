@@ -1466,6 +1466,13 @@ function decodeHtml(value){
     .replace(/&amp;/gi,'&')
     .replace(/&quot;/gi,'"')
     .replace(/&#39;|&apos;/gi,"'")
+    .replace(/&deg;/gi,'°')
+    .replace(/&(?:rsquo|lsquo);/gi,"'")
+    .replace(/&(?:rdquo|ldquo);/gi,'"')
+    .replace(/&ndash;/gi,'–')
+    .replace(/&mdash;/gi,'—')
+    .replace(/&#x([0-9a-f]+);/gi,(_,code)=>String.fromCodePoint(Number.parseInt(code,16)))
+    .replace(/&#(\d+);/g,(_,code)=>String.fromCodePoint(Number(code)))
     .replace(/\s+/g,' ')
     .trim()
 }
@@ -1510,6 +1517,30 @@ function treeQuantity(text){
   return plain?Number(plain[1]):null
 }
 
+function treeLocations(text){
+  return[...text.matchAll(
+    /Ubicazione\s*:\s*(.{2,180}?)(?=\s+(?:Caratteristiche botaniche|Ragioni che hanno condotto|Data di esecuzione|Ubicazione\s*:)|$)/gi
+  )]
+    .map(match=>String(match[1]||'').trim().replace(/[,:;\s]+$/,''))
+    .filter(Boolean)
+}
+
+function treeGeocodeQuery(locationName){
+  return String(locationName||'')
+    .replace(/\bP\.?\s*co\b/gi,'Parco')
+    .replace(/\bP\.?\s*zza\b/gi,'Piazza')
+    .replace(/\bP\.?\s*za\b/gi,'Piazza')
+    .replace(/\bP\.?\s*le\b/gi,'Piazzale')
+    .replace(/\bV\.?\s*le\b/gi,'Viale')
+    .replace(/\bL\.?\s*go\b/gi,'Largo')
+}
+
+function treeGeocodeQueries(locationName){
+  const expanded=treeGeocodeQuery(locationName);
+  const stripped=expanded.replace(/^(?:Parco|Piazza|Piazzale|Viale|Largo)\s+/i,'').trim();
+  return[...new Set([expanded,stripped].filter(Boolean))]
+}
+
 function classifyTreePage(html,url){
   const text=decodeHtml(html);
   if(!/alber|arbore|piantum|messa a dimora|abbattiment/i.test(text))return null;
@@ -1519,12 +1550,12 @@ function classifyTreePage(html,url){
   const hasPlanting=/piantum|mess[aei]\s+a dimora|nuov[ei]\s+alber/i.test(text);
   const hasCut=/abbattiment|alber[oi]\s+abbattut/i.test(text);
   const eventType=hasPlanting&&!hasCut?'planting':hasCut&&!hasPlanting?'decrement':'unknown';
-  const locationMatches=[...text.matchAll(/Ubicazione\s*:\s*([^.;]{2,160})/gi)];
-  const locationName=(locationMatches[0]?.[1]||'Roma').trim().slice(0,180);
+  const locations=treeLocations(text);
+  const locationName=(locations[0]||'Roma').slice(0,180);
   const planned=/saranno?\s+(?:messi|effettuat|abbattut)|verranno?\s+(?:messi|effettuat|abbattut)|in previsione|programmati?|previsti?/i.test(text);
   const executed=/sono stati effettuati|intervento eseguito|sono stati messi a dimora|già (?:messi a dimora|piantati)|data di esecuzione/i.test(text);
   const structuredNotice=/\/informazione-di-servizio\.page/i.test(url);
-  const singleScope=structuredNotice&&locationMatches.length===1&&eventType!=='unknown';
+  const singleScope=structuredNotice&&locations.length===1&&eventType!=='unknown';
   const status=planned?'planned':executed&&singleScope?(eventType==='decrement'?'emergency_completed':'completed'):'reported';
   const quantity=singleScope?treeQuantity(text):null;
   const validation=executed&&singleScope&&Number.isFinite(quantity)
@@ -1558,7 +1589,13 @@ async function upsertTreeEvent(db,event,now){
       raw_excerpt,updated_at
     ) VALUES (?, 'roma', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(source_key) DO UPDATE SET
-      year=excluded.year,event_date=excluded.event_date,location_name=excluded.location_name,
+      year=excluded.year,event_date=excluded.event_date,
+      latitude=CASE WHEN tree_events.location_name!=excluded.location_name THEN NULL ELSE tree_events.latitude END,
+      longitude=CASE WHEN tree_events.location_name!=excluded.location_name THEN NULL ELSE tree_events.longitude END,
+      geocode_precision=CASE WHEN tree_events.location_name!=excluded.location_name THEN NULL ELSE tree_events.geocode_precision END,
+      geocode_label=CASE WHEN tree_events.location_name!=excluded.location_name THEN NULL ELSE tree_events.geocode_label END,
+      geocoded_at=CASE WHEN tree_events.location_name!=excluded.location_name THEN NULL ELSE tree_events.geocoded_at END,
+      location_name=excluded.location_name,
       event_type=excluded.event_type,quantity=excluded.quantity,status=excluded.status,
       validation=CASE
         WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.validation
@@ -1588,18 +1625,22 @@ async function geocodePendingTreeEvents(db){
   let geocoded=0,rejected=0;
   for(const [index,row] of (pending.results||[]).entries()){
     if(index)await wait(1100);
-    const query=`${row.location_name}, Roma, Italia`;
     try{
-      const url=new URL('https://nominatim.openstreetmap.org/search');
-      url.searchParams.set('format','jsonv2');
-      url.searchParams.set('limit','1');
-      url.searchParams.set('countrycodes','it');
-      url.searchParams.set('q',query);
-      const response=await fetch(url,{headers:{Accept:'application/json','User-Agent':'A.R.I.A. environmental-data-indexer/0.8 (https://fabzip.github.io/qualita-aria/)','Referer':'https://fabzip.github.io/qualita-aria/'}});
-      if(!response.ok)throw new Error(`Geocoding HTTP ${response.status}`);
-      const match=(await response.json())?.[0];
-      const latitude=Number(match?.lat),longitude=Number(match?.lon);
-      const inside=Number.isFinite(latitude)&&Number.isFinite(longitude)&&longitude>=ROME_GEOCODE_BBOX.west&&longitude<=ROME_GEOCODE_BBOX.east&&latitude>=ROME_GEOCODE_BBOX.south&&latitude<=ROME_GEOCODE_BBOX.north;
+      let match=null,latitude=null,longitude=null,inside=false;
+      for(const [candidateIndex,candidate] of treeGeocodeQueries(row.location_name).entries()){
+        if(candidateIndex)await wait(1100);
+        const url=new URL('https://nominatim.openstreetmap.org/search');
+        url.searchParams.set('format','jsonv2');
+        url.searchParams.set('limit','1');
+        url.searchParams.set('countrycodes','it');
+        url.searchParams.set('q',`${candidate}, Roma, Italia`);
+        const response=await fetch(url,{headers:{Accept:'application/json','User-Agent':'A.R.I.A. environmental-data-indexer/0.8 (https://fabzip.github.io/qualita-aria/)','Referer':'https://fabzip.github.io/qualita-aria/'}});
+        if(!response.ok)throw new Error(`Geocoding HTTP ${response.status}`);
+        match=(await response.json())?.[0]||null;
+        latitude=Number(match?.lat);longitude=Number(match?.lon);
+        inside=Number.isFinite(latitude)&&Number.isFinite(longitude)&&longitude>=ROME_GEOCODE_BBOX.west&&longitude<=ROME_GEOCODE_BBOX.east&&latitude>=ROME_GEOCODE_BBOX.south&&latitude<=ROME_GEOCODE_BBOX.north;
+        if(inside)break
+      }
       await db.prepare(`UPDATE tree_events SET latitude=?,longitude=?,geocode_precision=?,geocode_label=?,geocoded_at=? WHERE source_key=?`)
         .bind(inside?latitude:null,inside?longitude:null,inside?'address':'unresolved',String(match?.display_name||'').slice(0,300),new Date().toISOString(),row.source_key).run();
       if(inside)geocoded++;else rejected++
@@ -1734,7 +1775,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.8.3',
+        version:'0.8.4',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,

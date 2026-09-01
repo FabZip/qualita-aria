@@ -8,6 +8,21 @@
   const scopeMaps=new Set();
   const fmt=n=>Number(n).toLocaleString('it-IT');
   const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const italianMonths={gennaio:0,febbraio:1,marzo:2,aprile:3,maggio:4,giugno:5,luglio:6,agosto:7,settembre:8,ottobre:9,novembre:10,dicembre:11};
+
+  function eventTimestamp(event){
+    const raw=String(event?.date||event?.eventDate||event?.sourcePublishedAt||event?.year||'').trim();
+    const iso=raw.match(/^(20\d{2})-(\d{2})-(\d{2})/);
+    if(iso)return Date.UTC(Number(iso[1]),Number(iso[2])-1,Number(iso[3]));
+    const italian=raw.toLowerCase().match(/(?:(\d{1,2})(?:\s*[–-]\s*\d{1,2})?\s+)?(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\s+(20\d{2})/);
+    if(italian)return Date.UTC(Number(italian[3]),italianMonths[italian[2]],Number(italian[1]||1));
+    const year=raw.match(/\b(20\d{2})\b/);
+    return year?Date.UTC(Number(year[1]),0,1):0
+  }
+
+  function sortEventsNewestFirst(events){
+    return events.sort((a,b)=>eventTimestamp(b)-eventTimestamp(a)||String(a.id||'').localeCompare(String(b.id||''),'it'))
+  }
 
   async function catalog(){
     if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.5.14',{cache:'no-store'}).then(response=>{
@@ -386,7 +401,7 @@
     const remoteDocumented=dynamic.events
       .filter(event=>!localSourceUrls.has(event.sourceUrl))
       .map(event=>({...event,source:{publisher:'Roma Capitale · aggiornamento automatico',url:event.sourceUrl}}));
-    const documentedEvents=prepareDocumentedPaths([...localDocumented,...remoteDocumented]);
+    const documentedEvents=sortEventsNewestFirst(prepareDocumentedPaths([...localDocumented,...remoteDocumented]));
     const completed=documentedEvents.filter(event=>
       ['completed','emergency_completed'].includes(event.status)&&Number.isFinite(event.quantity)
     );

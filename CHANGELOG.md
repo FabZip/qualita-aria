@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.19] - 2026-09-01
+
+- Corretta l'estrazione degli indirizzi nelle nuove schede di Roma Capitale: abbreviazioni come `P.co`, `P.za` e le entità HTML non interrompono più il nome del luogo.
+- Ripristinata l'estrazione delle quantità indicate con `n°` e mantenuta la validazione prudente delle schede prive dei requisiti completi.
+- Se il luogo estratto cambia, il Worker annulla le vecchie coordinate errate e avvia una nuova geocodifica con varianti espanse e fallback controllato entro Roma.
+- Gli eventi Alberi vengono ordinati per data decrescente dopo l'unione fra archivio consolidato e aggiornamenti dinamici.
+- Ripristinata la regola CSS che nasconde il pulsante `Installa app` quando l'app è già installata.
+- App aggiornata alla versione `0.5.19` (build 72), dataset invariato alla revisione 18 e Worker aggiornato alla versione `0.8.4`.
+
 ## [0.5.18] - 2026-08-30
 
 - Corretto il calcolo delle temperature annuali: `MIN` è ora il minimo assoluto dell'anno e `MAX` il massimo assoluto dell'anno.
