@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0] - 2026-09-01
+
+- Lo zoom degli eventi multilocalità considera contemporaneamente tutte le geometrie e tutti i marker dell’avviso.
+- Le geometrie stradali o di area restituite dalla geocodifica vengono conservate e mostrate in azzurro sotto le etichette della cartografia.
+- Aggiunto “Segnala posizione” accanto alla fonte ufficiale, con scelta della località e marker trascinabile sulla mappa.
+- Le segnalazioni possono essere anonime; nome ed email sono facoltativi e viene registrata automaticamente la data di invio.
+- Aggiunta l’area amministrativa, accessibile con cinque clic consecutivi sulla versione dell’app.
+- La password non è presente nel frontend: viene verificata tramite il secret Cloudflare `TREE_ADMIN_PASSWORD` per ogni approvazione o rifiuto.
+- Le correzioni approvate hanno priorità sulla geocodifica automatica e non vengono sovrascritte dalle scansioni successive.
+- Aggiunta la migrazione D1 `0004_tree_location_reports.sql` per segnalazioni e override geografici.
+- App aggiornata alla versione `0.6.0` (build 73), dataset invariato alla revisione 18 e Worker aggiornato alla versione `0.9.0`.
+
 ## [Proxy 0.8.5] - 2026-09-01
 
 - Gli avvisi dinamici conservano tutte le ubicazioni riportate dalla stessa pagina ufficiale e le espongono come marker appartenenti a un unico evento.

@@ -111,7 +111,7 @@ unset ARIA_TREE_TOKEN
 
 Il file `data/trees.json` rimane il dataset consolidato di fallback se D1 o il proxy non sono raggiungibili.
 
-Il Worker è identificato dalla versione proxy `0.8.5`.
+Il Worker è identificato dalla versione proxy `0.9.0`.
 
 ### Pubblicazione Worker
 
@@ -130,6 +130,25 @@ npx wrangler@latest deploy
 ```
 
 Al termine Wrangler deve mostrare `schedule: 0 3 * * 1`. Non sono richieste migrazioni D1 né modifiche a `TREE_ADMIN_TOKEN`.
+
+## 0.9.0
+
+Introduce segnalazioni pubbliche delle posizioni, override geografici approvati
+e geometrie GeoJSON per strade e aree. La migrazione
+`0004_tree_location_reports.sql` crea le tabelle delle segnalazioni e delle
+correzioni e rimette in coda le località già geocodificate per acquisirne la
+geometria. Le operazioni amministrative richiedono a ogni richiesta il secret
+`TREE_ADMIN_PASSWORD`; la password non deve essere inserita nel repository.
+
+Configurazione:
+
+```bash
+npx wrangler@latest secret put TREE_ADMIN_PASSWORD
+npx wrangler@latest secret put REPORT_HASH_SALT
+```
+
+`REPORT_HASH_SALT` serve esclusivamente a pseudonimizzare l'indirizzo IP usato
+per il limite di cinque segnalazioni al giorno.
 
 ## 0.8.5
 

@@ -238,12 +238,19 @@
     return treeIconSvg(variant)
   }
 
-  function documentedPopupHtml(event){
+  function sourceKeyOf(event){
+    if(event.sourceKey)return String(event.sourceKey);
+    try{return new URL(event.sourceUrl).searchParams.get('contentId')||String(event.id)}catch{return String(event.id)}
+  }
+
+  function documentedPopupHtml(event,locationIndex=0){
     const type=event.eventType==='planting'?'Piantumazione':event.eventType==='decrement'?'Abbattimento':'Evento arboreo';
     const multilocation=Array.isArray(event.markerCoordinates)&&event.markerCoordinates.length>1;
     const quantity=Number.isFinite(event.quantity)?`${fmt(event.quantity)} alberi`:'quantità non specificata';
     const precision=event.locationPrecision==='district'?'Posizione indicativa nell’area di competenza':'Posizione ricavata dall’indirizzo documentato';
-    return`<div class="tree-popup"><strong>${escapeHtml(event.locationName)}</strong><br>${escapeHtml(event.date||event.year)}<br>Tipo: ${type}<br>${multilocation?'Quantità complessiva':'Quantità'}: ${quantity}${multilocation?`<br>Punti visualizzati: ${event.markerCoordinates.length}<br>Ripartizione per luogo non specificata.`:''}<br>${precision}<br><a href="${escapeHtml(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a></div>`
+    const location=event.locations?.[locationIndex]||event.locationName;
+    const reportButton=event.sourceKey?`<button type="button" data-tree-report="${escapeHtml(event.id)}" data-tree-source-key="${escapeHtml(sourceKeyOf(event))}" data-tree-location-index="${locationIndex}">Segnala posizione</button>`:'';
+    return`<div class="tree-popup"><strong>${escapeHtml(location)}</strong><br>${escapeHtml(event.date||event.year)}<br>Tipo: ${type}<br>${multilocation?'Quantità complessiva':'Quantità'}: ${quantity}${multilocation?`<br>Punti visualizzati: ${event.markerCoordinates.length}<br>Ripartizione per luogo non specificata.`:''}<br>${precision}<br><span class="tree-popup-actions"><a href="${escapeHtml(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a>${reportButton}</span></div>`
   }
 
   function showDocumentedEvents(map,events=[]){
@@ -257,6 +264,7 @@
       const entry={markers:[],elements:[],event};
       markerCoordinates.forEach((coordinates,locationIndex)=>{
         if(!Array.isArray(coordinates)||coordinates.length!==2)return;
+        const documentedLocationIndex=event.markerLocationIndexes?.[locationIndex]??locationIndex;
         const el=document.createElement('button');
         el.type='button';
         el.className=`tree-event-marker ${event.eventType==='planting'?'is-planted':'is-cut'} ${event.status==='planned'?'is-planned':''}`;
@@ -267,7 +275,7 @@
         el.setAttribute('aria-label',`${event.eventType==='planting'?'Piantumazione':'Abbattimento'}: ${event.locationName}, località ${locationIndex+1} di ${markerCoordinates.length}, ${Number.isFinite(event.quantity)?fmt(event.quantity):'quantità non specificata'} alberi complessivi`);
         const marker=new maplibregl.Marker({element:el,anchor:'bottom'})
           .setLngLat(coordinates)
-          .setPopup(new maplibregl.Popup({offset:Math.ceil(size*.65)}).setHTML(documentedPopupHtml(event)))
+          .setPopup(new maplibregl.Popup({offset:Math.ceil(size*.65)}).setHTML(documentedPopupHtml(event,documentedLocationIndex)))
           .addTo(map);
         el.addEventListener('click',()=>focusEvent(map,event.id,marker));
         markerGroups.set(map,[...(markerGroups.get(map)||[]),marker]);
@@ -296,7 +304,10 @@
   }
 
   function pathCoordinates(path){
-    return(path?.features||[]).flatMap(feature=>feature.geometry?.type==='LineString'?feature.geometry.coordinates:[])
+    const flatten=value=>Array.isArray(value)&&value.length===2&&value.every(Number.isFinite)
+      ?[value]
+      :Array.isArray(value)?value.flatMap(flatten):[];
+    return(path?.features||[]).flatMap(feature=>flatten(feature.geometry?.coordinates))
   }
 
   function resolveEventPath(pathData,eventId){
@@ -366,7 +377,7 @@
     addActivePathLayers(map);
     const path=event.path?.features?.length?event.path:{type:'FeatureCollection',features:[]};
     map.getSource('tree-active-path').setData(path);
-    const coordinates=pathCoordinates(path);
+    const coordinates=[...pathCoordinates(path),...markers.map(item=>{const point=item.getLngLat();return[point.lng,point.lat]})];
     if(coordinates.length>1){
       const bounds=coordinates.reduce((box,coordinate)=>box.extend(coordinate),new maplibregl.LngLatBounds(coordinates[0],coordinates[0]));
       map.fitBounds(bounds,{padding:{top:64,bottom:64,left:48,right:48},maxZoom:16.5,duration:900,essential:true})

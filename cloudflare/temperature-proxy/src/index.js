@@ -1549,7 +1549,8 @@ function treeGeocodeQueries(locationName){
   if(/^Parco Corto Maltese$/i.test(expanded))aliases.push('Parco Corto Maltese, Via Gianluigi Bonelli');
   if(/^Parco Agnelli$/i.test(expanded))aliases.push('Parco Agnelli, Via Elio Vittorini');
   if(intersection)aliases.push(`${intersection[1]} & ${intersection[2]}`,`${intersection[1]}, ${intersection[2]}`,intersection[1],intersection[2]);
-  return[...new Set([expanded,...aliases,...parts,areaStripped,stripped].filter(Boolean))]
+  const preferredParts=parts.length>1?[...parts].reverse():[];
+  return[...new Set([...aliases,...preferredParts,expanded,areaStripped,stripped].filter(Boolean))]
 }
 
 function classifyTreePage(html,url){
@@ -1640,7 +1641,7 @@ async function geocodePendingTreeEvents(db){
     const locations=JSON.parse(row.locations_json||'null')||[row.location_name];
     const points=JSON.parse(row.location_points_json||'null')||Array(locations.length).fill(null);
     for(let locationIndex=0;locationIndex<locations.length&&attempted<TREE_MAX_GEOCODES_PER_RUN;locationIndex+=1){
-      if(points[locationIndex])continue;
+      if(points[locationIndex]?.geometryChecked)continue;
       if(attempted||index)await wait(1100);
       attempted+=1;
       try{
@@ -1651,6 +1652,7 @@ async function geocodePendingTreeEvents(db){
           url.searchParams.set('format','jsonv2');
           url.searchParams.set('limit','1');
           url.searchParams.set('countrycodes','it');
+          url.searchParams.set('polygon_geojson','1');
           url.searchParams.set('q',`${candidate}, Roma, Italia`);
           const response=await fetch(url,{headers:{Accept:'application/json','User-Agent':'A.R.I.A. environmental-data-indexer/0.8 (https://fabzip.github.io/qualita-aria/)','Referer':'https://fabzip.github.io/qualita-aria/'}});
           if(!response.ok)throw new Error(`Geocoding HTTP ${response.status}`);
@@ -1659,14 +1661,15 @@ async function geocodePendingTreeEvents(db){
           inside=Number.isFinite(latitude)&&Number.isFinite(longitude)&&longitude>=ROME_GEOCODE_BBOX.west&&longitude<=ROME_GEOCODE_BBOX.east&&latitude>=ROME_GEOCODE_BBOX.south&&latitude<=ROME_GEOCODE_BBOX.north;
           if(inside)break
         }
-        points[locationIndex]={coordinates:inside?[longitude,latitude]:null,precision:inside?'address':'unresolved',label:String(match?.display_name||'').slice(0,300)};
+        const geometry=['LineString','MultiLineString','Polygon','MultiPolygon'].includes(match?.geojson?.type)?match.geojson:null;
+        points[locationIndex]={coordinates:inside?[longitude,latitude]:null,precision:inside?'address':'unresolved',label:String(match?.display_name||'').slice(0,300),geometry:inside?geometry:null,geometryChecked:true};
         if(inside)geocoded++;else rejected++
       }catch{
-        points[locationIndex]={coordinates:null,precision:'unresolved',label:''};
+        points[locationIndex]={coordinates:null,precision:'unresolved',label:'',geometry:null,geometryChecked:true};
         rejected++
       }
     }
-    const complete=points.length===locations.length&&points.every(Boolean);
+    const complete=points.length===locations.length&&points.every(point=>point?.geometryChecked);
     const firstResolved=points.find(point=>Array.isArray(point?.coordinates));
     await db.prepare(`UPDATE tree_events SET latitude=?,longitude=?,geocode_precision=?,geocode_label=?,location_points_json=?,geocoded_at=? WHERE source_key=?`)
       .bind(firstResolved?.coordinates?.[1]??null,firstResolved?.coordinates?.[0]??null,firstResolved?.precision||'unresolved',firstResolved?.label||'',JSON.stringify(points),complete?new Date().toISOString():null,row.source_key).run();
@@ -1719,16 +1722,42 @@ async function treeEventsResponse(env,cors,url){
     WHERE city=? AND year=? AND validation!='manual_rejected'
     ORDER BY COALESCE(event_date,source_published_at) DESC, id DESC
   `).bind(city,year).all();
+  const overrideResult=await env.TREE_DB.prepare(`
+    SELECT o.source_key,o.location_index,o.location_name,o.longitude,o.latitude,o.geometry_json
+    FROM tree_location_overrides o JOIN tree_events e ON e.source_key=o.source_key
+    WHERE e.city=? AND e.year=?
+  `).bind(city,year).all();
+  const overridesBySource=new Map();
+  for(const override of (overrideResult.results||[])){
+    const entries=overridesBySource.get(override.source_key)||[];
+    entries.push(override);overridesBySource.set(override.source_key,entries)
+  }
   const events=(result.results||[]).map(row=>{
     const locations=JSON.parse(row.locations_json||'null')||[row.location_name];
     const points=JSON.parse(row.location_points_json||'null')||[];
-    const markerCoordinates=points.map(point=>point?.coordinates).filter(coordinates=>Array.isArray(coordinates));
+    const overrideFeatures=[];
+    for(const override of (overridesBySource.get(row.source_key)||[])){
+      const index=Number(override.location_index);
+      locations[index]=override.location_name||locations[index];
+      points[index]={coordinates:[Number(override.longitude),Number(override.latitude)],precision:'manual_confirmed',label:override.location_name};
+      try{
+        const geometry=JSON.parse(override.geometry_json||'null');
+        if(geometry?.type)overrideFeatures.push({type:'Feature',properties:{locationIndex:index,precision:'manual-confirmed'},geometry})
+      }catch{}
+    }
+    const markerEntries=points.map((point,index)=>({index,coordinates:point?.coordinates})).filter(item=>Array.isArray(item.coordinates));
+    const markerCoordinates=markerEntries.map(item=>item.coordinates);
+    const geometryFeatures=points.flatMap((point,index)=>point?.geometry?.type?[{type:'Feature',properties:{locationIndex:index,precision:point.precision||'automatic'},geometry:point.geometry}]:[]);
+    geometryFeatures.push(...overrideFeatures);
     return{
-    id:`dynamic-${row.source_key}`,year:String(row.year),date:row.event_date||row.source_published_at||String(row.year),
+    id:`dynamic-${row.source_key}`,sourceKey:row.source_key,year:String(row.year),date:row.event_date||row.source_published_at||String(row.year),
     locationName:locations.join(' · '),locations,district:row.district||undefined,
     eventType:row.event_type,status:row.status,quantity:row.quantity,
     coordinates:markerCoordinates[0]||(Number.isFinite(row.longitude)&&Number.isFinite(row.latitude)?[row.longitude,row.latitude]:undefined),
     markerCoordinates:markerCoordinates.length?markerCoordinates:undefined,
+    markerLocationIndexes:markerEntries.map(item=>item.index),
+    locationPoints:points,
+    path:geometryFeatures.length?{type:'FeatureCollection',features:geometryFeatures}:undefined,
     locationPrecision:row.geocode_precision||(row.location_name==='Roma'?'city':'address'),
     validation:row.validation,title:row.title,sourceUrl:row.source_url,
     firstSeenAt:row.first_seen_at,lastCheckedAt:row.last_checked_at
@@ -1741,6 +1770,91 @@ function adminAuthorized(request,env){
   const expected=String(env.TREE_ADMIN_TOKEN||'');
   const supplied=String(request.headers.get('Authorization')||'').replace(/^Bearer\s+/i,'');
   return Boolean(expected)&&supplied===expected
+}
+
+async function adminPasswordAuthorized(request,env){
+  const expected=String(env.TREE_ADMIN_PASSWORD||'');
+  const supplied=String(request.headers.get('Authorization')||'').replace(/^Bearer\s+/i,'');
+  if(!expected||!supplied)return false;
+  const encode=value=>crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));
+  const [expectedHash,suppliedHash]=await Promise.all([encode(expected),encode(supplied)]);
+  const left=new Uint8Array(expectedHash),right=new Uint8Array(suppliedHash);
+  let difference=left.length^right.length;
+  for(let index=0;index<left.length;index+=1)difference|=left[index]^(right[index]||0);
+  return difference===0
+}
+
+async function requestFingerprint(request,env){
+  const ip=String(request.headers.get('CF-Connecting-IP')||'unknown');
+  const salt=String(env.REPORT_HASH_SALT||env.TREE_ADMIN_PASSWORD||'aria-reports');
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(`${salt}:${ip}`));
+  return[...new Uint8Array(digest)].map(value=>value.toString(16).padStart(2,'0')).join('')
+}
+
+async function createTreeLocationReport(request,env,cors){
+  if(!env.TREE_DB)return json({error:'Archivio arboreo dinamico non configurato'},503,{...cors,'Cache-Control':'no-store'});
+  const body=await request.json().catch(()=>null);
+  const sourceKey=String(body?.sourceKey||'').trim().slice(0,160);
+  const eventId=String(body?.eventId||'').trim().slice(0,200)||null;
+  const locationIndex=Number(body?.locationIndex);
+  const locationName=String(body?.locationName||'').trim().slice(0,300);
+  const reason=String(body?.reason||'').trim().slice(0,1200);
+  const reporterName=String(body?.reporterName||'').trim().slice(0,120)||null;
+  const reporterEmail=String(body?.reporterEmail||'').trim().toLowerCase().slice(0,254)||null;
+  const coordinates=body?.suggestedCoordinates;
+  const longitude=Number(coordinates?.[0]),latitude=Number(coordinates?.[1]);
+  if(!sourceKey||!locationName||reason.length<5)return badRequest('Evento, località e descrizione del problema sono obbligatori',cors);
+  if(!Number.isInteger(locationIndex)||locationIndex<0||locationIndex>100)return badRequest('Indice località non valido',cors);
+  if(reporterEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reporterEmail))return badRequest('Indirizzo email non valido',cors);
+  if(!Number.isFinite(longitude)||!Number.isFinite(latitude)||longitude<ROME_GEOCODE_BBOX.west||longitude>ROME_GEOCODE_BBOX.east||latitude<ROME_GEOCODE_BBOX.south||latitude>ROME_GEOCODE_BBOX.north)return badRequest('Posizione proposta fuori dall’area di Roma',cors);
+  const event=await env.TREE_DB.prepare('SELECT source_key FROM tree_events WHERE source_key=?').bind(sourceKey).first();
+  if(!event)return json({error:'Evento dinamico non trovato'},404,{...cors,'Cache-Control':'no-store'});
+  const ipHash=await requestFingerprint(request,env);
+  const recent=await env.TREE_DB.prepare("SELECT COUNT(*) AS total FROM tree_location_reports WHERE reporter_ip_hash=? AND created_at>=datetime('now','-1 day')").bind(ipHash).first();
+  if(Number(recent?.total||0)>=5)return json({error:'Limite giornaliero di segnalazioni raggiunto'},429,{...cors,'Cache-Control':'no-store'});
+  const now=new Date().toISOString();
+  const result=await env.TREE_DB.prepare(`
+    INSERT INTO tree_location_reports(source_key,event_id,location_index,location_name,reason,reporter_name,reporter_email,suggested_longitude,suggested_latitude,reporter_ip_hash,created_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING id
+  `).bind(sourceKey,eventId,locationIndex,locationName,reason,reporterName,reporterEmail,longitude,latitude,ipHash,now).first();
+  return json({ok:true,reportId:result?.id,status:'pending',reportedAt:now,emailConfirmation:Boolean(reporterEmail)},201,{...cors,'Cache-Control':'no-store'})
+}
+
+async function listTreeLocationReports(env,cors,url){
+  const status=String(url.searchParams.get('status')||'pending');
+  if(!['pending','approved','rejected','all'].includes(status))return badRequest('Stato non valido',cors);
+  const where=status==='all'?'':"WHERE status=?";
+  const statement=env.TREE_DB.prepare(`SELECT id,source_key,event_id,location_index,location_name,reason,reporter_name,reporter_email,suggested_longitude,suggested_latitude,status,created_at FROM tree_location_reports ${where} ORDER BY created_at DESC LIMIT 200`);
+  const result=await(status==='all'?statement:statement.bind(status)).all();
+  return json({reports:result.results||[]},200,{...cors,'Cache-Control':'no-store'})
+}
+
+async function reviewTreeLocationReport(request,env,cors){
+  const body=await request.json().catch(()=>null);
+  const reportId=Number(body?.reportId);
+  const action=String(body?.action||'');
+  if(!Number.isInteger(reportId)||!['approve','reject'].includes(action))return badRequest('Revisione non valida',cors);
+  const report=await env.TREE_DB.prepare("SELECT * FROM tree_location_reports WHERE id=? AND status='pending'").bind(reportId).first();
+  if(!report)return json({error:'Segnalazione non trovata o già revisionata'},404,{...cors,'Cache-Control':'no-store'});
+  if(action==='reject'){
+    await env.TREE_DB.prepare("UPDATE tree_location_reports SET status='rejected' WHERE id=?").bind(reportId).run();
+    return json({ok:true,reportId,status:'rejected',notificationEmail:report.reporter_email||null},200,{...cors,'Cache-Control':'no-store'})
+  }
+  const longitude=Number(body?.longitude??report.suggested_longitude),latitude=Number(body?.latitude??report.suggested_latitude);
+  const locationName=String(body?.locationName||report.location_name).trim().slice(0,300);
+  if(!Number.isFinite(longitude)||!Number.isFinite(latitude)||longitude<ROME_GEOCODE_BBOX.west||longitude>ROME_GEOCODE_BBOX.east||latitude<ROME_GEOCODE_BBOX.south||latitude>ROME_GEOCODE_BBOX.north)return badRequest('Coordinate di approvazione non valide',cors);
+  let geometryJson=null;
+  if(body?.geometry){
+    const geometry=body.geometry;
+    if(!['LineString','MultiLineString','Polygon','MultiPolygon'].includes(geometry?.type))return badRequest('Geometria GeoJSON non valida',cors);
+    geometryJson=JSON.stringify(geometry);
+    if(geometryJson.length>100000)return badRequest('Geometria troppo grande',cors)
+  }
+  await env.TREE_DB.batch([
+    env.TREE_DB.prepare(`INSERT INTO tree_location_overrides(source_key,location_index,location_name,longitude,latitude,geometry_json,report_id) VALUES(?,?,?,?,?,?,?) ON CONFLICT(source_key,location_index) DO UPDATE SET location_name=excluded.location_name,longitude=excluded.longitude,latitude=excluded.latitude,geometry_json=excluded.geometry_json,report_id=excluded.report_id`).bind(report.source_key,report.location_index,locationName,longitude,latitude,geometryJson,reportId),
+    env.TREE_DB.prepare("UPDATE tree_location_reports SET status='approved' WHERE id=?").bind(reportId)
+  ]);
+  return json({ok:true,reportId,status:'approved',notificationEmail:report.reporter_email||null},200,{...cors,'Cache-Control':'no-store'})
 }
 
 async function reviewTreeEvent(request,env,cors){
@@ -1793,6 +1907,20 @@ export default{
       return reviewTreeEvent(request,env,cors)
     }
 
+    if(request.method==='POST'&&url.pathname==='/v1/trees/location-reports'){
+      return createTreeLocationReport(request,env,cors)
+    }
+
+    if(request.method==='GET'&&url.pathname==='/v1/trees/location-reports'){
+      if(!await adminPasswordAuthorized(request,env))return json({error:'Password amministratore non valida'},401,{...cors,'Cache-Control':'no-store'});
+      return listTreeLocationReports(env,cors,url)
+    }
+
+    if(request.method==='POST'&&url.pathname==='/v1/trees/location-reports/review'){
+      if(!await adminPasswordAuthorized(request,env))return json({error:'Password amministratore non valida'},401,{...cors,'Cache-Control':'no-store'});
+      return reviewTreeLocationReport(request,env,cors)
+    }
+
     if(request.method!=='GET'){
       return json({error:'Metodo non consentito'},405,{
         ...cors,
@@ -1804,7 +1932,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.8.5',
+        version:'0.9.0',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,

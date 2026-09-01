@@ -18,6 +18,7 @@ const state={
   viewportRefreshDepth:0,
   lastMapViewportKey:'',
   romeBoundary:null,
+  treeEvents:new Map(),treeProxyPromise:null,treeReportMap:null,treeReportMarker:null,treeReportEvent:null,
   diagnostics:{}
 };
 
@@ -2897,6 +2898,7 @@ function treeListHtml(result,year,includeAggregate=true){
   const {city,events,aggregate,documentedEvents=[],documentedSummary,diagnostic={}}=result;
   const safe=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const safeUrl=value=>{try{const url=new URL(String(value));return url.protocol==='https:'?url.toString():'#'}catch{return'#'}};
+  const sourceKey=event=>{try{return event.sourceKey||new URL(event.sourceUrl).searchParams.get('contentId')||event.id}catch{return event.sourceKey||event.id}};
   if(!city)return'<div class="empty-state">Città non configurata per le statistiche arboree.</div>';
   if(!city.available)return`<div class="tree-period-note"><strong>${city.name}</strong><br>${city.reason}</div>`;
 
@@ -2923,7 +2925,8 @@ function treeListHtml(result,year,includeAggregate=true){
       const mapped=Number(event.path?.properties?.locationsMapped||0);
       const expected=Number(event.path?.properties?.locationsExpected||0);
       const pathDetail=expected>1?`<br>${mapped} località evidenziate su ${expected} documentate; ripartizione delle quantità non specificata.`:'';
-      return`<div class="tree-event-row" data-tree-event-index="${index}" data-tree-event-id="${safe(event.id)}"><button class="tree-event-focus" type="button" data-tree-focus="${safe(event.id)}" ${located?'':`disabled title="Coordinate non ancora disponibili"`}><i class="tree-list-icon ${event.eventType==='planting'?'is-planted':'is-cut'} ${event.status==='planned'?'is-planned':''}">${TreeStats.iconSvg(event)}</i><span><strong>${safe(event.locationName)}</strong><small>${safe(event.date)}${event.district?` · ${safe(event.district)}`:''}<br>${safe(type)} · ${safe(statusLabels[event.status]||event.status)}${safe(validation)} · ${safe(quantity)}${located?' · mostra sulla mappa':' · posizione in verifica'}${pathDetail}</small></span></button><a href="${safeUrl(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a></div>`
+      const reportButton=event.sourceKey?`<button class="tree-event-report" type="button" data-tree-report="${safe(event.id)}" data-tree-source-key="${safe(sourceKey(event))}" data-tree-location-index="0">Segnala posizione</button>`:'';
+      return`<div class="tree-event-row" data-tree-event-index="${index}" data-tree-event-id="${safe(event.id)}"><button class="tree-event-focus" type="button" data-tree-focus="${safe(event.id)}" ${located?'':`disabled title="Coordinate non ancora disponibili"`}><i class="tree-list-icon ${event.eventType==='planting'?'is-planted':'is-cut'} ${event.status==='planned'?'is-planned':''}">${TreeStats.iconSvg(event)}</i><span><strong>${safe(event.locationName)}</strong><small>${safe(event.date)}${event.district?` · ${safe(event.district)}`:''}<br>${safe(type)} · ${safe(statusLabels[event.status]||event.status)}${safe(validation)} · ${safe(quantity)}${located?' · mostra sulla mappa':' · posizione in verifica'}${pathDetail}</small></span></button><span class="tree-event-links"><a href="${safeUrl(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a>${reportButton}</span></div>`
     }).join('')}</div>${documentedEvents.length>TREE_EVENTS_PER_PAGE?`<nav class="tree-pagination" data-tree-pagination aria-label="Pagine degli eventi"><button type="button" data-tree-page="prev">Precedente</button><span data-tree-page-status></span><button type="button" data-tree-page="next">Successiva</button></nav>`:''}`
     :'';
 
@@ -2986,6 +2989,7 @@ async function renderTreesMode(token){
     TreeStats.rows(cityId,yearA),
     yearB?TreeStats.rows(cityId,yearB):Promise.resolve(null)
   ]);
+  state.treeEvents=new Map([...(resultA.documentedEvents||[]),...(resultB?.documentedEvents||[])].map(event=>[String(event.id),event]));
   if(token!==state.renderToken)return;
   const boundary=cityId==='roma'&&(resultA.record||resultB?.record)?await fetchRomeBoundary():null;
   if(token!==state.renderToken)return;
@@ -3315,6 +3319,100 @@ async function installApp(){
     :'Apri il menu del browser e scegli “Installa app” o “Aggiungi alla schermata Home”.')
 }
 
+async function treeApiBase(){
+  if(!state.treeProxyPromise)state.treeProxyPromise=fetch('data/trees-proxy.json?v=0.5.14',{cache:'no-store'})
+    .then(response=>response.ok?response.json():null)
+    .then(config=>String(config?.base_url||'').replace(/\/+$/,''));
+  return state.treeProxyPromise
+}
+
+function treeLocationCoordinates(event,index){
+  const point=event?.locationPoints?.[index]?.coordinates;
+  if(Array.isArray(point)&&point.length===2)return point;
+  const marker=event?.markerCoordinates?.[index];
+  if(Array.isArray(marker)&&marker.length===2)return marker;
+  return Array.isArray(event?.coordinates)?event.coordinates:ROME.center
+}
+
+function positionTreeReportMarker(event,index){
+  const coordinates=treeLocationCoordinates(event,index);
+  state.treeReportMarker?.setLngLat(coordinates);
+  state.treeReportMap?.flyTo({center:coordinates,zoom:16,duration:500})
+}
+
+function openTreeLocationReport(eventId,requestedIndex=0){
+  const event=state.treeEvents.get(String(eventId));
+  if(!event){showToast('Evento non disponibile nella vista corrente.');return}
+  state.treeReportEvent=event;
+  const dialog=$('treeReportDialog');
+  const select=$('treeReportLocation');
+  const locations=event.locations?.length?event.locations:[event.locationName];
+  select.innerHTML=locations.map((location,index)=>`<option value="${index}">${String(location).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}</option>`).join('');
+  select.value=String(Math.min(Math.max(Number(requestedIndex)||0,0),locations.length-1));
+  $('treeReportReason').value='';$('treeReporterName').value='';$('treeReporterEmail').value='';$('treeReportStatus').textContent='';
+  $('treeReportForm').querySelector('[type=submit]').disabled=false;
+  dialog.showModal();
+  requestAnimationFrame(()=>{
+    const coordinates=treeLocationCoordinates(event,Number(select.value));
+    if(!state.treeReportMap){
+      state.treeReportMap=new maplibregl.Map({container:'treeReportMap',style:MAP_STYLE,center:coordinates,zoom:16,attributionControl:false});
+      state.treeReportMap.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
+      state.treeReportMarker=new maplibregl.Marker({draggable:true,color:'#38bdf8'}).setLngLat(coordinates).addTo(state.treeReportMap)
+    }else{
+      state.treeReportMap.resize();positionTreeReportMarker(event,Number(select.value))
+    }
+  })
+}
+
+async function submitTreeLocationReport(submitEvent){
+  submitEvent.preventDefault();
+  const event=state.treeReportEvent,index=Number($('treeReportLocation').value);
+  if(!event||!state.treeReportMarker)return;
+  const status=$('treeReportStatus');status.textContent='Invio in corso…';
+  const point=state.treeReportMarker.getLngLat();
+  try{
+    const base=await treeApiBase();if(!base)throw new Error('Proxy Alberi non configurato');
+    let sourceKey=event.sourceKey;
+    try{sourceKey=sourceKey||new URL(event.sourceUrl).searchParams.get('contentId')}catch{}
+    const response=await fetch(`${base}/v1/trees/location-reports`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      sourceKey:sourceKey||event.id.replace(/^dynamic-/,''),eventId:event.id,locationIndex:index,
+      locationName:event.locations?.[index]||event.locationName,reason:$('treeReportReason').value,
+      reporterName:$('treeReporterName').value,reporterEmail:$('treeReporterEmail').value,
+      suggestedCoordinates:[point.lng,point.lat]
+    })});
+    const result=await response.json();if(!response.ok)throw new Error(result.error||`HTTP ${response.status}`);
+    status.textContent=`Segnalazione n. ${result.reportId} inviata. Sarà verificata da un amministratore.`;
+    submitEvent.target.querySelector('[type=submit]').disabled=true
+  }catch(error){status.textContent=String(error.message||error)}
+}
+
+function renderTreeAdminReports(reports){
+  const safe=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  $('treeAdminReports').innerHTML=reports.length?reports.map(report=>`<article class="tree-admin-report" data-report-id="${report.id}"><h3>${safe(report.location_name)}</h3><p>${safe(report.reason)}</p><p>Segnalata il ${safe(new Date(report.created_at).toLocaleString('it-IT'))}${report.reporter_name?` · ${safe(report.reporter_name)}`:' · anonima'}${report.reporter_email?` · ${safe(report.reporter_email)}`:''}</p><div class="tree-form-grid"><label>Longitudine<input data-admin-lon type="number" step="any" value="${Number(report.suggested_longitude)}"></label><label>Latitudine<input data-admin-lat type="number" step="any" value="${Number(report.suggested_latitude)}"></label></div><label>Nome località<input data-admin-location value="${safe(report.location_name)}"></label><label>Geometria GeoJSON <small>(facoltativa)</small><textarea data-admin-geometry placeholder='{"type":"LineString","coordinates":[...]}'></textarea></label><div class="tree-admin-actions"><button type="button" data-admin-action="reject">Rifiuta</button><button type="button" data-admin-action="approve">Approva</button></div></article>`).join(''):'<p>Nessuna segnalazione in attesa.</p>'
+}
+
+async function loadTreeAdminReports(password){
+  const status=$('treeAdminStatus');status.textContent='Caricamento…';
+  const base=await treeApiBase();
+  const response=await fetch(`${base}/v1/trees/location-reports?status=pending`,{headers:{Authorization:`Bearer ${password}`}});
+  const result=await response.json();if(!response.ok)throw new Error(result.error||`HTTP ${response.status}`);
+  renderTreeAdminReports(result.reports||[]);status.textContent=`${result.reports?.length||0} segnalazioni in attesa.`
+}
+
+async function reviewTreeAdminReport(article,action){
+  const password=window.prompt(`Inserisci la password amministratore per ${action==='approve'?'approvare':'rifiutare'} questa segnalazione:`);
+  if(!password)return;
+  const geometryText=article.querySelector('[data-admin-geometry]').value.trim();
+  let geometry=null;
+  try{geometry=geometryText?JSON.parse(geometryText):null}catch{showToast('Il GeoJSON inserito non è valido.');return}
+  const base=await treeApiBase();
+  const response=await fetch(`${base}/v1/trees/location-reports/review`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${password}`},body:JSON.stringify({reportId:Number(article.dataset.reportId),action,longitude:Number(article.querySelector('[data-admin-lon]').value),latitude:Number(article.querySelector('[data-admin-lat]').value),locationName:article.querySelector('[data-admin-location]').value,geometry})});
+  const result=await response.json();if(!response.ok){showToast(result.error||`HTTP ${response.status}`);return}
+  article.remove();
+  if(result.notificationEmail){$('treeAdminStatus').innerHTML=`Revisione salvata. <a href="mailto:${encodeURIComponent(result.notificationEmail)}?subject=${encodeURIComponent('A.R.I.A. – esito segnalazione posizione')}">Invia conferma al segnalante</a>.`}
+  else $('treeAdminStatus').textContent='Revisione salvata.'
+}
+
 function bind(){
   // La vecchia modalità ERA5-Land non deve poter riapparire nemmeno se il
   // browser conserva una copia precedente dell'HTML.
@@ -3402,13 +3500,35 @@ function bind(){
   }
 
   $('installBtn').addEventListener('click',installApp);
+  document.addEventListener('click',event=>{
+    const reportButton=event.target.closest('[data-tree-report]');
+    if(reportButton){event.preventDefault();openTreeLocationReport(reportButton.dataset.treeReport,reportButton.dataset.treeLocationIndex)}
+    const closeButton=event.target.closest('[data-dialog-close]');
+    if(closeButton)$(closeButton.dataset.dialogClose)?.close();
+    const adminAction=event.target.closest('[data-admin-action]');
+    if(adminAction)reviewTreeAdminReport(adminAction.closest('[data-report-id]'),adminAction.dataset.adminAction).catch(error=>showToast(error.message||error))
+  });
+  $('treeReportLocation')?.addEventListener('change',event=>positionTreeReportMarker(state.treeReportEvent,Number(event.target.value)));
+  $('treeReportForm')?.addEventListener('submit',submitTreeLocationReport);
+  $('treeAdminLogin')?.addEventListener('submit',event=>{
+    event.preventDefault();
+    const password=$('treeAdminPassword').value;$('treeAdminPassword').value='';
+    loadTreeAdminReports(password).catch(error=>$('treeAdminStatus').textContent=error.message||error)
+  });
+  let versionClicks=0,lastVersionClick=0;
+  const openAdmin=()=>{
+    const now=Date.now();versionClicks=now-lastVersionClick<1800?versionClicks+1:1;lastVersionClick=now;
+    if(versionClicks===5){versionClicks=0;$('treeAdminReports').innerHTML='';$('treeAdminStatus').textContent='';$('treeAdminDialog').showModal();$('treeAdminPassword').focus()}
+  };
+  $('appVersion')?.addEventListener('click',openAdmin);
+  $('appVersion')?.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openAdmin()}});
   bindSwipe()
 }
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.5.19',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.5.19',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.6.0',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.6.0',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3424,7 +3544,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.5.19')
+    navigator.serviceWorker.register('./service-worker.js?v=0.6.0')
       .then(reg=>reg.update())
       .catch(console.error)
   }
