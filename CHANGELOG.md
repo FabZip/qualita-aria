@@ -1,5 +1,12 @@
 # Changelog
 
+## [Proxy 0.9.3] - 2026-09-01
+
+- Separata la scansione settimanale delle fonti dallo smaltimento quotidiano della coda geografica.
+- Il lunedì alle 03:00 UTC resta attivo il refresh completo; ogni giorno alle 03:30 UTC vengono elaborate soltanto le località ancora in attesa.
+- Il limite resta di otto località per esecuzione, senza interrogare quotidianamente il portale Roma Capitale.
+- Aggiornato `wrangler.toml.example`; non sono richieste migrazioni D1 e l’app resta alla versione `0.6.1` build 74.
+
 ## [Proxy 0.9.2] - 2026-09-01
 
 - Il refresh arboreo ricontrolla anche gli avvisi già archiviati, ordinandoli dal meno recente, oltre alle pagine presenti nell’elenco corrente di Roma Capitale.

@@ -1905,7 +1905,12 @@ async function reviewTreeEvent(request,env,cors){
 export default{
   async scheduled(controller,env,ctx){
     if(String(env.TREE_SYNC_ENABLED||'true')!=='true')return;
-    ctx.waitUntil(refreshTreeSources(env))
+    if(!env.TREE_DB)return;
+    if(controller.cron==='30 3 * * *'){
+      ctx.waitUntil(geocodePendingTreeEvents(env.TREE_DB));
+      return
+    }
+    if(controller.cron==='0 3 * * 1')ctx.waitUntil(refreshTreeSources(env))
   },
   async fetch(request,env,ctx){
     const url=new URL(request.url);
@@ -1960,7 +1965,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.9.2',
+        version:'0.9.3',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,
@@ -1971,6 +1976,7 @@ export default{
         historicalFrom:1950,
         treeEventsDynamic:Boolean(env.TREE_DB),
         treeSyncSchedule:'0 3 * * 1',
+        treeGeocodeSchedule:'30 3 * * *',
         cacheSeconds:CACHE_TTL
       },200,{
         ...cors,

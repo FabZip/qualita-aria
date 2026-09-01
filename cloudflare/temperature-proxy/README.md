@@ -34,7 +34,7 @@ Il Worker espone:
 - `GET /v1/trees/events?city=roma&year=2026` per il frontend;
 - `POST /v1/trees/refresh` per avviare una scansione manuale autenticata;
 - `POST /v1/trees/review` per confermare, correggere o rifiutare un evento;
-- un `scheduled()` handler eseguito ogni lunedì alle 03:00 UTC (04:00 in Italia con ora solare, 05:00 con ora legale).
+- un refresh completo ogni lunedì alle 03:00 UTC e lo smaltimento della sola coda geografica ogni giorno alle 03:30 UTC.
 
 Gli eventi sono conservati in Cloudflare D1. Le pagine con più interventi o formulazioni ambigue vengono archiviate come `automatic_pending` e non incidono sui totali. Soltanto eventi con quantità nota e stato `completed` o `emergency_completed` vengono sommati dal frontend.
 
@@ -66,7 +66,7 @@ La migrazione `0002_tree_event_coordinates.sql` non elimina eventi: aggiunge i c
 
 ### Forzare manualmente l'aggiornamento arboreo
 
-Il token amministrativo **non serve all'app e non serve al cron settimanale**. È richiesto soltanto per avviare manualmente una scansione o revisionare un evento. Conservarlo in un password manager e non inserirlo in Git, `wrangler.toml`, README o script versionati.
+Il token amministrativo **non serve all'app e non serve ai cron automatici**. È richiesto soltanto per avviare manualmente una scansione o revisionare un evento. Conservarlo in un password manager e non inserirlo in Git, `wrangler.toml`, README o script versionati.
 
 Per forzare un aggiornamento senza lasciare il token nella cronologia della shell:
 
@@ -111,7 +111,7 @@ unset ARIA_TREE_TOKEN
 
 Il file `data/trees.json` rimane il dataset consolidato di fallback se D1 o il proxy non sono raggiungibili.
 
-Il Worker è identificato dalla versione proxy `0.9.2`.
+Il Worker è identificato dalla versione proxy `0.9.3`.
 
 ### Pubblicazione Worker
 
@@ -119,7 +119,7 @@ Nei progetti già configurati, aggiornare anche il file locale `wrangler.toml` (
 
 ```toml
 [triggers]
-crons = ["0 3 * * 1"]
+crons = ["0 3 * * 1", "30 3 * * *"]
 ```
 
 Poi distribuire il Worker:
@@ -129,7 +129,14 @@ cd cloudflare/temperature-proxy
 npx wrangler@latest deploy
 ```
 
-Al termine Wrangler deve mostrare `schedule: 0 3 * * 1`. Non sono richieste migrazioni D1 né modifiche a `TREE_ADMIN_TOKEN`.
+Al termine Wrangler deve mostrare entrambi gli schedule: `0 3 * * 1` e `30 3 * * *`. Non sono richieste migrazioni D1 né modifiche a `TREE_ADMIN_TOKEN`.
+
+## 0.9.3
+
+Il trigger settimanale continua a scansionare le fonti e aggiornare D1. Il nuovo
+trigger quotidiano richiama soltanto `geocodePendingTreeEvents`, smaltendo fino
+a otto località senza scaricare nuovamente le pagine comunali. Il lunedì i due
+trigger restano indipendenti. Non sono richieste migrazioni D1.
 
 ## 0.9.2
 
