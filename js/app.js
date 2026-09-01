@@ -2937,15 +2937,16 @@ function treeListHtml(result,year,includeAggregate=true){
     ?`${documentedSummary?balanceRow(documentedSummary):''}<div class="tree-event-list" data-tree-event-list>${documentedEvents.map((event,index)=>{
       const type=event.eventType==='planting'?'Piantumazione':event.eventType==='decrement'?'Abbattimento':'Tipo da verificare';
       const quantity=Number.isFinite(event.quantity)?TreeStats.fmt(event.quantity):'—';
-      const validation=event.validation==='automatic_pending'?' · da verificare':event.validation==='automatic_confirmed'?' · verifica automatica':'';
       const located=Array.isArray(event.coordinates)&&event.coordinates.length===2;
+      const validation=!located||event.validation==='automatic_pending'?' · da verificare':'';
       const mapped=Number(event.path?.properties?.locationsMapped||0);
       const expected=Number(event.path?.properties?.locationsExpected||0);
-      const pathDetail=expected>1?`<br>${mapped} località evidenziate su ${expected} documentate; ripartizione delle quantità non specificata.`:'';
-      const reportButton=event.sourceKey?`<button class="tree-event-report" type="button" data-tree-report="${safe(event.id)}" data-tree-source-key="${safe(sourceKey(event))}" data-tree-location-index="0">Segnala posizione</button>`:'';
+      const pathDetail=located&&expected>1?`<br>${mapped} località evidenziate su ${expected} documentate; ripartizione delle quantità non specificata.`:'';
+      const reportButton=located&&event.sourceKey?`<button class="tree-event-report" type="button" data-tree-report="${safe(event.id)}" data-tree-source-key="${safe(sourceKey(event))}" data-tree-location-index="0">Segnala posizione</button>`:'';
       const statusLabel=plannedDateHasPassed(event)?'Programmato · data trascorsa':statusLabels[event.status]||event.status;
       const quantityTitle=Number.isFinite(event.quantity)?`${quantity} alberi`:'Quantità non specificata';
-      return`<div class="tree-event-row" data-tree-event-index="${index}" data-tree-event-id="${safe(event.id)}"><button class="tree-event-focus" type="button" data-tree-focus="${safe(event.id)}" ${located?'':`disabled title="Coordinate non ancora disponibili"`}><span class="tree-list-symbol"><i class="tree-list-icon ${event.eventType==='planting'?'is-planted':'is-cut'} ${event.status==='planned'?'is-planned':''}">${TreeStats.iconSvg(event)}</i><b class="tree-list-quantity" title="${safe(quantityTitle)}">${safe(quantity)}</b></span><span><strong>${safe(event.locationName)}</strong><small>${safe(event.date)}${event.district?` · ${safe(event.district)}`:''}<br>${safe(type)} · ${safe(statusLabel)}${safe(validation)}${located?' · mostra sulla mappa':' · posizione in verifica'}${pathDetail}</small></span></button><span class="tree-event-links"><a href="${safeUrl(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a>${reportButton}</span></div>`
+      const eventDetail=located?`${type} · ${statusLabel}${validation}`:'da verificare';
+      return`<div class="tree-event-row" data-tree-event-index="${index}" data-tree-event-id="${safe(event.id)}"><button class="tree-event-focus" type="button" data-tree-focus="${safe(event.id)}" ${located?'':`disabled title="Coordinate non ancora disponibili"`}><span class="tree-list-symbol"><i class="tree-list-icon ${event.eventType==='planting'?'is-planted':'is-cut'} ${event.status==='planned'?'is-planned':''}">${TreeStats.iconSvg(event)}</i><b class="tree-list-quantity" title="${safe(quantityTitle)}">${safe(quantity)}</b></span><span><strong>${safe(event.locationName)}</strong><small>${safe(event.date)}${event.district?` · ${safe(event.district)}`:''}<br>${safe(eventDetail)}${pathDetail}</small></span></button><span class="tree-event-links"><a href="${safeUrl(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a>${reportButton}</span></div>`
     }).join('')}</div>${documentedEvents.length>TREE_EVENTS_PER_PAGE?`<nav class="tree-pagination" data-tree-pagination aria-label="Pagine degli eventi"><button type="button" data-tree-page="prev">Precedente</button><span data-tree-page-status></span><button type="button" data-tree-page="next">Successiva</button></nav>`:''}`
     :'';
 
@@ -3572,8 +3573,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.6.2',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.6.2',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.6.3',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.6.3',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3589,7 +3590,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.6.2')
+    navigator.serviceWorker.register('./service-worker.js?v=0.6.3')
       .then(reg=>reg.update())
       .catch(console.error)
   }

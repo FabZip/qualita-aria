@@ -7,6 +7,13 @@
 - Il limite resta di otto località per esecuzione, senza interrogare quotidianamente il portale Roma Capitale.
 - Aggiornato `wrangler.toml.example`; non sono richieste migrazioni D1 e l’app resta alla versione `0.6.1` build 74.
 
+## [0.6.3] - 2026-09-01
+
+- Rimossi dalla lista Alberi i testi “mostra sulla mappa” e “verifica automatica”.
+- Gli eventi privi di coordinate mostrano soltanto l’indicazione “da verificare”, senza la dicitura ridondante “posizione in verifica”.
+- “Segnala posizione” non viene più proposto per gli eventi non geolocalizzati, perché manca un punto iniziale attendibile da correggere.
+- App aggiornata alla versione `0.6.3` (build 76), dataset invariato alla revisione 18 e Worker invariato alla versione `0.9.3`.
+
 ## [0.6.2] - 2026-09-01
 
 - Gli eventi ancora classificati come programmati mostrano “Programmato · data trascorsa” quando l’ultimo giorno documentato è già passato.
