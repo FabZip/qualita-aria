@@ -1820,6 +1820,20 @@ async function createTreeLocationReport(request,env,cors){
   return json({ok:true,reportId:result?.id,status:'pending',reportedAt:now,emailConfirmation:Boolean(reporterEmail)},201,{...cors,'Cache-Control':'no-store'})
 }
 
+async function treeGeocodeSearchResponse(cors,url){
+  const query=String(url.searchParams.get('q')||'').trim().slice(0,180);
+  if(query.length<3)return badRequest('Inserire almeno tre caratteri',cors);
+  const target=new URL('https://nominatim.openstreetmap.org/search');
+  target.searchParams.set('format','jsonv2');target.searchParams.set('limit','5');target.searchParams.set('countrycodes','it');
+  target.searchParams.set('viewbox',`${ROME_GEOCODE_BBOX.west},${ROME_GEOCODE_BBOX.north},${ROME_GEOCODE_BBOX.east},${ROME_GEOCODE_BBOX.south}`);
+  target.searchParams.set('bounded','1');target.searchParams.set('q',`${query}, Roma`);
+  const response=await fetch(target,{headers:{Accept:'application/json','User-Agent':'A.R.I.A. location-report-search/0.9 (https://fabzip.github.io/qualita-aria/)','Referer':'https://fabzip.github.io/qualita-aria/'}});
+  if(!response.ok)return json({error:`Ricerca indirizzo HTTP ${response.status}`},502,{...cors,'Cache-Control':'no-store'});
+  const values=await response.json();
+  const results=(values||[]).map(item=>({label:String(item.display_name||'').slice(0,300),coordinates:[Number(item.lon),Number(item.lat)]})).filter(item=>item.coordinates.every(Number.isFinite));
+  return json({results},200,{...cors,'Cache-Control':'no-store'})
+}
+
 async function listTreeLocationReports(env,cors,url){
   const status=String(url.searchParams.get('status')||'pending');
   if(!['pending','approved','rejected','all'].includes(status))return badRequest('Stato non valido',cors);
@@ -1921,6 +1935,10 @@ export default{
       return reviewTreeLocationReport(request,env,cors)
     }
 
+    if(request.method==='GET'&&url.pathname==='/v1/trees/geocode'){
+      return treeGeocodeSearchResponse(cors,url)
+    }
+
     if(request.method!=='GET'){
       return json({error:'Metodo non consentito'},405,{
         ...cors,
@@ -1932,7 +1950,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.9.0',
+        version:'0.9.1',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,

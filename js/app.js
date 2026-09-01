@@ -18,12 +18,13 @@ const state={
   viewportRefreshDepth:0,
   lastMapViewportKey:'',
   romeBoundary:null,
-  treeEvents:new Map(),treeProxyPromise:null,treeReportMap:null,treeReportMarker:null,treeReportEvent:null,
+  treeEvents:new Map(),treeProxyPromise:null,treeReportMap:null,treeReportEvent:null,treeReportInitialCoordinates:null,
   diagnostics:{}
 };
 
 const $=id=>document.getElementById(id);
 const MAP_STYLE='https://tiles.openfreemap.org/styles/positron';
+const TREE_REPORT_SATELLITE_STYLE={version:8,sources:{satellite:{type:'raster',tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],tileSize:256,attribution:'Imagery © Esri, Maxar, Earthstar Geographics e altri contributori'}},layers:[{id:'satellite',type:'raster',source:'satellite'}]};
 const ROME={center:[12.4964,41.9028],zoom:10.2,bbox:[12.15,41.65,12.85,42.15]};
 const EUROPE={center:[10.0,50.0],zoom:3.15,bbox:[-25.0,27.0,45.0,72.0]};
 const EEA_CITY_RADIUS_KM=40;
@@ -3336,8 +3337,8 @@ function treeLocationCoordinates(event,index){
 
 function positionTreeReportMarker(event,index){
   const coordinates=treeLocationCoordinates(event,index);
-  state.treeReportMarker?.setLngLat(coordinates);
-  state.treeReportMap?.flyTo({center:coordinates,zoom:16,duration:500})
+  state.treeReportInitialCoordinates=[...coordinates];
+  state.treeReportMap?.flyTo({center:coordinates,zoom:17,duration:500})
 }
 
 function openTreeLocationReport(eventId,requestedIndex=0){
@@ -3350,14 +3351,15 @@ function openTreeLocationReport(eventId,requestedIndex=0){
   select.innerHTML=locations.map((location,index)=>`<option value="${index}">${String(location).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}</option>`).join('');
   select.value=String(Math.min(Math.max(Number(requestedIndex)||0,0),locations.length-1));
   $('treeReportReason').value='';$('treeReporterName').value='';$('treeReporterEmail').value='';$('treeReportStatus').textContent='';
+  $('treeAddressSearch').value='';$('treeAddressResults').innerHTML='';
   $('treeReportForm').querySelector('[type=submit]').disabled=false;
   dialog.showModal();
   requestAnimationFrame(()=>{
     const coordinates=treeLocationCoordinates(event,Number(select.value));
     if(!state.treeReportMap){
-      state.treeReportMap=new maplibregl.Map({container:'treeReportMap',style:MAP_STYLE,center:coordinates,zoom:16,attributionControl:false});
+      state.treeReportInitialCoordinates=[...coordinates];
+      state.treeReportMap=new maplibregl.Map({container:'treeReportMap',style:TREE_REPORT_SATELLITE_STYLE,center:coordinates,zoom:17,attributionControl:true});
       state.treeReportMap.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
-      state.treeReportMarker=new maplibregl.Marker({draggable:true,color:'#38bdf8'}).setLngLat(coordinates).addTo(state.treeReportMap)
     }else{
       state.treeReportMap.resize();positionTreeReportMarker(event,Number(select.value))
     }
@@ -3367,9 +3369,9 @@ function openTreeLocationReport(eventId,requestedIndex=0){
 async function submitTreeLocationReport(submitEvent){
   submitEvent.preventDefault();
   const event=state.treeReportEvent,index=Number($('treeReportLocation').value);
-  if(!event||!state.treeReportMarker)return;
+  if(!event||!state.treeReportMap)return;
   const status=$('treeReportStatus');status.textContent='Invio in corso…';
-  const point=state.treeReportMarker.getLngLat();
+  const point=state.treeReportMap.getCenter();
   try{
     const base=await treeApiBase();if(!base)throw new Error('Proxy Alberi non configurato');
     let sourceKey=event.sourceKey;
@@ -3384,6 +3386,26 @@ async function submitTreeLocationReport(submitEvent){
     status.textContent=`Segnalazione n. ${result.reportId} inviata. Sarà verificata da un amministratore.`;
     submitEvent.target.querySelector('[type=submit]').disabled=true
   }catch(error){status.textContent=String(error.message||error)}
+}
+
+async function searchTreeReportAddress(){
+  const query=$('treeAddressSearch').value.trim(),results=$('treeAddressResults');
+  if(query.length<3){results.textContent='Inserisci almeno tre caratteri.';return}
+  results.textContent='Ricerca in corso…';
+  try{
+    const base=await treeApiBase();
+    const response=await fetch(`${base}/v1/trees/geocode?q=${encodeURIComponent(query)}`,{cache:'no-store'});
+    const data=await response.json();if(!response.ok)throw new Error(data.error||`HTTP ${response.status}`);
+    results.innerHTML=(data.results||[]).length
+      ?data.results.map(item=>`<button type="button" data-tree-address-lon="${Number(item.coordinates[0])}" data-tree-address-lat="${Number(item.coordinates[1])}">${String(item.label).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}</button>`).join('')
+      :'Nessun indirizzo trovato nell’area di Roma.'
+  }catch(error){results.textContent=error.message||error}
+}
+
+function resetTreeReportMap(){
+  if(!state.treeReportMap||!state.treeReportInitialCoordinates)return;
+  state.treeReportMap.flyTo({center:state.treeReportInitialCoordinates,zoom:17,duration:600});
+  $('treeAddressSearch').value='';$('treeAddressResults').innerHTML=''
 }
 
 function renderTreeAdminReports(reports){
@@ -3507,9 +3529,14 @@ function bind(){
     if(closeButton)$(closeButton.dataset.dialogClose)?.close();
     const adminAction=event.target.closest('[data-admin-action]');
     if(adminAction)reviewTreeAdminReport(adminAction.closest('[data-report-id]'),adminAction.dataset.adminAction).catch(error=>showToast(error.message||error))
+    const addressResult=event.target.closest('[data-tree-address-lon]');
+    if(addressResult){state.treeReportMap?.flyTo({center:[Number(addressResult.dataset.treeAddressLon),Number(addressResult.dataset.treeAddressLat)],zoom:18,duration:650});$('treeAddressResults').innerHTML=''}
   });
   $('treeReportLocation')?.addEventListener('change',event=>positionTreeReportMarker(state.treeReportEvent,Number(event.target.value)));
   $('treeReportForm')?.addEventListener('submit',submitTreeLocationReport);
+  $('treeAddressSearchBtn')?.addEventListener('click',searchTreeReportAddress);
+  $('treeReportReset')?.addEventListener('click',resetTreeReportMap);
+  $('treeAddressSearch')?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();searchTreeReportAddress()}});
   $('treeAdminLogin')?.addEventListener('submit',event=>{
     event.preventDefault();
     const password=$('treeAdminPassword').value;$('treeAdminPassword').value='';
@@ -3527,8 +3554,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.6.0',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.6.0',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.6.1',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.6.1',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3544,7 +3571,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.6.0')
+    navigator.serviceWorker.register('./service-worker.js?v=0.6.1')
       .then(reg=>reg.update())
       .catch(console.error)
   }

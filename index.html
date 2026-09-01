@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="css/station-list.css?v=0.2.2">
   <link rel="stylesheet" href="css/openaq-world.css?v=0.2.4">
   <link rel="stylesheet" href="css/temperature.css?v=0.3.8">
-  <link rel="stylesheet" href="css/trees.css?v=0.6.0">
+  <link rel="stylesheet" href="css/trees.css?v=0.6.1">
   <link rel="stylesheet" href="css/header-overrides.css?v=0.5.19">
   <title>Qualità dell'aria</title>
 </head>
@@ -231,9 +231,12 @@
     <dialog id="treeReportDialog" class="tree-dialog">
       <form id="treeReportForm">
         <div class="tree-dialog-head"><h2>Segnala una posizione</h2><button type="button" data-dialog-close="treeReportDialog" aria-label="Chiudi">×</button></div>
-        <p>Indica il problema e, se conosci la posizione corretta, trascina il marker sulla mappa.</p>
+        <p>Indica il problema e sposta la mappa fino a collocare il mirino sulla posizione corretta.</p>
         <label>Località<select id="treeReportLocation"></select></label>
-        <div id="treeReportMap" class="tree-report-map" aria-label="Mappa per correggere la posizione"></div>
+        <div class="tree-address-search"><input id="treeAddressSearch" type="search" placeholder="Cerca indirizzo a Roma" aria-label="Cerca indirizzo"><button id="treeAddressSearchBtn" type="button">Cerca</button><button id="treeReportReset" type="button">Ripristina</button></div>
+        <div id="treeAddressResults" class="tree-address-results"></div>
+        <div class="tree-report-map-wrap"><div id="treeReportMap" class="tree-report-map" aria-label="Mappa satellitare per correggere la posizione"></div><div class="tree-report-crosshair" aria-hidden="true"></div></div>
+        <small>Sposta la mappa: il mirino resta fisso al centro e indica la posizione proposta.</small>
         <label>Problema<textarea id="treeReportReason" required minlength="5" maxlength="1200" placeholder="Descrivi perché la posizione non è corretta"></textarea></label>
         <div class="tree-form-grid"><label>Nome <small>(facoltativo)</small><input id="treeReporterName" maxlength="120"></label><label>Email <small>(facoltativa)</small><input id="treeReporterEmail" type="email" maxlength="254"></label></div>
         <small>L’email sarà usata esclusivamente per comunicare l’esito della segnalazione.</small>
@@ -250,7 +253,7 @@
     </dialog>
 
     <footer class="app-footer">
-      v<span id="appVersion" role="button" tabindex="0" aria-label="Versione applicazione">0.6.0</span> · dataset <span id="dataVersion">18</span>
+      v<span id="appVersion" role="button" tabindex="0" aria-label="Versione applicazione">0.6.1</span> · dataset <span id="dataVersion">18</span>
     </footer>
   </main>
 
@@ -260,8 +263,8 @@
   <script src="js/openaq-proxy.js?v=0.2.11" defer></script>
   <script src="js/eea-proxy.js?v=0.2.14" defer></script>
   <script src="js/temperature-proxy.js?v=0.3.9" defer></script>
-  <script src="js/trees.js?v=0.6.0" defer></script>
-  <script src="js/app.js?v=0.6.0" defer></script>
+  <script src="js/trees.js?v=0.6.1" defer></script>
+  <script src="js/app.js?v=0.6.1" defer></script>
   <script src="js/eea-utd.js?v=0.2.14" defer></script>
   <script src="js/openaq-world.js?v=0.3.8" defer></script>
   <script src="js/temperature-overlay.js?v=0.3.9" defer></script>

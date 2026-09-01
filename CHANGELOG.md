@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1] - 2026-09-01
+
+- La mappa delle segnalazioni usa una vista satellitare con attribuzione Esri.
+- Il punto proposto è indicato da un mirino fisso al centro: si sposta la cartografia, non il marker.
+- Aggiunta la ricerca degli indirizzi nell’area di Roma tramite il Worker.
+- Aggiunto il pulsante “Ripristina” per tornare alla posizione iniziale della località selezionata.
+- App aggiornata alla versione `0.6.1` (build 74), dataset invariato alla revisione 18 e Worker aggiornato alla versione `0.9.1`.
+
 ## [0.6.0] - 2026-09-01
 
 - Lo zoom degli eventi multilocalità considera contemporaneamente tutte le geometrie e tutti i marker dell’avviso.

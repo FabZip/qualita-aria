@@ -111,7 +111,7 @@ unset ARIA_TREE_TOKEN
 
 Il file `data/trees.json` rimane il dataset consolidato di fallback se D1 o il proxy non sono raggiungibili.
 
-Il Worker è identificato dalla versione proxy `0.9.0`.
+Il Worker è identificato dalla versione proxy `0.9.1`.
 
 ### Pubblicazione Worker
 
@@ -130,6 +130,12 @@ npx wrangler@latest deploy
 ```
 
 Al termine Wrangler deve mostrare `schedule: 0 3 * * 1`. Non sono richieste migrazioni D1 né modifiche a `TREE_ADMIN_TOKEN`.
+
+## 0.9.1
+
+Aggiunge `GET /v1/trees/geocode?q=...`, una ricerca Nominatim limitata al
+riquadro geografico di Roma e usata esclusivamente dal correttore delle
+segnalazioni. Non sono richieste nuove migrazioni D1.
 
 ## 0.9.0
 
