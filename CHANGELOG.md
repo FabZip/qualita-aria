@@ -7,6 +7,13 @@
 - Il limite resta di otto località per esecuzione, senza interrogare quotidianamente il portale Roma Capitale.
 - Aggiornato `wrangler.toml.example`; non sono richieste migrazioni D1 e l’app resta alla versione `0.6.1` build 74.
 
+## [0.6.2] - 2026-09-01
+
+- Gli eventi ancora classificati come programmati mostrano “Programmato · data trascorsa” quando l’ultimo giorno documentato è già passato.
+- La scadenza è soltanto un’indicazione temporale: lo stato ufficiale non viene convertito automaticamente in eseguito.
+- La quantità degli alberi è stata spostata sotto l’icona nella lista degli eventi; quando non è disponibile viene mostrato un trattino.
+- App aggiornata alla versione `0.6.2` (build 75), dataset invariato alla revisione 18 e Worker invariato alla versione `0.9.3`.
+
 ## [Proxy 0.9.2] - 2026-09-01
 
 - Il refresh arboreo ricontrolla anche gli avvisi già archiviati, ordinandoli dal meno recente, oltre alle pagine presenti nell’elenco corrente di Roma Capitale.
