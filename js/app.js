@@ -18,7 +18,7 @@ const state={
   viewportRefreshDepth:0,
   lastMapViewportKey:'',
   romeBoundary:null,
-  treeEvents:new Map(),treeProxyPromise:null,treeReportMap:null,treeReportEvent:null,treeReportInitialCoordinates:null,
+  treeEvents:new Map(),treeProxyPromise:null,treeReportMap:null,treeReportEvent:null,treeEventReportEvent:null,treeReportInitialCoordinates:null,
   diagnostics:{}
 };
 
@@ -2942,7 +2942,11 @@ function treeListHtml(result,year,includeAggregate=true){
       const mapped=Number(event.path?.properties?.locationsMapped||0);
       const expected=Number(event.path?.properties?.locationsExpected||0);
       const pathDetail=located&&expected>1?`<br>${mapped} località evidenziate su ${expected} documentate; ripartizione delle quantità non specificata.`:'';
-      const reportButton=located&&event.sourceKey?`<button class="tree-event-report" type="button" data-tree-report="${safe(event.id)}" data-tree-source-key="${safe(sourceKey(event))}" data-tree-location-index="0">Segnala posizione</button>`:'';
+      const reportButton=located&&event.sourceKey
+        ?`<button class="tree-event-report" type="button" data-tree-report="${safe(event.id)}" data-tree-source-key="${safe(sourceKey(event))}" data-tree-location-index="0">Segnala posizione</button>`
+        :!located&&event.sourceKey
+          ?`<button class="tree-event-report" type="button" data-tree-event-report="${safe(event.id)}" data-tree-source-key="${safe(sourceKey(event))}">Segnala evento</button>`
+          :'';
       const statusLabel=plannedDateHasPassed(event)?'Programmato · data trascorsa':statusLabels[event.status]||event.status;
       const quantityTitle=Number.isFinite(event.quantity)?`${quantity} alberi`:'Quantità non specificata';
       const eventDetail=located?`${type} · ${statusLabel}${validation}`:'da verificare';
@@ -3407,6 +3411,33 @@ async function submitTreeLocationReport(submitEvent){
   }catch(error){status.textContent=String(error.message||error)}
 }
 
+function openTreeEventReport(eventId){
+  const event=state.treeEvents.get(String(eventId));
+  if(!event){showToast('Evento non disponibile nella vista corrente.');return}
+  state.treeEventReportEvent=event;
+  $('treeEventReportSummary').textContent=`${event.locationName} · ${event.date||event.year}`;
+  $('treeEventReportReason').value='';$('treeEventReporterName').value='';$('treeEventReporterEmail').value='';$('treeEventReportStatus').textContent='';
+  $('treeEventReportForm').querySelector('[type=submit]').disabled=false;
+  $('treeEventReportDialog').showModal()
+}
+
+async function submitTreeEventReport(submitEvent){
+  submitEvent.preventDefault();
+  const event=state.treeEventReportEvent;
+  if(!event)return;
+  const status=$('treeEventReportStatus');status.textContent='Invio in corso…';
+  try{
+    const base=await treeApiBase();if(!base)throw new Error('Proxy Alberi non configurato');
+    const response=await fetch(`${base}/v1/trees/event-reports`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      sourceKey:event.sourceKey,eventId:event.id,reason:$('treeEventReportReason').value,
+      reporterName:$('treeEventReporterName').value,reporterEmail:$('treeEventReporterEmail').value
+    })});
+    const result=await response.json();if(!response.ok)throw new Error(result.error||`HTTP ${response.status}`);
+    status.textContent=`Segnalazione n. ${result.reportId} inviata. Sarà verificata da un amministratore.`;
+    submitEvent.target.querySelector('[type=submit]').disabled=true
+  }catch(error){status.textContent=String(error.message||error)}
+}
+
 async function searchTreeReportAddress(){
   const query=$('treeAddressSearch').value.trim(),results=$('treeAddressResults');
   if(query.length<3){results.textContent='Inserisci almeno tre caratteri.';return}
@@ -3429,7 +3460,16 @@ function resetTreeReportMap(){
 
 function renderTreeAdminReports(reports){
   const safe=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-  $('treeAdminReports').innerHTML=reports.length?reports.map(report=>`<article class="tree-admin-report" data-report-id="${report.id}"><h3>${safe(report.location_name)}</h3><p>${safe(report.reason)}</p><p>Segnalata il ${safe(new Date(report.created_at).toLocaleString('it-IT'))}${report.reporter_name?` · ${safe(report.reporter_name)}`:' · anonima'}${report.reporter_email?` · ${safe(report.reporter_email)}`:''}</p><div class="tree-form-grid"><label>Longitudine<input data-admin-lon type="number" step="any" value="${Number(report.suggested_longitude)}"></label><label>Latitudine<input data-admin-lat type="number" step="any" value="${Number(report.suggested_latitude)}"></label></div><label>Nome località<input data-admin-location value="${safe(report.location_name)}"></label><label>Geometria GeoJSON <small>(facoltativa)</small><textarea data-admin-geometry placeholder='{"type":"LineString","coordinates":[...]}'></textarea></label><div class="tree-admin-actions"><button type="button" data-admin-action="reject">Rifiuta</button><button type="button" data-admin-action="approve">Approva</button></div></article>`).join(''):'<p>Nessuna segnalazione in attesa.</p>'
+  const option=(value,label,current)=>`<option value="${value}" ${value===current?'selected':''}>${label}</option>`;
+  $('treeAdminReports').innerHTML=reports.length?reports.map(report=>{
+    const reporter=`Segnalata il ${safe(new Date(report.created_at).toLocaleString('it-IT'))}${report.reporter_name?` · ${safe(report.reporter_name)}`:' · anonima'}${report.reporter_email?` · ${safe(report.reporter_email)}`:''}`;
+    if(Number(report.location_index)<0){
+      let locations=[];try{locations=JSON.parse(report.locations_json||'[]')}catch{};
+      if(!locations.length)locations=[report.location_name];
+      return`<article class="tree-admin-report tree-admin-event-report" data-report-id="${report.id}" data-report-type="event"><h3>Segnalazione evento · ${safe(report.event_title||report.location_name)}</h3><p>${safe(report.reason)}</p><p>${reporter}</p><label>Titolo<input data-admin-event-title value="${safe(report.event_title)}"></label><label>Data evento<input data-admin-event-date value="${safe(report.event_date)}"></label><label>Località <small>(una per riga)</small><textarea data-admin-event-locations>${safe(locations.join('\n'))}</textarea></label><div class="tree-form-grid"><label>Tipo<select data-admin-event-type>${option('planting','Piantumazione',report.event_type)}${option('decrement','Abbattimento',report.event_type)}${option('unknown','Da verificare',report.event_type)}</select></label><label>Stato<select data-admin-event-status>${option('planned','Programmato',report.event_status)}${option('reported','Comunicazione ufficiale',report.event_status)}${option('completed','Eseguito',report.event_status)}${option('emergency_completed','Urgente eseguito',report.event_status)}${option('unknown','Da verificare',report.event_status)}</select></label></div><label>Quantità <small>(vuoto se sconosciuta)</small><input data-admin-event-quantity type="number" min="0" step="1" value="${report.event_quantity??''}"></label><div class="tree-admin-actions"><button type="button" data-admin-action="reject">Rifiuta segnalazione</button><button class="is-danger" type="button" data-admin-action="delete_event">Elimina evento</button><button type="button" data-admin-action="update_event">Salva modifiche</button></div></article>`
+    }
+    return`<article class="tree-admin-report" data-report-id="${report.id}" data-report-type="location"><h3>${safe(report.location_name)}</h3><p>${safe(report.reason)}</p><p>${reporter}</p><div class="tree-form-grid"><label>Longitudine<input data-admin-lon type="number" step="any" value="${Number(report.suggested_longitude)}"></label><label>Latitudine<input data-admin-lat type="number" step="any" value="${Number(report.suggested_latitude)}"></label></div><label>Nome località<input data-admin-location value="${safe(report.location_name)}"></label><label>Geometria GeoJSON <small>(facoltativa)</small><textarea data-admin-geometry placeholder='{"type":"LineString","coordinates":[...]}'></textarea></label><div class="tree-admin-actions"><button type="button" data-admin-action="reject">Rifiuta</button><button type="button" data-admin-action="approve">Approva</button></div></article>`
+  }).join(''):'<p>Nessuna segnalazione in attesa.</p>'
 }
 
 async function loadTreeAdminReports(password){
@@ -3441,13 +3481,20 @@ async function loadTreeAdminReports(password){
 }
 
 async function reviewTreeAdminReport(article,action){
-  const password=window.prompt(`Inserisci la password amministratore per ${action==='approve'?'approvare':'rifiutare'} questa segnalazione:`);
+  const actionLabels={approve:'approvare la posizione',reject:'rifiutare la segnalazione',update_event:'salvare le modifiche',delete_event:'eliminare l’evento'};
+  const password=window.prompt(`Inserisci la password amministratore per ${actionLabels[action]||'revisionare la segnalazione'}:`);
   if(!password)return;
-  const geometryText=article.querySelector('[data-admin-geometry]').value.trim();
-  let geometry=null;
-  try{geometry=geometryText?JSON.parse(geometryText):null}catch{showToast('Il GeoJSON inserito non è valido.');return}
+  const isEvent=article.dataset.reportType==='event';
+  let body={reportId:Number(article.dataset.reportId),action};
+  if(isEvent&&action==='update_event'){
+    body={...body,title:article.querySelector('[data-admin-event-title]').value,eventDate:article.querySelector('[data-admin-event-date]').value,locations:article.querySelector('[data-admin-event-locations]').value.split(/\n+/).map(value=>value.trim()).filter(Boolean),eventType:article.querySelector('[data-admin-event-type]').value,eventStatus:article.querySelector('[data-admin-event-status]').value,quantity:article.querySelector('[data-admin-event-quantity]').value}
+  }else if(!isEvent&&action==='approve'){
+    const geometryText=article.querySelector('[data-admin-geometry]').value.trim();
+    let geometry=null;try{geometry=geometryText?JSON.parse(geometryText):null}catch{showToast('Il GeoJSON inserito non è valido.');return}
+    body={...body,longitude:Number(article.querySelector('[data-admin-lon]').value),latitude:Number(article.querySelector('[data-admin-lat]').value),locationName:article.querySelector('[data-admin-location]').value,geometry}
+  }
   const base=await treeApiBase();
-  const response=await fetch(`${base}/v1/trees/location-reports/review`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${password}`},body:JSON.stringify({reportId:Number(article.dataset.reportId),action,longitude:Number(article.querySelector('[data-admin-lon]').value),latitude:Number(article.querySelector('[data-admin-lat]').value),locationName:article.querySelector('[data-admin-location]').value,geometry})});
+  const response=await fetch(`${base}/v1/trees/location-reports/review`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${password}`},body:JSON.stringify(body)});
   const result=await response.json();if(!response.ok){showToast(result.error||`HTTP ${response.status}`);return}
   article.remove();
   if(result.notificationEmail){$('treeAdminStatus').innerHTML=`Revisione salvata. <a href="mailto:${encodeURIComponent(result.notificationEmail)}?subject=${encodeURIComponent('A.R.I.A. – esito segnalazione posizione')}">Invia conferma al segnalante</a>.`}
@@ -3544,6 +3591,8 @@ function bind(){
   document.addEventListener('click',event=>{
     const reportButton=event.target.closest('[data-tree-report]');
     if(reportButton){event.preventDefault();openTreeLocationReport(reportButton.dataset.treeReport,reportButton.dataset.treeLocationIndex)}
+    const eventReportButton=event.target.closest('[data-tree-event-report]');
+    if(eventReportButton){event.preventDefault();openTreeEventReport(eventReportButton.dataset.treeEventReport)}
     const closeButton=event.target.closest('[data-dialog-close]');
     if(closeButton)$(closeButton.dataset.dialogClose)?.close();
     const adminAction=event.target.closest('[data-admin-action]');
@@ -3553,6 +3602,7 @@ function bind(){
   });
   $('treeReportLocation')?.addEventListener('change',event=>positionTreeReportMarker(state.treeReportEvent,Number(event.target.value)));
   $('treeReportForm')?.addEventListener('submit',submitTreeLocationReport);
+  $('treeEventReportForm')?.addEventListener('submit',submitTreeEventReport);
   $('treeAddressSearchBtn')?.addEventListener('click',searchTreeReportAddress);
   $('treeReportReset')?.addEventListener('click',resetTreeReportMap);
   $('treeAddressSearch')?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();searchTreeReportAddress()}});
@@ -3573,8 +3623,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.6.3',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.6.3',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.6.4',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.6.4',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3590,7 +3640,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.6.3')
+    navigator.serviceWorker.register('./service-worker.js?v=0.6.4')
       .then(reg=>reg.update())
       .catch(console.error)
   }

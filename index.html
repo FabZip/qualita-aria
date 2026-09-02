@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="css/station-list.css?v=0.2.2">
   <link rel="stylesheet" href="css/openaq-world.css?v=0.2.4">
   <link rel="stylesheet" href="css/temperature.css?v=0.3.8">
-  <link rel="stylesheet" href="css/trees.css?v=0.6.2">
+  <link rel="stylesheet" href="css/trees.css?v=0.6.4">
   <link rel="stylesheet" href="css/header-overrides.css?v=0.5.19">
   <title>Qualità dell'aria</title>
 </head>
@@ -245,15 +245,28 @@
       </form>
     </dialog>
 
+    <dialog id="treeEventReportDialog" class="tree-dialog">
+      <form id="treeEventReportForm">
+        <div class="tree-dialog-head"><h2>Segnala un evento</h2><button type="button" data-dialog-close="treeEventReportDialog" aria-label="Chiudi">×</button></div>
+        <p>Descrivi il problema presente nei dati dell’evento. Questa segnalazione non riguarda la posizione geografica.</p>
+        <p id="treeEventReportSummary" class="tree-event-report-summary"></p>
+        <label>Problema<textarea id="treeEventReportReason" required minlength="5" maxlength="1200" placeholder="Descrivi i dati errati, mancanti o il motivo per cui l’evento non dovrebbe comparire"></textarea></label>
+        <div class="tree-form-grid"><label>Nome <small>(facoltativo)</small><input id="treeEventReporterName" maxlength="120"></label><label>Email <small>(facoltativa)</small><input id="treeEventReporterEmail" type="email" maxlength="254"></label></div>
+        <small>L’email sarà usata esclusivamente per comunicare l’esito della segnalazione.</small>
+        <div id="treeEventReportStatus" class="tree-form-status" role="status"></div>
+        <div class="tree-dialog-actions"><button type="button" data-dialog-close="treeEventReportDialog">Annulla</button><button type="submit">Invia segnalazione</button></div>
+      </form>
+    </dialog>
+
     <dialog id="treeAdminDialog" class="tree-dialog tree-admin-dialog">
-      <div class="tree-dialog-head"><h2>Revisione posizioni Alberi</h2><button type="button" data-dialog-close="treeAdminDialog" aria-label="Chiudi">×</button></div>
+      <div class="tree-dialog-head"><h2>Revisione segnalazioni Alberi</h2><button type="button" data-dialog-close="treeAdminDialog" aria-label="Chiudi">×</button></div>
       <form id="treeAdminLogin" class="tree-admin-login"><label>Password amministratore<input id="treeAdminPassword" type="password" autocomplete="current-password" required></label><button type="submit">Carica segnalazioni</button></form>
       <div id="treeAdminStatus" class="tree-form-status" role="status"></div>
       <div id="treeAdminReports" class="tree-admin-reports"></div>
     </dialog>
 
     <footer class="app-footer">
-      v<span id="appVersion" role="button" tabindex="0" aria-label="Versione applicazione">0.6.3</span> · dataset <span id="dataVersion">18</span>
+      v<span id="appVersion" role="button" tabindex="0" aria-label="Versione applicazione">0.6.4</span> · dataset <span id="dataVersion">18</span>
     </footer>
   </main>
 
@@ -264,7 +277,7 @@
   <script src="js/eea-proxy.js?v=0.2.14" defer></script>
   <script src="js/temperature-proxy.js?v=0.3.9" defer></script>
   <script src="js/trees.js?v=0.6.1" defer></script>
-  <script src="js/app.js?v=0.6.3" defer></script>
+  <script src="js/app.js?v=0.6.4" defer></script>
   <script src="js/eea-utd.js?v=0.2.14" defer></script>
   <script src="js/openaq-world.js?v=0.3.8" defer></script>
   <script src="js/temperature-overlay.js?v=0.3.9" defer></script>

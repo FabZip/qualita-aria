@@ -1595,9 +1595,8 @@ function classifyTreePage(html,url){
 }
 
 async function removeExcludedTreeEvents(db){
-  const paths=[...TREE_EXCLUDED_SOURCE_PATHS];
   const statements=[];
-  for(const path of paths){
+  for(const path of TREE_EXCLUDED_SOURCE_PATHS){
     statements.push(db.prepare('DELETE FROM tree_location_overrides WHERE source_key=?').bind(path));
     statements.push(db.prepare('DELETE FROM tree_location_reports WHERE source_key=?').bind(path));
     statements.push(db.prepare('DELETE FROM tree_events WHERE source_key=? OR source_url=?').bind(path,`${TREE_SOURCE_ORIGIN}${path}`))
@@ -1634,21 +1633,25 @@ async function upsertTreeEvent(db,event,now){
       raw_excerpt,updated_at
     ) VALUES (?, 'roma', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(source_key) DO UPDATE SET
-      year=excluded.year,event_date=excluded.event_date,
-      latitude=CASE WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.latitude END,
-      longitude=CASE WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.longitude END,
-      geocode_precision=CASE WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.geocode_precision END,
-      geocode_label=CASE WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.geocode_label END,
-      geocoded_at=CASE WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.geocoded_at END,
-      location_points_json=CASE WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.location_points_json END,
-      location_name=excluded.location_name,
-      locations_json=excluded.locations_json,
-      event_type=excluded.event_type,quantity=excluded.quantity,status=excluded.status,
+      year=CASE WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.year ELSE excluded.year END,
+      event_date=CASE WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.event_date ELSE excluded.event_date END,
+      latitude=CASE WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.latitude WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.latitude END,
+      longitude=CASE WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.longitude WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.longitude END,
+      geocode_precision=CASE WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.geocode_precision WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.geocode_precision END,
+      geocode_label=CASE WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.geocode_label WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.geocode_label END,
+      geocoded_at=CASE WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.geocoded_at WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.geocoded_at END,
+      location_points_json=CASE WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.location_points_json WHEN COALESCE(tree_events.locations_json,'')!=excluded.locations_json THEN NULL ELSE tree_events.location_points_json END,
+      location_name=CASE WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.location_name ELSE excluded.location_name END,
+      locations_json=CASE WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.locations_json ELSE excluded.locations_json END,
+      event_type=CASE WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.event_type ELSE excluded.event_type END,
+      quantity=CASE WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.quantity ELSE excluded.quantity END,
+      status=CASE WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.status ELSE excluded.status END,
       validation=CASE
         WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.validation
         ELSE excluded.validation
       END,
-      title=excluded.title,source_url=excluded.source_url,
+      title=CASE WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.title ELSE excluded.title END,
+      source_url=excluded.source_url,
       source_published_at=excluded.source_published_at,last_checked_at=excluded.last_checked_at,
       raw_excerpt=excluded.raw_excerpt,updated_at=excluded.updated_at
   `).bind(
@@ -1666,7 +1669,7 @@ function wait(milliseconds){
 async function geocodePendingTreeEvents(db){
   const pending=await db.prepare(`
     SELECT source_key,location_name,locations_json,location_points_json FROM tree_events
-    WHERE city='roma' AND geocoded_at IS NULL AND location_name!='Roma'
+    WHERE city='roma' AND geocoded_at IS NULL AND location_name!='Roma' AND validation!='manual_rejected'
     ORDER BY first_seen_at ASC LIMIT ?
   `).bind(TREE_MAX_GEOCODES_PER_RUN).all();
   let geocoded=0,rejected=0,attempted=0;
@@ -1855,6 +1858,29 @@ async function createTreeLocationReport(request,env,cors){
   return json({ok:true,reportId:result?.id,status:'pending',reportedAt:now,emailConfirmation:Boolean(reporterEmail)},201,{...cors,'Cache-Control':'no-store'})
 }
 
+async function createTreeEventReport(request,env,cors){
+  if(!env.TREE_DB)return json({error:'Archivio arboreo dinamico non configurato'},503,{...cors,'Cache-Control':'no-store'});
+  const body=await request.json().catch(()=>null);
+  const sourceKey=String(body?.sourceKey||'').trim().slice(0,160);
+  const eventId=String(body?.eventId||'').trim().slice(0,200)||null;
+  const reason=String(body?.reason||'').trim().slice(0,1200);
+  const reporterName=String(body?.reporterName||'').trim().slice(0,120)||null;
+  const reporterEmail=String(body?.reporterEmail||'').trim().toLowerCase().slice(0,254)||null;
+  if(!sourceKey||reason.length<5)return badRequest('Evento e descrizione del problema sono obbligatori',cors);
+  if(reporterEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reporterEmail))return badRequest('Indirizzo email non valido',cors);
+  const event=await env.TREE_DB.prepare('SELECT source_key,location_name FROM tree_events WHERE source_key=?').bind(sourceKey).first();
+  if(!event)return json({error:'Evento dinamico non trovato'},404,{...cors,'Cache-Control':'no-store'});
+  const ipHash=await requestFingerprint(request,env);
+  const recent=await env.TREE_DB.prepare("SELECT COUNT(*) AS total FROM tree_location_reports WHERE reporter_ip_hash=? AND created_at>=datetime('now','-1 day')").bind(ipHash).first();
+  if(Number(recent?.total||0)>=5)return json({error:'Limite giornaliero di segnalazioni raggiunto'},429,{...cors,'Cache-Control':'no-store'});
+  const now=new Date().toISOString();
+  const result=await env.TREE_DB.prepare(`
+    INSERT INTO tree_location_reports(source_key,event_id,location_index,location_name,reason,reporter_name,reporter_email,reporter_ip_hash,created_at)
+    VALUES(?,?,-1,?,?,?,?,?,?) RETURNING id
+  `).bind(sourceKey,eventId,event.location_name,reason,reporterName,reporterEmail,ipHash,now).first();
+  return json({ok:true,reportId:result?.id,status:'pending',reportedAt:now,emailConfirmation:Boolean(reporterEmail)},201,{...cors,'Cache-Control':'no-store'})
+}
+
 async function treeGeocodeSearchResponse(cors,url){
   const query=String(url.searchParams.get('q')||'').trim().slice(0,180);
   if(query.length<3)return badRequest('Inserire almeno tre caratteri',cors);
@@ -1872,8 +1898,10 @@ async function treeGeocodeSearchResponse(cors,url){
 async function listTreeLocationReports(env,cors,url){
   const status=String(url.searchParams.get('status')||'pending');
   if(!['pending','approved','rejected','all'].includes(status))return badRequest('Stato non valido',cors);
-  const where=status==='all'?'':"WHERE status=?";
-  const statement=env.TREE_DB.prepare(`SELECT id,source_key,event_id,location_index,location_name,reason,reporter_name,reporter_email,suggested_longitude,suggested_latitude,status,created_at FROM tree_location_reports ${where} ORDER BY created_at DESC LIMIT 200`);
+  const reportWhere=status==='all'?'':'WHERE r.status=?';
+  const statement=env.TREE_DB.prepare(`SELECT r.id,r.source_key,r.event_id,r.location_index,r.location_name,r.reason,r.reporter_name,r.reporter_email,r.suggested_longitude,r.suggested_latitude,r.status,r.created_at,
+    e.title AS event_title,e.event_date,e.locations_json,e.event_type,e.quantity AS event_quantity,e.status AS event_status
+    FROM tree_location_reports r LEFT JOIN tree_events e ON e.source_key=r.source_key ${reportWhere} ORDER BY r.created_at DESC LIMIT 200`);
   const result=await(status==='all'?statement:statement.bind(status)).all();
   return json({reports:result.results||[]},200,{...cors,'Cache-Control':'no-store'})
 }
@@ -1882,13 +1910,42 @@ async function reviewTreeLocationReport(request,env,cors){
   const body=await request.json().catch(()=>null);
   const reportId=Number(body?.reportId);
   const action=String(body?.action||'');
-  if(!Number.isInteger(reportId)||!['approve','reject'].includes(action))return badRequest('Revisione non valida',cors);
+  if(!Number.isInteger(reportId)||!['approve','reject','update_event','delete_event'].includes(action))return badRequest('Revisione non valida',cors);
   const report=await env.TREE_DB.prepare("SELECT * FROM tree_location_reports WHERE id=? AND status='pending'").bind(reportId).first();
   if(!report)return json({error:'Segnalazione non trovata o già revisionata'},404,{...cors,'Cache-Control':'no-store'});
   if(action==='reject'){
     await env.TREE_DB.prepare("UPDATE tree_location_reports SET status='rejected' WHERE id=?").bind(reportId).run();
     return json({ok:true,reportId,status:'rejected',notificationEmail:report.reporter_email||null},200,{...cors,'Cache-Control':'no-store'})
   }
+  if(Number(report.location_index)<0){
+    if(action==='delete_event'){
+      await env.TREE_DB.batch([
+        env.TREE_DB.prepare("UPDATE tree_events SET validation='manual_rejected',updated_at=? WHERE source_key=?").bind(new Date().toISOString(),report.source_key),
+        env.TREE_DB.prepare("UPDATE tree_location_reports SET status='rejected' WHERE source_key=? AND status='pending'").bind(report.source_key),
+        env.TREE_DB.prepare("UPDATE tree_location_reports SET status='approved' WHERE id=?").bind(reportId)
+      ]);
+      return json({ok:true,reportId,status:'approved',eventAction:'deleted',notificationEmail:report.reporter_email||null},200,{...cors,'Cache-Control':'no-store'})
+    }
+    if(action!=='update_event')return badRequest('Azione non valida per una segnalazione evento',cors);
+    const title=String(body?.title||'').trim().slice(0,300);
+    const eventDate=String(body?.eventDate||'').trim().slice(0,80)||null;
+    const locations=(Array.isArray(body?.locations)?body.locations:[]).map(value=>String(value||'').trim().slice(0,300)).filter(Boolean).slice(0,100);
+    const eventType=String(body?.eventType||'').trim();
+    const eventStatus=String(body?.eventStatus||'').trim();
+    const quantity=body?.quantity===''||body?.quantity===null?null:Number(body?.quantity);
+    if(!title||!locations.length)return badRequest('Titolo e almeno una località sono obbligatori',cors);
+    if(!['planting','decrement','unknown'].includes(eventType))return badRequest('Tipo evento non valido',cors);
+    if(!['completed','emergency_completed','planned','reported','unknown'].includes(eventStatus))return badRequest('Stato evento non valido',cors);
+    if(quantity!==null&&(!Number.isInteger(quantity)||quantity<0))return badRequest('Quantità non valida',cors);
+    const now=new Date().toISOString();
+    await env.TREE_DB.batch([
+      env.TREE_DB.prepare(`UPDATE tree_events SET title=?,event_date=?,location_name=?,locations_json=?,event_type=?,quantity=?,status=?,validation='manual_confirmed',latitude=NULL,longitude=NULL,geocode_precision=NULL,geocode_label=NULL,geocoded_at=NULL,location_points_json=NULL,updated_at=? WHERE source_key=?`).bind(title,eventDate,locations[0],JSON.stringify(locations),eventType,quantity,eventStatus,now,report.source_key),
+      env.TREE_DB.prepare("DELETE FROM tree_location_overrides WHERE source_key=?").bind(report.source_key),
+      env.TREE_DB.prepare("UPDATE tree_location_reports SET status='approved' WHERE id=?").bind(reportId)
+    ]);
+    return json({ok:true,reportId,status:'approved',eventAction:'updated',notificationEmail:report.reporter_email||null},200,{...cors,'Cache-Control':'no-store'})
+  }
+  if(action!=='approve')return badRequest('Azione non valida per una segnalazione di posizione',cors);
   const longitude=Number(body?.longitude??report.suggested_longitude),latitude=Number(body?.latitude??report.suggested_latitude);
   const locationName=String(body?.locationName||report.location_name).trim().slice(0,300);
   if(!Number.isFinite(longitude)||!Number.isFinite(latitude)||longitude<ROME_GEOCODE_BBOX.west||longitude>ROME_GEOCODE_BBOX.east||latitude<ROME_GEOCODE_BBOX.south||latitude>ROME_GEOCODE_BBOX.north)return badRequest('Coordinate di approvazione non valide',cors);
@@ -1965,6 +2022,10 @@ export default{
       return createTreeLocationReport(request,env,cors)
     }
 
+    if(request.method==='POST'&&url.pathname==='/v1/trees/event-reports'){
+      return createTreeEventReport(request,env,cors)
+    }
+
     if(request.method==='GET'&&url.pathname==='/v1/trees/location-reports'){
       if(!await adminPasswordAuthorized(request,env))return json({error:'Password amministratore non valida'},401,{...cors,'Cache-Control':'no-store'});
       return listTreeLocationReports(env,cors,url)
@@ -1990,7 +2051,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.9.4',
+        version:'0.9.5',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,

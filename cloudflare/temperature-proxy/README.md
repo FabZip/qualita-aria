@@ -34,6 +34,8 @@ Il Worker espone:
 - `GET /v1/trees/events?city=roma&year=2026` per il frontend;
 - `POST /v1/trees/refresh` per avviare una scansione manuale autenticata;
 - `POST /v1/trees/review` per confermare, correggere o rifiutare un evento;
+- `POST /v1/trees/location-reports` per le segnalazioni geografiche;
+- `POST /v1/trees/event-reports` per le segnalazioni sui dati dell’evento;
 - un refresh completo ogni lunedì alle 03:00 UTC e lo smaltimento della sola coda geografica ogni giorno alle 03:30 UTC.
 
 Gli eventi sono conservati in Cloudflare D1. Le pagine con più interventi o formulazioni ambigue vengono archiviate come `automatic_pending` e non incidono sui totali. Soltanto eventi con quantità nota e stato `completed` o `emergency_completed` vengono sommati dal frontend.
@@ -111,7 +113,7 @@ unset ARIA_TREE_TOKEN
 
 Il file `data/trees.json` rimane il dataset consolidato di fallback se D1 o il proxy non sono raggiungibili.
 
-Il Worker è identificato dalla versione proxy `0.9.4`.
+Il Worker è identificato dalla versione proxy `0.9.5`.
 
 ### Pubblicazione Worker
 
@@ -131,15 +133,17 @@ npx wrangler@latest deploy
 
 Al termine Wrangler deve mostrare entrambi gli schedule: `0 3 * * 1` e `30 3 * * *`. Non sono richieste migrazioni D1 né modifiche a `TREE_ADMIN_TOKEN`.
 
-## 0.9.4
+## 0.9.5
 
-Il filtro delle fonti richiede una chiara azione di piantumazione o abbattimento.
-Per le pagine di tipo notizia è necessaria anche una quantità esplicitamente
-associata agli alberi: semplici riferimenti al verde, alle alberature accessorie
-o a progetti generali non vengono importati. Al primo refresh vengono eliminati
-anche i due falsi positivi già individuati relativi alle chiusure di via del Foro
-Italico/viale Newton e al PUI Tor Bella Monaca. Il campo `excludedRemoved` nella
-risposta indica quanti record sono stati rimossi. Non serve una migrazione D1.
+Gli eventi dinamici privi di coordinate possono ricevere una segnalazione non
+geografica tramite `POST /v1/trees/event-reports`. Queste segnalazioni riusano
+l’archivio esistente con un indice località riservato e non richiedono una nuova
+migrazione. Nel pannello amministrativo è possibile correggere titolo, data,
+località, tipo, stato e quantità oppure escludere l’evento dalla pubblicazione.
+Le revisioni diventano `manual_confirmed` o `manual_rejected` e vengono preservate
+dall’upsert settimanale. La password `TREE_ADMIN_PASSWORD` è richiesta per ogni
+singola decisione. Il filtro esclude inoltre notizie prive di quantità arboree
+esplicite e rimuove i falsi positivi già individuati.
 
 ## 0.9.3
 

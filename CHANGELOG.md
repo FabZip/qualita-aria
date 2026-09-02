@@ -1,11 +1,14 @@
 # Changelog
 
-## [Proxy 0.9.4] - 2026-09-01
+## [Proxy 0.9.5 / App 0.6.4] - 2026-09-02
 
-- Rafforzata la classificazione delle pagine Roma Capitale: i contenuti senza una chiara azione di piantumazione o abbattimento vengono esclusi.
-- Le normali notizie sono acquisite soltanto quando riportano anche una quantità arborea esplicita; i progetti generici che citano il verde non diventano eventi Alberi.
-- Escluse e rimosse da D1 le false classificazioni sulle chiusure notturne di via del Foro Italico/viale Newton e sul progetto PUI Tor Bella Monaca.
-- Il risultato del refresh espone `excludedRemoved`; non sono richieste migrazioni D1 e l’app resta alla versione `0.6.3` build 76.
+- Gli eventi dinamici non geolocalizzati mostrano “Segnala evento” al posto del comando relativo alla posizione.
+- Il nuovo modulo raccoglie descrizione, nome ed email facoltativi senza caricare una mappa.
+- Il pannello amministrativo distingue le segnalazioni geografiche da quelle sull’evento e consente di modificarne titolo, data, località, tipo, stato e quantità.
+- L’amministratore può rimuovere un evento dalla pubblicazione; la decisione e le correzioni manuali hanno priorità sui refresh successivi.
+- Ogni modifica, eliminazione o rifiuto richiede nuovamente la password amministrativa.
+- Rafforzato anche il filtro delle fonti: vengono rimossi i falsi eventi relativi alle chiusure di via del Foro Italico/viale Newton e al PUI Tor Bella Monaca.
+- App aggiornata alla versione `0.6.4` build 77 e Worker alla versione `0.9.5`; dataset invariato alla revisione 18 e nessuna migrazione D1 richiesta.
 
 ## [Proxy 0.9.3] - 2026-09-01
 
