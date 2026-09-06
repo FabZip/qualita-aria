@@ -1,3 +1,12 @@
+# 0.7.1
+
+- Verificato il PDF ufficiale dell'autorizzazione paesaggistica 34/2024 di Guidonia Montecelio.
+- Corretto l'evento esistente, senza cambiarne l'identificativo: 109 alberi autorizzati all'abbattimento, stato programmato e successivo reimpianto sostitutivo previsto.
+- Sostituite le sette località generiche con 17 località o insiemi di vie riportati nell'atto; la quantità resta complessiva e non viene suddivisa artificialmente.
+- Aggiunta la migrazione dati `0006_guidonia_109_tree_authorization.sql`, che azzera soltanto la precedente geocodifica generica dell'evento e avvia quella delle ubicazioni documentate.
+- Controllati gli altri risultati indicizzati per “Autorizzazione Paesaggistica”: non sono stati aggiunti atti privi di un riferimento esplicito ad alberi, alberature, abbattimenti o reimpianti.
+- App aggiornata alla versione `0.7.1` build 81, dataset alla revisione 20; Worker invariato alla versione `0.9.6`.
+
 # 0.7.0
 
 - Aggiunto Guidonia Montecelio alla selezione della fonte Alberi con identificatore isolato `guidonia-montecelio`.
@@ -1053,4 +1062,3 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Corretto l'abbinamento tra i Samplingpoint dei file Parquet EEA UTD/E2a e i metadati delle stazioni quando l'identificatore contiene metodo e data.
 - Ripristinata la visualizzazione delle stazioni EEA preliminari 2025 su Roma senza modificare la soglia minima di copertura del 75%.
 - Reso disponibile Segnala evento anche quando la chiave della fonte deve essere ricavata dall'URL o dall'identificatore dinamico.
-

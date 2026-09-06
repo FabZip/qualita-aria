@@ -552,21 +552,31 @@
           "id": "guidonia-2024-abbattimenti-reimpianti",
           "year": "2024",
           "date": "3 ottobre 2024",
-          "locationName": "Montecelio · Guidonia · Setteville · Colleverde · Villanova · Collefiorito · Albuccione",
+          "locationName": "Località e vie nel territorio di Guidonia Montecelio",
           "locations": [
-            "Montecelio",
-            "Guidonia",
-            "Setteville",
-            "Colleverde",
-            "Villanova",
-            "Collefiorito",
-            "Albuccione"
+            "Via Nuova, Montecelio",
+            "Via XXV Aprile - Parco San Michele, Montecelio",
+            "Via della Pietrata - via degli Spagnoli, Guidonia",
+            "Viale Roma - Parcheggio viale Roma (Peghetti) - Area verde Maggiore Roberto Giontella, Guidonia",
+            "Piazza Amedeo d'Aosta - Piazza Caduti di Nassirya (viale Roma), Guidonia",
+            "Via Umberto Maddalena - Parco della Croce Rossa Italiana - Scalinata Padre Lino Lottatori - via Giulio Douhet - Stadio Comunale - via Camarotta Adorno - via Archita di Tar, Guidonia",
+            "Viale Roma - via Marco Aurelio (scuola I.C. Don L. Milani), Guidonia",
+            "Via Collefarina, Guidonia",
+            "Via Umberto I, Villanova",
+            "Rotonda via Garibaldi, Villanova",
+            "Area verde Bartolini, Collefiorito",
+            "Via delle Petunie - via Casal Bianco, Collefiorito",
+            "Via dei Castagni, Albuccione",
+            "Via Nomentana, Poggio Fiorito",
+            "Via Nomentana, Colleverde",
+            "Piazza Trilussa, Setteville",
+            "Via Natalia Ginzburg - via Giovanni Verga, Setteville"
           ],
           "locationPrecision": "district",
-          "eventType": "unknown",
-          "status": "reported",
-          "quantity": null,
-          "notes": "Autorizzazione paesaggistica per abbattimento di alberature e successivo reimpianto; quantità e ripartizione territoriale non indicate nell'atto pubblicato.",
+          "eventType": "decrement",
+          "status": "planned",
+          "quantity": 109,
+          "notes": "L'autorizzazione paesaggistica documenta 109 alberi da abbattere in 17 località o insiemi di vie e un successivo reimpianto sostitutivo. La quantità è complessiva e non viene ripartita tra le ubicazioni; l'atto non certifica l'esecuzione degli interventi.",
           "sourceUrl": "https://guidonia.halleyweb.it/zf/index.php/atti-amministrativi/determine/dettaglio/atto/G1WpNM0T6UT0-A"
         },
         {
@@ -585,4 +595,3 @@
     }
   }
 }
-

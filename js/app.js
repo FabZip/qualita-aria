@@ -3644,8 +3644,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.7.0',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.7.0',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.7.1',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.7.1',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3661,7 +3661,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.7.0')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.1')
       .then(reg=>reg.update())
       .catch(console.error)
   }
@@ -3673,5 +3673,4 @@ boot().catch(err=>{
   diagnostics({error:String(err.message||err)});
   showToast(err.message||'Errore di inizializzazione')
 })
-
 
