@@ -1456,6 +1456,10 @@ const TREE_SOURCE_ORIGIN='https://www.comune.roma.it';
 const TREE_MAX_PAGES_PER_RUN=40;
 const TREE_MAX_GEOCODES_PER_RUN=8;
 const ROME_GEOCODE_BBOX={west:12.15,south:41.65,east:12.85,north:42.15};
+const TREE_GEOCODE_AREAS={
+  roma:{label:'Roma',bbox:ROME_GEOCODE_BBOX},
+  'guidonia-montecelio':{label:'Guidonia Montecelio',bbox:{west:12.55,south:41.88,east:12.85,north:42.12}}
+};
 const TREE_EXCLUDED_SOURCE_PATHS=new Set([
   '/web/it/notizia/chiusure-notturne-via-foro-italico-e-viale-newton.page',
   '/web/it/notizia/pui-tor-bella-monaca-cantiere-ciclabili-verde.page'
@@ -1668,12 +1672,13 @@ function wait(milliseconds){
 
 async function geocodePendingTreeEvents(db){
   const pending=await db.prepare(`
-    SELECT source_key,location_name,locations_json,location_points_json FROM tree_events
-    WHERE city='roma' AND geocoded_at IS NULL AND location_name!='Roma' AND validation!='manual_rejected'
+    SELECT source_key,city,location_name,locations_json,location_points_json FROM tree_events
+    WHERE city IN ('roma','guidonia-montecelio') AND geocoded_at IS NULL AND location_name!='Roma' AND validation!='manual_rejected'
     ORDER BY first_seen_at ASC LIMIT ?
   `).bind(TREE_MAX_GEOCODES_PER_RUN).all();
   let geocoded=0,rejected=0,attempted=0;
   for(const [index,row] of (pending.results||[]).entries()){
+    const area=TREE_GEOCODE_AREAS[row.city]||TREE_GEOCODE_AREAS.roma;
     const locations=JSON.parse(row.locations_json||'null')||[row.location_name];
     const points=JSON.parse(row.location_points_json||'null')||Array(locations.length).fill(null);
     for(let locationIndex=0;locationIndex<locations.length&&attempted<TREE_MAX_GEOCODES_PER_RUN;locationIndex+=1){
@@ -1689,12 +1694,12 @@ async function geocodePendingTreeEvents(db){
           url.searchParams.set('limit','1');
           url.searchParams.set('countrycodes','it');
           url.searchParams.set('polygon_geojson','1');
-          url.searchParams.set('q',`${candidate}, Roma, Italia`);
+          url.searchParams.set('q',`${candidate}, ${area.label}, Italia`);
           const response=await fetch(url,{headers:{Accept:'application/json','User-Agent':'A.R.I.A. environmental-data-indexer/0.8 (https://fabzip.github.io/qualita-aria/)','Referer':'https://fabzip.github.io/qualita-aria/'}});
           if(!response.ok)throw new Error(`Geocoding HTTP ${response.status}`);
           match=(await response.json())?.[0]||null;
           latitude=Number(match?.lat);longitude=Number(match?.lon);
-          inside=Number.isFinite(latitude)&&Number.isFinite(longitude)&&longitude>=ROME_GEOCODE_BBOX.west&&longitude<=ROME_GEOCODE_BBOX.east&&latitude>=ROME_GEOCODE_BBOX.south&&latitude<=ROME_GEOCODE_BBOX.north;
+          inside=Number.isFinite(latitude)&&Number.isFinite(longitude)&&longitude>=area.bbox.west&&longitude<=area.bbox.east&&latitude>=area.bbox.south&&latitude<=area.bbox.north;
           if(inside)break
         }
         const geometry=['LineString','MultiLineString','Polygon','MultiPolygon'].includes(match?.geojson?.type)?match.geojson:null;
@@ -2052,7 +2057,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.9.6',
+        version:'0.9.7',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,
@@ -2127,4 +2132,3 @@ export default{
     },404,cors)
   }
 };
-

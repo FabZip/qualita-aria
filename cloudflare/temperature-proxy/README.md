@@ -1,6 +1,6 @@
-# Proxy ambientale 0.9.6
+# Proxy ambientale 0.9.7
 
-La release 0.9.6 abilita anche `city=guidonia-montecelio`. Applicare le migrazioni dati in ordine: `0005_guidonia_seed_events.sql` inserisce i riferimenti iniziali; `0006_guidonia_109_tree_authorization.sql` integra nel medesimo evento le 109 alberature e le ubicazioni verificate nel PDF ufficiale; `0007_remove_invalid_valle_pilella_event.sql` elimina il riferimento non verificabile a Valle Pilella. Nessuna delle migrazioni modifica le righe di Roma.
+La release 0.9.7 estende la coda geografica a `city=guidonia-montecelio`, usando il nome e i limiti territoriali di Guidonia invece del precedente contesto fisso di Roma. Applicare le migrazioni dati in ordine: `0005_guidonia_seed_events.sql`, `0006_guidonia_109_tree_authorization.sql`, `0007_remove_invalid_valle_pilella_event.sql` e `0008_guidonia_verified_tree_events.sql`. L'ultima ripristina Valle Pilella con la fonte corretta, separa gli eventi AVR per località e aggiunge gli interventi verificati del 2025 e 2026. Le migrazioni non modificano gli eventi di Roma.
 
 Worker Cloudflare dei moduli temperatura e aggiornamento eventi arborei di Qualità aria.
 

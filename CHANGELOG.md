@@ -1,3 +1,14 @@
+# 0.7.3
+
+- Ripristinato Valle Pilella nell'anno 2019 con il collegamento puntuale all'ordinanza n. 1/2019 e la quantità documentata di 50 alberi.
+- Divise le 61 piantumazioni AVR del 2024 in tre eventi geolocalizzabili: Colle Fiorito 49, Piazza Matteotti 5 e Piazza Carrara 7.
+- Aggiunto l'avvio nel 2025 della sostituzione di circa 200 piante nell'area La Sorgente a Colle Fiorito.
+- Aggiunte le 82 piantumazioni concluse il 3 marzo 2026, ripartite in cinque eventi: Colleverde 47, Vena d'Oro 11, Parco Azzurro 12, Setteville Nord 2 e Villanova 10.
+- Aggiunta l'ordinanza n. 32/2026 per potature e abbattimenti in nove tratti di Colleverde; quantità non disponibile perché il documento non distingue né conta gli abbattimenti.
+- Corretto il geocodificatore del Worker: la coda include ora sia Roma sia Guidonia Montecelio e usa per ciascun comune nome e limiti geografici dedicati.
+- Aggiunta la migrazione `0008_guidonia_verified_tree_events.sql`.
+- App aggiornata alla versione `0.7.3` build 83, dataset alla revisione 22 e Worker alla versione `0.9.7`.
+
 # 0.7.2
 
 - Rimosso l'evento `guidonia-valle-pilella-messa-dimora`: la fonte indicata non identifica un'ordinanza specifica e non consente di verificare l'intervento.

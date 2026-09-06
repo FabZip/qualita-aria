@@ -53,7 +53,12 @@ const TREE_MAP_PERIODS=[
   ...TREE_YEARS.filter(year=>Number(year)<=2021).map(year=>({value:year,label:year}))
 ];
 const TREE_PERIOD_LABELS=new Map(TREE_MAP_PERIODS.map(item=>[item.value,item.label]));
-const TREE_GUIDONIA_PERIODS=[{value:'2024',label:'2024 eventi'}];
+const TREE_GUIDONIA_PERIODS=[
+  {value:'2026',label:'2026 eventi'},
+  {value:'2025',label:'2025 eventi'},
+  {value:'2024',label:'2024 eventi'},
+  {value:'2019',label:'2019 eventi'}
+];
 const TREE_CITY_CONFIG={
   roma:{id:'roma',name:'Roma',center:ROME.center,zoom:10.2,istat:'058091'},
   'guidonia-montecelio':{id:'guidonia-montecelio',name:'Guidonia Montecelio',center:[12.7268,41.9938],zoom:11.2,istat:'058047'}
@@ -3649,8 +3654,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.7.2',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.7.2',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.7.3',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.7.3',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3666,7 +3671,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.7.2')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.3')
       .then(reg=>reg.update())
       .catch(console.error)
   }

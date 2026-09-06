@@ -533,19 +533,52 @@
       "aggregatePeriods": [],
       "documentedEvents": [
         {
-          "id": "guidonia-2024-forestazione-avr",
+          "id": "guidonia-valle-pilella-messa-dimora",
+          "year": "2019",
+          "date": "21–25 novembre 2019",
+          "locationName": "Parco di Valle Pilella, Villanova",
+          "locationPrecision": "area",
+          "eventType": "planting",
+          "status": "planned",
+          "quantity": 50,
+          "notes": "L'ordinanza comunale dispone la chiusura del parco per consentire la messa a dimora di 50 alberi come barriera contro il pulviscolo della cava adiacente.",
+          "sourceUrl": "https://guidonia.halleyweb.it/zf/index.php/atti-amministrativi/ordinanze/dettaglio/table-ordinanze-public-page/553/atto/GTkRje5URPT0-F"
+        },
+        {
+          "id": "guidonia-2024-colle-fiorito-avr",
           "year": "2024",
           "date": "2024",
-          "locationName": "Territorio comunale di Guidonia Montecelio",
-          "locationPrecision": "city",
-          "coordinates": [
-            12.7268,
-            41.9938
-          ],
+          "locationName": "Via dell'Edera e via dei Girasoli, Colle Fiorito",
+          "locations": ["Via dell'Edera, Colle Fiorito", "Via dei Girasoli, Colle Fiorito"],
+          "locationPrecision": "address",
           "eventType": "planting",
           "status": "completed",
-          "quantity": 61,
-          "notes": "Prima fase documentata del progetto di forestazione urbana realizzato nell'ambito del protocollo con l'Amministrazione comunale.",
+          "quantity": 49,
+          "notes": "29 alberi di Giuda e 20 fotinie. Quantità complessiva delle due vie, non ripartita dalla fonte.",
+          "sourceUrl": "https://avrgroup.it/forestazione-urbana-a-guidonia-montecelio-un-progetto-sostenibile-del-gruppo-avr/"
+        },
+        {
+          "id": "guidonia-2024-piazza-matteotti-avr",
+          "year": "2024",
+          "date": "2024",
+          "locationName": "Piazza Matteotti, Guidonia",
+          "locationPrecision": "address",
+          "eventType": "planting",
+          "status": "completed",
+          "quantity": 5,
+          "notes": "Cinque alberi di Giuda nelle quattro aiuole lineari all'ingresso della piazza.",
+          "sourceUrl": "https://avrgroup.it/forestazione-urbana-a-guidonia-montecelio-un-progetto-sostenibile-del-gruppo-avr/"
+        },
+        {
+          "id": "guidonia-2024-piazza-carrara-avr",
+          "year": "2024",
+          "date": "2024",
+          "locationName": "Piazza Carrara, Villalba",
+          "locationPrecision": "address",
+          "eventType": "planting",
+          "status": "completed",
+          "quantity": 7,
+          "notes": "Sette fotinie messe a dimora nelle aiuole pubbliche.",
           "sourceUrl": "https://avrgroup.it/forestazione-urbana-a-guidonia-montecelio-un-progetto-sostenibile-del-gruppo-avr/"
         },
         {
@@ -578,6 +611,101 @@
           "quantity": 109,
           "notes": "L'autorizzazione paesaggistica documenta 109 alberi da abbattere in 17 località o insiemi di vie e un successivo reimpianto sostitutivo. La quantità è complessiva e non viene ripartita tra le ubicazioni; l'atto non certifica l'esecuzione degli interventi.",
           "sourceUrl": "https://guidonia.halleyweb.it/zf/index.php/atti-amministrativi/determine/dettaglio/atto/G1WpNM0T6UT0-A"
+        },
+        {
+          "id": "guidonia-2025-la-sorgente-200",
+          "year": "2025",
+          "date": "11 marzo 2025",
+          "locationName": "Centro residenziale La Sorgente, Colle Fiorito",
+          "locationPrecision": "area",
+          "eventType": "planting",
+          "status": "reported",
+          "quantity": 200,
+          "notes": "Avviata la sostituzione di circa 200 piante, sulle circa 450 originarie, che non avevano attecchito. Il valore è approssimativo.",
+          "sourceUrl": "https://www.facebook.com/comuneguidoniamontecelio/posts/966451592337843/"
+        },
+        {
+          "id": "guidonia-2026-avr-colleverde-47",
+          "year": "2026",
+          "date": "3 marzo 2026",
+          "locationName": "Colleverde",
+          "locationPrecision": "district",
+          "eventType": "planting",
+          "status": "completed",
+          "quantity": 47,
+          "notes": "Lavori di messa a dimora conclusi il 3 marzo 2026.",
+          "sourceUrl": "https://avrgroup.it/forestazione-urbana-a-guidonia-montecelio-prosegue-il-progetto-sostenibile-del-gruppo-avr/"
+        },
+        {
+          "id": "guidonia-2026-avr-vena-doro-11",
+          "year": "2026",
+          "date": "3 marzo 2026",
+          "locationName": "Vena d'Oro",
+          "locationPrecision": "district",
+          "eventType": "planting",
+          "status": "completed",
+          "quantity": 11,
+          "notes": "Lavori di messa a dimora conclusi il 3 marzo 2026.",
+          "sourceUrl": "https://avrgroup.it/forestazione-urbana-a-guidonia-montecelio-prosegue-il-progetto-sostenibile-del-gruppo-avr/"
+        },
+        {
+          "id": "guidonia-2026-avr-parco-azzurro-12",
+          "year": "2026",
+          "date": "3 marzo 2026",
+          "locationName": "Parco Azzurro",
+          "locationPrecision": "area",
+          "eventType": "planting",
+          "status": "completed",
+          "quantity": 12,
+          "notes": "Lavori di messa a dimora conclusi il 3 marzo 2026.",
+          "sourceUrl": "https://avrgroup.it/forestazione-urbana-a-guidonia-montecelio-prosegue-il-progetto-sostenibile-del-gruppo-avr/"
+        },
+        {
+          "id": "guidonia-2026-avr-setteville-nord-2",
+          "year": "2026",
+          "date": "3 marzo 2026",
+          "locationName": "Setteville Nord",
+          "locationPrecision": "district",
+          "eventType": "planting",
+          "status": "completed",
+          "quantity": 2,
+          "notes": "Lavori di messa a dimora conclusi il 3 marzo 2026.",
+          "sourceUrl": "https://avrgroup.it/forestazione-urbana-a-guidonia-montecelio-prosegue-il-progetto-sostenibile-del-gruppo-avr/"
+        },
+        {
+          "id": "guidonia-2026-avr-villanova-10",
+          "year": "2026",
+          "date": "3 marzo 2026",
+          "locationName": "Villanova",
+          "locationPrecision": "district",
+          "eventType": "planting",
+          "status": "completed",
+          "quantity": 10,
+          "notes": "Lavori di messa a dimora conclusi il 3 marzo 2026.",
+          "sourceUrl": "https://avrgroup.it/forestazione-urbana-a-guidonia-montecelio-prosegue-il-progetto-sostenibile-del-gruppo-avr/"
+        },
+        {
+          "id": "guidonia-2026-colleverde-potature-abbattimenti",
+          "year": "2026",
+          "date": "2–4 febbraio 2026",
+          "locationName": "Colleverde · nove tratti stradali",
+          "locations": [
+            "Via Monte Cervialto da via Monte Vettore al civico 8, Colleverde",
+            "Via Monte Bianco - palo Enel 0974, Colleverde",
+            "Via Monte Gran Paradiso - palo Enel 0953, Colleverde",
+            "Via Monte Gran Paradiso dal civico 20 al civico 10, Colleverde",
+            "Via Monte Gran Paradiso dal civico 43 al civico 37, Colleverde",
+            "Via Monte Gran Paradiso dal civico 8 al civico 4, Colleverde",
+            "Via Monte Grappa dal civico 22 alla Parrocchia di San Remigio, Colleverde",
+            "Via Monte Grappa dal civico 30 al civico 34, Colleverde",
+            "Via Monte Rosa dal civico 36 a via Monte Gran Paradiso, Colleverde"
+          ],
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "planned",
+          "quantity": null,
+          "notes": "L'ordinanza n. 32/2026 autorizza lavori misti di potatura e abbattimento, senza indicare il numero degli alberi abbattuti; la quantità resta quindi non disponibile.",
+          "sourceUrl": "https://tiburno.tv/wp-content/uploads/2026/02/CLICCA-E-LEGGI-LORDINANZA.pdf"
         }
       ]
     }
