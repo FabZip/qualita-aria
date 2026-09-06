@@ -381,11 +381,31 @@ WHERE CountryCode='IT'
     return[...bySample.values()]
   }
 
-  function metadataForSample(bySample,sample){
+  function stationCode(value){
+    return String(value??'').match(/(?:SPO\.)?(IT[A-Z0-9]{4,})/i)?.[1]?.toLowerCase()||''
+  }
+
+  function metadataForSample(metadata,sample){
     for(const key of identifierKeys(sample)){
-      if(bySample.has(key))return bySample.get(key)
+      if(metadata.bySample.has(key)){
+        return{row:metadata.bySample.get(key),match:'sample-id'}
+      }
     }
-    return null
+
+    // Fallback controllato: il codice EoI della stazione è stabile anche
+    // quando E2a/UTD e Measurements serializzano SampleId in modo diverso.
+    const code=stationCode(sample);
+    if(!code)return{row:null,match:null};
+
+    const row=metadata.rows.find(item=>
+      [
+        item?.AirQualityStationEoICode,
+        item?.AirQualityStation,
+        item?.SampleId
+      ].some(value=>stationCode(value)===code)
+    )||null;
+
+    return{row,match:row?'station-eoi':null}
   }
 
   function verificationLabel(code){
@@ -547,14 +567,17 @@ WHERE CountryCode='IT'
     const candidates=selectBestCandidates(groups,year);
     const unmatched=[];
     let lowCoverageSkipped=0;
+    let stationCodeFallbackMatches=0;
     const bestStation=new Map();
 
     for(const candidate of candidates){
-      const meta=metadataForSample(metadata.bySample,candidate.sample);
+      const metadataMatch=metadataForSample(metadata,candidate.sample);
+      const meta=metadataMatch.row;
       if(!meta){
         unmatched.push(candidate.sample);
         continue
       }
+      if(metadataMatch.match==='station-eoi')stationCodeFallbackMatches++;
 
       if(candidate.coverage!==null&&candidate.coverage<UTD_MIN_COVERAGE){
         lowCoverageSkipped++;
@@ -626,6 +649,7 @@ WHERE CountryCode='IT'
       lowCoverageSkipped,
       minimumCoverage:UTD_MIN_COVERAGE,
       unmatchedSamplingPoints:unmatched.slice(0,20),
+      stationCodeFallbackMatches,
       fileErrors:fileErrors.slice(0,10),
       note:'Media annuale preliminare calcolata da osservazioni E2a/UTD valide. Preferenza automatica per la serie con maggiore copertura; soglia minima 75%.'
     };
@@ -709,3 +733,4 @@ WHERE CountryCode='IT'
     loadHyparquet
   }
 })();
+

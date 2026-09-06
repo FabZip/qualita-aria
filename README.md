@@ -1,3 +1,7 @@
+# A.R.I.A. 0.6.6
+
+La versione 0.6.6 ripristina le stazioni EEA UTD/E2a 2025 di Roma associando i metadati tramite SampleId esatto e, solo quando questo fallisce, tramite il codice ufficiale EoI della stazione. Nessun identificatore originale viene riscritto.
+
 # Qualità dell'aria
 
 PWA mobile-first per esplorare dati reali sulla qualità dell'aria su una mappa interattiva, confrontare periodi storici quando la fonte lo consente e distinguere chiaramente tra misure di stazione e valutazioni territoriali.
@@ -260,3 +264,4 @@ Dati e servizi:
 # A.R.I.A. 0.6.5
 
 La versione 0.6.5 corregge l'associazione fra i file binari EEA UTD/E2a del 2025 e i metadati delle stazioni di Roma e rende affidabile la disponibilità del collegamento Segnala evento.
+

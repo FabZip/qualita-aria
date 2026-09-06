@@ -1,3 +1,9 @@
+# 0.6.6
+
+- Corretto il collegamento tra le serie EEA UTD/E2a 2025 di Roma e i metadati mediante il codice ufficiale EoI della stazione, usato solo come fallback dopo il confronto esatto di SampleId.
+- Gli identificatori originali non vengono modificati; il fallback serve esclusivamente al confronto in memoria.
+- Aggiunto alla diagnostica il conteggio stationCodeFallbackMatches.
+
 # Changelog
 
 ## [Proxy 0.9.5 / App 0.6.4] - 2026-09-02
@@ -1038,3 +1044,4 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Corretto l'abbinamento tra i Samplingpoint dei file Parquet EEA UTD/E2a e i metadati delle stazioni quando l'identificatore contiene metodo e data.
 - Ripristinata la visualizzazione delle stazioni EEA preliminari 2025 su Roma senza modificare la soglia minima di copertura del 75%.
 - Reso disponibile Segnala evento anche quando la chiave della fonte deve essere ricavata dall'URL o dall'identificatore dinamico.
+
