@@ -257,3 +257,6 @@ Dati e servizi:
 - file ufficiali ARPA Lazio
 - OpenAQ API v3
 - Cloudflare Worker per proteggere la API key OpenAQ e applicare cache, filtri e limiti geografici
+# A.R.I.A. 0.6.5
+
+La versione 0.6.5 corregge l'associazione fra i file binari EEA UTD/E2a del 2025 e i metadati delle stazioni di Roma e rende affidabile la disponibilità del collegamento Segnala evento.

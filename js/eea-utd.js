@@ -70,6 +70,13 @@
       const hash=clean.split('#').pop();
       if(slash)values.add(slash);
       if(hash)values.add(hash)
+      // I Parquet UTD aggiungono spesso metodo e data alla chiave stabile
+      // (es. IT/SPO.IT2012A_5_BETA_2010-06-01_00:00:00).
+      const stableSample=clean.match(/SPO\.[A-Z0-9]+_\d+/i)?.[0];
+      if(stableSample){
+        values.add(stableSample);
+        values.add(`IT/${stableSample}`)
+      }
     }
 
     return[...values].map(normalizeId).filter(Boolean)
@@ -129,8 +136,21 @@
     return null
   }
 
+  function rowValue(row,...names){
+    if(!row||typeof row!=='object')return undefined;
+    for(const name of names){
+      if(Object.prototype.hasOwnProperty.call(row,name))return row[name]
+    }
+    const keys=new Map(Object.keys(row).map(key=>[key.toLowerCase(),key]));
+    for(const name of names){
+      const key=keys.get(String(name).toLowerCase());
+      if(key!==undefined)return row[key]
+    }
+    return undefined
+  }
+
   function isValidObservation(row){
-    const code=vocabularyCode(row?.Validity);
+    const code=vocabularyCode(rowValue(row,'Validity','validity'));
     return code===null||code>0
   }
 
@@ -282,19 +302,20 @@ WHERE CountryCode='IT'
   function addObservation(groups,row,year){
     if(!isValidObservation(row))return false;
 
-    const ms=parseTime(row.Start??row.End);
+    const ms=parseTime(rowValue(row,'Start','start','DatetimeBegin','datetimeBegin')??rowValue(row,'End','end','DatetimeEnd','datetimeEnd'));
     if(ms===null||new Date(ms).getUTCFullYear()!==Number(year))return false;
 
-    const rawValue=Number(row.Value);
+    const rawValue=Number(rowValue(row,'Value','value','Concentration','concentration'));
     if(!Number.isFinite(rawValue)||rawValue<0)return false;
 
-    const factor=unitFactor(row.Unit);
+    const unit=rowValue(row,'Unit','unit');
+    const factor=unitFactor(unit);
     if(factor===null)return false;
 
-    const sample=String(row.Samplingpoint??'').trim();
+    const sample=String(rowValue(row,'Samplingpoint','SamplingPoint','samplingpoint','sampling_point','SampleId','sample_id')??'').trim();
     if(!sample)return false;
 
-    const kind=aggKind(row.AggType);
+    const kind=aggKind(rowValue(row,'AggType','aggType','AggregationType','aggregation_type'));
     const key=`${sample}\u0000${kind}`;
 
     if(!groups.has(key)){
@@ -303,7 +324,7 @@ WHERE CountryCode='IT'
         kind,
         values:new Map(),
         verification:new Map(),
-        unit:String(row.Unit??'')
+        unit:String(unit??'')
       })
     }
 
@@ -311,7 +332,7 @@ WHERE CountryCode='IT'
     const timeKey=timestampKey(ms,kind);
     group.values.set(timeKey,rawValue*factor);
 
-    const verification=vocabularyCode(row.Verification);
+    const verification=vocabularyCode(rowValue(row,'Verification','verification'));
     if(verification!==null){
       group.verification.set(
         verification,

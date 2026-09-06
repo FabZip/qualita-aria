@@ -1033,3 +1033,8 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Corretta la conversione dei valori mancanti per evitare falsi zeri.
 - Aggiunto fallback posizionale per MIN, MED e MAX nei fogli XLSX.
 - Confermata la distinzione tra valutazione comunale e stazione di misura.
+# 0.6.5
+
+- Corretto l'abbinamento tra i Samplingpoint dei file Parquet EEA UTD/E2a e i metadati delle stazioni quando l'identificatore contiene metodo e data.
+- Ripristinata la visualizzazione delle stazioni EEA preliminari 2025 su Roma senza modificare la soglia minima di copertura del 75%.
+- Reso disponibile Segnala evento anche quando la chiave della fonte deve essere ricavata dall'URL o dall'identificatore dinamico.

@@ -2942,9 +2942,10 @@ function treeListHtml(result,year,includeAggregate=true){
       const mapped=Number(event.path?.properties?.locationsMapped||0);
       const expected=Number(event.path?.properties?.locationsExpected||0);
       const pathDetail=located&&expected>1?`<br>${mapped} località evidenziate su ${expected} documentate; ripartizione delle quantità non specificata.`:'';
-      const reportButton=located&&event.sourceKey
+      const reportKey=sourceKey(event);
+      const reportButton=located&&reportKey
         ?`<button class="tree-event-report" type="button" data-tree-report="${safe(event.id)}" data-tree-source-key="${safe(sourceKey(event))}" data-tree-location-index="0">Segnala posizione</button>`
-        :!located&&event.sourceKey
+        :!located&&reportKey
           ?`<button class="tree-event-report" type="button" data-tree-event-report="${safe(event.id)}" data-tree-source-key="${safe(sourceKey(event))}">Segnala evento</button>`
           :'';
       const statusLabel=plannedDateHasPassed(event)?'Programmato · data trascorsa':statusLabels[event.status]||event.status;
@@ -3429,7 +3430,7 @@ async function submitTreeEventReport(submitEvent){
   try{
     const base=await treeApiBase();if(!base)throw new Error('Proxy Alberi non configurato');
     const response=await fetch(`${base}/v1/trees/event-reports`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      sourceKey:event.sourceKey,eventId:event.id,reason:$('treeEventReportReason').value,
+      sourceKey:sourceKey(event),eventId:event.id,reason:$('treeEventReportReason').value,
       reporterName:$('treeEventReporterName').value,reporterEmail:$('treeEventReporterEmail').value
     })});
     const result=await response.json();if(!response.ok)throw new Error(result.error||`HTTP ${response.status}`);
@@ -3623,8 +3624,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.6.4',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.6.4',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.6.5',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.6.5',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3640,7 +3641,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.6.4')
+    navigator.serviceWorker.register('./service-worker.js?v=0.6.5')
       .then(reg=>reg.update())
       .catch(console.error)
   }
