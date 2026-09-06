@@ -53,6 +53,11 @@ const TREE_MAP_PERIODS=[
   ...TREE_YEARS.filter(year=>Number(year)<=2021).map(year=>({value:year,label:year}))
 ];
 const TREE_PERIOD_LABELS=new Map(TREE_MAP_PERIODS.map(item=>[item.value,item.label]));
+const TREE_GUIDONIA_PERIODS=[{value:'2024',label:'2024 eventi'}];
+const TREE_CITY_CONFIG={
+  roma:{id:'roma',name:'Roma',center:ROME.center,zoom:10.2,istat:'058091'},
+  'guidonia-montecelio':{id:'guidonia-montecelio',name:'Guidonia Montecelio',center:[12.7268,41.9938],zoom:11.2,istat:'058047'}
+};
 const TREE_EVENTS_PER_PAGE=6;
 
 const EEA_SCOPES={
@@ -224,7 +229,14 @@ function currentEeaScope(){
   }
 }
 
-function currentYears(){return isTrees()?TREE_YEARS:(isTemperature()?TEMPERATURE_YEARS:SOURCE_INFO[source()].years)}
+function currentTreePeriods(){
+  return eeaCity()==='guidonia-montecelio'?TREE_GUIDONIA_PERIODS:TREE_MAP_PERIODS
+}
+function currentYears(){
+  return isTrees()
+    ?currentTreePeriods().map(item=>item.value)
+    :(isTemperature()?TEMPERATURE_YEARS:SOURCE_INFO[source()].years)
+}
 function normalizeText(v){return String(v??'').toLowerCase().replace(/\s+/g,' ').trim()}
 function fmt(v){return Number(v).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})}
 function avg(rows){return rows.length?rows.reduce((s,r)=>s+r.value,0)/rows.length:0}
@@ -285,19 +297,20 @@ async function loadEeaCities(){
 
 function fillYears(){
   const years=currentYears();
-  const latest=isTrees()?TREE_MAP_PERIODS[0].value:years[0];
-  const preferredA=isTrees()?'2019':(years.includes('2015')?'2015':years.at(-1));
-  const preferredB=isTrees()?'2020':(years.includes('2023')?'2023':latest);
+  const treePeriods=isTrees()?currentTreePeriods():[];
+  const latest=isTrees()?treePeriods[0]?.value:years[0];
+  const preferredA=isTrees()?(years.includes('2019')?'2019':years.at(-1)):(years.includes('2015')?'2015':years.at(-1));
+  const preferredB=isTrees()?(years.includes('2020')?'2020':latest):(years.includes('2023')?'2023':latest);
 
   for(const id of ['yearSelect','compareYearA','compareYearB']){
     const options=isTrees()&&id==='yearSelect'
-      ?TREE_MAP_PERIODS.map(item=>item.value)
+      ?treePeriods.map(item=>item.value)
       :years;
     const old=$(id).value;
     $(id).innerHTML=options.map(y=>`<option value="${y}">${isTrees()?(TREE_PERIOD_LABELS.get(y)||y):y}</option>`).join('');
     if(old&&options.includes(old))$(id).value=old;
   }
-  if(!(isTrees()?TREE_MAP_PERIODS.some(item=>item.value===$('yearSelect').value):years.includes($('yearSelect').value)))$('yearSelect').value=latest;
+  if(!(isTrees()?treePeriods.some(item=>item.value===$('yearSelect').value):years.includes($('yearSelect').value)))$('yearSelect').value=latest;
   if(!years.includes($('compareYearA').value))$('compareYearA').value=preferredA;
   if(!years.includes($('compareYearB').value))$('compareYearB').value=preferredB;
 }
@@ -480,9 +493,10 @@ function configureSourceUI(){
 function configureTreeCityOptions(active){
   const select=$('eeaCitySelect');
   if(!select)return;
-  const treeCities=['roma','padova','bologna','torino'];
   const desired=active
-    ?treeCities.map(id=>state.eeaCities.get(id)).filter(Boolean)
+    ?Object.values(TREE_CITY_CONFIG).map(city=>({
+        id:city.id,name:city.name,lon:city.center[0],lat:city.center[1]
+      }))
     :[...state.eeaCities.values()];
   const signature=`${active?'trees':'air'}:${desired.map(city=>city.id).join(',')}`;
   if(select.dataset.optionSignature===signature)return;
@@ -1013,8 +1027,9 @@ async function fetchArpaBoundary(code,name){
   }
 }
 
-function fetchRomeBoundary(){
-  return fetchArpaBoundary('058091','Roma')
+function fetchTreeBoundary(cityId){
+  const city=TREE_CITY_CONFIG[cityId];
+  return city?fetchArpaBoundary(city.istat,city.name):Promise.resolve(null)
 }
 
 
@@ -3016,7 +3031,7 @@ async function renderTreesMode(token){
   ]);
   state.treeEvents=new Map([...(resultA.documentedEvents||[]),...(resultB?.documentedEvents||[])].map(event=>[String(event.id),event]));
   if(token!==state.renderToken)return;
-  const boundary=cityId==='roma'&&(resultA.record||resultB?.record)?await fetchRomeBoundary():null;
+  const boundary=(resultA.record||resultB?.record)?await fetchTreeBoundary(cityId):null;
   if(token!==state.renderToken)return;
 
   let displayed=0;
@@ -3547,6 +3562,11 @@ function bind(){
 
   $('eeaCitySelect')?.addEventListener('change',()=>{
     if(isTrees()){
+      fillYears();
+      const treeCity=TREE_CITY_CONFIG[eeaCity()];
+      if(treeCity){
+        withMapRefreshSuppressed(()=>state.map?.flyTo({center:treeCity.center,zoom:treeCity.zoom,duration:700}))
+      }
       render();
       return
     }
@@ -3624,8 +3644,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.6.6',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.6.6',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.7.0',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.7.0',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3641,7 +3661,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.6.6')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.0')
       .then(reg=>reg.update())
       .catch(console.error)
   }
@@ -3653,4 +3673,5 @@ boot().catch(err=>{
   diagnostics({error:String(err.message||err)});
   showToast(err.message||'Errore di inizializzazione')
 })
+
 

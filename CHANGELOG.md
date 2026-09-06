@@ -1,3 +1,12 @@
+# 0.7.0
+
+- Aggiunto Guidonia Montecelio alla selezione della fonte Alberi con identificatore isolato `guidonia-montecelio`.
+- Aggiunti il confine comunale ISTAT 058047, centro mappa e periodo documentato 2024.
+- Inseriti tre riferimenti documentali iniziali; soltanto i 61 alberi con quantità ed esecuzione documentate incidono sul totale minimo.
+- Aggiornato il Worker alla 0.9.6 per servire separatamente Roma e Guidonia Montecelio tramite il campo `city` già esistente.
+- Aggiunta la migrazione dati `0005_guidonia_seed_events.sql`; non altera lo schema e non modifica eventi di Roma.
+- Dataset aggiornato alla revisione 19.
+
 # 0.6.6
 
 - Corretto il collegamento tra le serie EEA UTD/E2a 2025 di Roma e i metadati mediante il codice ufficiale EoI della stazione, usato solo come fallback dopo il confronto esatto di SampleId.

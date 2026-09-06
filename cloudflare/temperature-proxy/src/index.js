@@ -1751,7 +1751,7 @@ async function treeEventsResponse(env,cors,url){
   if(!env.TREE_DB)return json({error:'Archivio arboreo dinamico non configurato'},503,{...cors,'Cache-Control':'no-store'});
   const city=String(url.searchParams.get('city')||'roma').toLowerCase();
   const year=Number(url.searchParams.get('year'));
-  if(city!=='roma')return badRequest('Città non supportata',cors);
+  if(!['roma','guidonia-montecelio'].includes(city))return badRequest('Città non supportata',cors);
   if(!Number.isInteger(year)||year<2013||year>new Date().getUTCFullYear())return badRequest('Anno non valido',cors);
   const result=await env.TREE_DB.prepare(`
     SELECT source_key,year,event_date,location_name,locations_json,location_points_json,district,event_type,quantity,latitude,longitude,geocode_precision,
@@ -1801,7 +1801,8 @@ async function treeEventsResponse(env,cors,url){
     firstSeenAt:row.first_seen_at,lastCheckedAt:row.last_checked_at
   }});
   const lastRun=await env.TREE_DB.prepare("SELECT completed_at,status,discovered,inserted,updated,errors FROM tree_sync_runs ORDER BY id DESC LIMIT 1").first();
-  return json({source:'Roma Capitale · aggiornamento automatico settimanale',city,year,events,lastSync:lastRun||null},200,{...cors,'Cache-Control':'public, max-age=3600'})
+  const publisher=city==='guidonia-montecelio'?'Città di Guidonia Montecelio':'Roma Capitale';
+  return json({source:`${publisher} · archivio dinamico`,city,year,events,lastSync:lastRun||null},200,{...cors,'Cache-Control':'public, max-age=3600'})
 }
 
 function adminAuthorized(request,env){
@@ -2051,7 +2052,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.9.5',
+        version:'0.9.6',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,
@@ -2061,6 +2062,7 @@ export default{
         stationCoverageThresholdPct:OBSERVED_COVERAGE_MIN*100,
         historicalFrom:1950,
         treeEventsDynamic:Boolean(env.TREE_DB),
+        treeCities:['roma','guidonia-montecelio'],
         treeSyncSchedule:'0 3 * * 1',
         treeGeocodeSchedule:'30 3 * * *',
         cacheSeconds:CACHE_TTL
@@ -2117,6 +2119,7 @@ export default{
       endpoints:[
         '/health',
         '/v1/trees/events?city=roma&year=2026',
+        '/v1/trees/events?city=guidonia-montecelio&year=2024',
         '/v1/temperature?bbox=12.2,41.7,12.8,42.1&year=2025',
         '/v1/observed?pollutantSource=arpa&bbox=12.1,41.7,12.8,42.1&year=2025',
         '/v1/observed?pollutantSource=eea&bbox=9,45,10,46&year=2025'
@@ -2124,3 +2127,4 @@ export default{
     },404,cors)
   }
 };
+

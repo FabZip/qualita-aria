@@ -1,3 +1,7 @@
+# A.R.I.A. 0.7.0
+
+La fonte Alberi supporta ora due comuni separati: Roma e Guidonia Montecelio. Guidonia parte da una raccolta documentale parziale 2024; statistiche, confine comunale, selezioni ed eventi non vengono mescolati con Roma. Il Worker 0.9.6 accetta entrambi gli identificatori mantenendo invariato `roma`.
+
 # A.R.I.A. 0.6.6
 
 La versione 0.6.6 ripristina le stazioni EEA UTD/E2a 2025 di Roma associando i metadati tramite SampleId esatto e, solo quando questo fallisce, tramite il codice ufficiale EoI della stazione. Nessun identificatore originale viene riscritto.
@@ -264,4 +268,5 @@ Dati e servizi:
 # A.R.I.A. 0.6.5
 
 La versione 0.6.5 corregge l'associazione fra i file binari EEA UTD/E2a del 2025 e i metadati delle stazioni di Roma e rende affidabile la disponibilità del collegamento Segnala evento.
+
 

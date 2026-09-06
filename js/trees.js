@@ -25,7 +25,7 @@
   }
 
   async function catalog(){
-    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.5.14',{cache:'no-store'}).then(response=>{
+    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.7.0',{cache:'no-store'}).then(response=>{
       if(!response.ok)throw new Error(`Dati arborei: HTTP ${response.status}`);
       return response.json()
     });
@@ -33,21 +33,21 @@
   }
 
   async function proxyConfig(){
-    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.5.14',{cache:'no-store'})
+    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.7.0',{cache:'no-store'})
       .then(response=>response.ok?response.json():null)
       .catch(()=>null);
     return proxyConfigPromise
   }
 
   async function coordinatesCatalog(){
-    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.5.14',{cache:'no-store'})
+    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.7.0',{cache:'no-store'})
       .then(response=>response.ok?response.json():{events:{}})
       .catch(()=>({events:{}}));
     return coordinatesPromise
   }
 
   async function pathsCatalog(){
-    if(!pathsPromise)pathsPromise=fetch('data/tree-paths.json?v=0.5.14',{cache:'no-store'})
+    if(!pathsPromise)pathsPromise=fetch('data/tree-paths.json?v=0.7.0',{cache:'no-store'})
       .then(response=>response.ok?response.json():{events:{}})
       .catch(()=>({events:{}}));
     return pathsPromise
@@ -405,13 +405,13 @@
         const ownPath=resolveEventPath(pathData,event.id);
         const markerCoordinates=Array.isArray(ownPath?.properties?.markerCoordinates)?ownPath.properties.markerCoordinates:null;
         const coordinates=markerCoordinates?.[0]||alignedCoordinates(location?.coordinates||event.coordinates,ownPath);
-        return{...event,coordinates,markerCoordinates,locationPrecision:location?.precision||event.locationPrecision,ownPath,path:ownPath,source:{publisher:'Roma Capitale',url:event.sourceUrl}}
+        return{...event,coordinates,markerCoordinates,locationPrecision:location?.precision||event.locationPrecision,ownPath,path:ownPath,source:{publisher:city.source?.publisher||city.name,url:event.sourceUrl}}
       });
     const dynamic=await dynamicEvents(cityId,selection);
     const localSourceUrls=new Set(localDocumented.map(event=>event.sourceUrl));
     const remoteDocumented=dynamic.events
       .filter(event=>!localSourceUrls.has(event.sourceUrl))
-      .map(event=>({...event,source:{publisher:'Roma Capitale · aggiornamento automatico',url:event.sourceUrl}}));
+      .map(event=>({...event,source:{publisher:`${city.source?.publisher||city.name} · aggiornamento automatico`,url:event.sourceUrl}}));
     const documentedEvents=sortEventsNewestFirst(prepareDocumentedPaths([...localDocumented,...remoteDocumented]));
     const completed=documentedEvents.filter(event=>
       ['completed','emergency_completed'].includes(event.status)&&Number.isFinite(event.quantity)
@@ -428,7 +428,7 @@
       plantings,decrements,decrementLabel:'Abbattimenti documentati',
       dataKind:'documented_partial',coverageLabel:'Totale minimo documentato',
       notes:'Somma dei soli eventi pubblici raccolti con quantità nota e stato eseguito. Non rappresenta il totale annuale completo.',
-      source:{publisher:'Roma Capitale · avvisi e notizie ufficiali',url:'https://www.comune.roma.it/web/it/informazioni-di-servizio.page?tem=verde_urbano'}
+      source:{publisher:`${city.source?.publisher||city.name} · fonti documentate`,url:city.source?.url||''}
     }:null;
     const aggregateRecord=aggregate?{
       ...aggregate,
@@ -443,3 +443,4 @@
 
   window.TreeStats={rows,show,showScope,showDifferenceScope,showDocumentedEvents,focusEvent,iconSvg,clear,fmt,balanceOf};
 })();
+

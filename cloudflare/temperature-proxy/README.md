@@ -1,4 +1,6 @@
-# Proxy ambientale
+# Proxy ambientale 0.9.6
+
+La release 0.9.6 abilita anche `city=guidonia-montecelio`. Applicare la migrazione dati `0005_guidonia_seed_events.sql` prima del deploy: inserisce tre riferimenti iniziali con chiavi dedicate e non modifica le righe di Roma.
 
 Worker Cloudflare dei moduli temperatura e aggiornamento eventi arborei di Qualità aria.
 
@@ -31,7 +33,7 @@ Copertura minima delle serie osservate: 75%.
 
 Il Worker espone:
 
-- `GET /v1/trees/events?city=roma&year=2026` per il frontend;
+- `GET /v1/trees/events?city=roma&year=2026` e `GET /v1/trees/events?city=guidonia-montecelio&year=2024` per il frontend;
 - `POST /v1/trees/refresh` per avviare una scansione manuale autenticata;
 - `POST /v1/trees/review` per confermare, correggere o rifiutare un evento;
 - `POST /v1/trees/location-reports` per le segnalazioni geografiche;

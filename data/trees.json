@@ -1,10 +1,13 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-26",
+  "generatedAt": "2026-09-06",
   "cities": {
     "roma": {
       "name": "Roma",
-      "center": [12.4964, 41.9028],
+      "center": [
+        12.4964,
+        41.9028
+      ],
       "zoom": 9.7,
       "available": true,
       "source": {
@@ -13,51 +16,573 @@
         "url": "https://www.comune.roma.it/web/it/scheda-servizi.page?contentId=INF70550"
       },
       "events": [
-        {"id":"roma-2017-balance","year":"2017","period":"2017","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":120,"decrements":1251,"decrementLabel":"Abbattimenti","notes":"Totale comunale ufficiale; localizzazione puntuale non disponibile."},
-        {"id":"roma-2018-balance","year":"2018","period":"2018","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":148,"decrements":1072,"decrementLabel":"Abbattimenti","notes":"Totale comunale ufficiale; localizzazione puntuale non disponibile."},
-        {"id":"roma-2019-balance","year":"2019","period":"2019","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":542,"decrements":1358,"decrementLabel":"Abbattimenti","notes":"Totale comunale ufficiale; localizzazione puntuale non disponibile."},
-        {"id":"roma-2020-balance","year":"2020","period":"2020","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":203,"decrements":2555,"decrementLabel":"Abbattimenti","notes":"Totale comunale ufficiale; localizzazione puntuale non disponibile."},
-        {"id":"roma-2021-partial","year":"2021","period":"1 gennaio–3 settembre 2021","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":1616,"decrements":1033,"decrementLabel":"Abbattimenti","forestations":8782,"notes":"Dato parziale fino al 3 settembre 2021. Le forestazioni sono indicate separatamente e non sono sommate alle piantumazioni."}
+        {
+          "id": "roma-2017-balance",
+          "year": "2017",
+          "period": "2017",
+          "locationName": "Roma",
+          "locationPrecision": "city",
+          "coordinates": [
+            12.4964,
+            41.9028
+          ],
+          "status": "completed",
+          "plantings": 120,
+          "decrements": 1251,
+          "decrementLabel": "Abbattimenti",
+          "notes": "Totale comunale ufficiale; localizzazione puntuale non disponibile."
+        },
+        {
+          "id": "roma-2018-balance",
+          "year": "2018",
+          "period": "2018",
+          "locationName": "Roma",
+          "locationPrecision": "city",
+          "coordinates": [
+            12.4964,
+            41.9028
+          ],
+          "status": "completed",
+          "plantings": 148,
+          "decrements": 1072,
+          "decrementLabel": "Abbattimenti",
+          "notes": "Totale comunale ufficiale; localizzazione puntuale non disponibile."
+        },
+        {
+          "id": "roma-2019-balance",
+          "year": "2019",
+          "period": "2019",
+          "locationName": "Roma",
+          "locationPrecision": "city",
+          "coordinates": [
+            12.4964,
+            41.9028
+          ],
+          "status": "completed",
+          "plantings": 542,
+          "decrements": 1358,
+          "decrementLabel": "Abbattimenti",
+          "notes": "Totale comunale ufficiale; localizzazione puntuale non disponibile."
+        },
+        {
+          "id": "roma-2020-balance",
+          "year": "2020",
+          "period": "2020",
+          "locationName": "Roma",
+          "locationPrecision": "city",
+          "coordinates": [
+            12.4964,
+            41.9028
+          ],
+          "status": "completed",
+          "plantings": 203,
+          "decrements": 2555,
+          "decrementLabel": "Abbattimenti",
+          "notes": "Totale comunale ufficiale; localizzazione puntuale non disponibile."
+        },
+        {
+          "id": "roma-2021-partial",
+          "year": "2021",
+          "period": "1 gennaio–3 settembre 2021",
+          "locationName": "Roma",
+          "locationPrecision": "city",
+          "coordinates": [
+            12.4964,
+            41.9028
+          ],
+          "status": "completed",
+          "plantings": 1616,
+          "decrements": 1033,
+          "decrementLabel": "Abbattimenti",
+          "forestations": 8782,
+          "notes": "Dato parziale fino al 3 settembre 2021. Le forestazioni sono indicate separatamente e non sono sommate alle piantumazioni."
+        }
       ],
       "aggregatePeriods": [
-        {"id":"roma-2021-2025-balance","selectorValue":"period-2021-2025","dataKind":"official_period","period":"novembre 2021–dicembre 2025","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":67640,"decrements":29842,"decrementLabel":"Decrementi","falls":706,"notes":"Totale aggregato ufficiale: non attribuibile ai singoli anni. I decrementi comprendono 706 schianti."},
-        {"id":"roma-season-2024-2025","selectorValue":"season-2024-2025","dataKind":"official_period","period":"2024–31 marzo 2025","locationName":"Roma","locationPrecision":"city","coordinates":[12.4964,41.9028],"status":"completed","plantings":29000,"decrements":13000,"decrementLabel":"Abbattimenti","approximate":true,"sourceUrl":"https://www.comune.roma.it/web/it/notizia/ambiente-avanti-piano-forestazione-mun02.page","notes":"Quantità comunicate come circa 29.000 messe a dimora e 13.000 abbattimenti. La fonte indica l'inizio soltanto come 2024, senza specificare il mese."}
+        {
+          "id": "roma-2021-2025-balance",
+          "selectorValue": "period-2021-2025",
+          "dataKind": "official_period",
+          "period": "novembre 2021–dicembre 2025",
+          "locationName": "Roma",
+          "locationPrecision": "city",
+          "coordinates": [
+            12.4964,
+            41.9028
+          ],
+          "status": "completed",
+          "plantings": 67640,
+          "decrements": 29842,
+          "decrementLabel": "Decrementi",
+          "falls": 706,
+          "notes": "Totale aggregato ufficiale: non attribuibile ai singoli anni. I decrementi comprendono 706 schianti."
+        },
+        {
+          "id": "roma-season-2024-2025",
+          "selectorValue": "season-2024-2025",
+          "dataKind": "official_period",
+          "period": "2024–31 marzo 2025",
+          "locationName": "Roma",
+          "locationPrecision": "city",
+          "coordinates": [
+            12.4964,
+            41.9028
+          ],
+          "status": "completed",
+          "plantings": 29000,
+          "decrements": 13000,
+          "decrementLabel": "Abbattimenti",
+          "approximate": true,
+          "sourceUrl": "https://www.comune.roma.it/web/it/notizia/ambiente-avanti-piano-forestazione-mun02.page",
+          "notes": "Quantità comunicate come circa 29.000 messe a dimora e 13.000 abbattimenti. La fonte indica l'inizio soltanto come 2024, senza specificare il mese."
+        }
       ],
       "documentedEvents": [
-        {"id":"roma-2026-fori-imperiali","year":"2026","date":"6 febbraio 2026","locationName":"Via dei Fori Imperiali","locationPrecision":"address","eventType":"decrement","status":"planned","quantity":1,"notes":"Pino domestico programmato per abbattimento dopo prova di trazione; escluso dal minimo documentato.","sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1526335"},
-        {"id":"roma-2026-villa-borghese-febbraio","year":"2026","date":"5–10 febbraio 2026","locationName":"Villa Borghese","locationPrecision":"address","eventType":"decrement","status":"planned","quantity":1,"notes":"Leccio programmato per abbattimento; escluso dal minimo documentato.","sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1526335"},
-        {"id":"roma-2026-via-ludovisi","year":"2026","date":"5–10 febbraio 2026","locationName":"Via Ludovisi","locationPrecision":"address","eventType":"decrement","status":"planned","quantity":1,"notes":"Leccio programmato per abbattimento; escluso dal minimo documentato.","sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1526335"},
-        {"id":"roma-2026-vitaliano-rotellini","year":"2026","date":"5 febbraio 2026","locationName":"Via Vitaliano Rotellini","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":7,"notes":"Prunus pissardi indicati con data di esecuzione.","sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1526335"},
-        {"id":"roma-2026-pisana","year":"2026","date":"31 gennaio 2026","locationName":"Via della Pisana 950E","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":4,"notes":"Pini domestici con intervento dichiarato eseguito.","sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1526335"},
-        {"id":"roma-2026-fratelli-bandiera","year":"2026","date":"17 febbraio 2026","locationName":"Istituto Comprensivo Fratelli Bandiera · Piazza Ruggero di Sicilia 2","district":"Municipio II","locationPrecision":"address","eventType":"planting","status":"planned","quantity":19,"notes":"Messa a dimora annunciata; esclusa dal minimo documentato in assenza di una conferma successiva dell'esecuzione.","sourceUrl":"https://www.comune.roma.it/web/it/notizia/municipio-ii-nuovi-alberi-allistituto-fratelli-bandiera.page"},
-        {"id":"roma-2026-municipio-iii-completed","year":"2026","date":"25 febbraio 2026","locationName":"Municipio III · oltre 20 strade","district":"Municipio III","locationPrecision":"district","eventType":"planting","status":"completed","quantity":473,"notes":"Alberi dichiarati già messi a dimora alla data della pubblicazione.","sourceUrl":"https://www.comune.roma.it/web/it/notizia/mun03-riqualificazione-arborea-con-oltre-700-nuovi-alberi.page"},
-        {"id":"roma-2026-municipio-iii-planned","year":"2026","date":"25 febbraio 2026","locationName":"Via Cimone, via Campi Flegrei, via Monte Rocchetta, parco Cinquina e parco Talenti","district":"Municipio III","locationPrecision":"district","eventType":"planting","status":"planned","quantity":231,"notes":"Alberi ancora da mettere a dimora nelle settimane successive; esclusi dal minimo documentato.","sourceUrl":"https://www.comune.roma.it/web/it/notizia/mun03-riqualificazione-arborea-con-oltre-700-nuovi-alberi.page"},
-        {"id":"roma-2026-colombo-pini","year":"2026","date":"marzo 2026","locationName":"Via Cristoforo Colombo","locationPrecision":"address","eventType":"planting","status":"reported","quantity":40,"notes":"Interventi avviati su 40 pini selezionati; esclusi dal minimo finché la messa a dimora completa non è attestata.","sourceUrl":"https://www.comune.roma.it/web/it/notizia/nuovi-pini-sulla-colombo-2026.page"},
-        {"id":"roma-2026-santa-petronilla","year":"2026","date":"marzo 2026","locationName":"Via di Santa Petronilla","locationPrecision":"address","eventType":"planting","status":"completed","quantity":70,"notes":"Ginkgo biloba messi a dimora.","sourceUrl":"https://www.comune.roma.it/web/it/notizia/nuovi-pini-sulla-colombo-2026.page"},
-        {"id":"roma-2026-serafico","year":"2026","date":"marzo 2026","locationName":"Via del Serafico","locationPrecision":"address","eventType":"planting","status":"completed","quantity":60,"notes":"Ciliegi da fiore messi a dimora.","sourceUrl":"https://www.comune.roma.it/web/it/notizia/nuovi-pini-sulla-colombo-2026.page"},
-        {"id":"roma-2026-ugo-della-seta","year":"2026","date":"17 marzo 2026","locationName":"Via Ugo della Seta","district":"Municipio III","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":6,"notes":"Aceri abbattuti con intervento urgente.","sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1551137"},
-        {"id":"roma-2026-via-kobler","year":"2026","date":"16 marzo 2026","locationName":"Area 52 · Via Kobler","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":2,"notes":"Un gelso nero e un fico indicati con data di esecuzione.","sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1551137"},
-        {"id":"roma-2026-villa-borghese","year":"2026","date":"23–31 marzo 2026","locationName":"Villa Borghese","locationPrecision":"address","eventType":"decrement","status":"planned","quantity":19,"notes":"Intervento programmato; escluso dal minimo documentato.","sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1555013"},
-        {"id":"roma-2026-castel-sant-angelo","year":"2026","date":"23–31 marzo 2026","locationName":"Castel Sant'Angelo","locationPrecision":"address","eventType":"decrement","status":"planned","quantity":1,"notes":"Intervento programmato; escluso dal minimo documentato.","sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1555013"},
-        {"id":"roma-2026-parco-scipioni","year":"2026","date":"23–31 marzo 2026","locationName":"Parco degli Scipioni","locationPrecision":"address","eventType":"decrement","status":"planned","quantity":1,"notes":"Intervento programmato; escluso dal minimo documentato.","sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1555013"},
-        {"id":"roma-2026-viale-giotto","year":"2026","date":"23–27 marzo 2026","locationName":"Viale Giotto","locationPrecision":"address","eventType":"decrement","status":"planned","quantity":5,"notes":"Intervento programmato; escluso dal minimo documentato.","sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1555013"},
-        {"id":"roma-2026-via-meropia","year":"2026","date":"8 giugno 2026","locationName":"Via Meropia","district":"Municipio VIII","locationPrecision":"address","eventType":"decrement","status":"planned","quantity":37,"notes":"Robinie in classe D inserite nella programmazione; escluse dal minimo documentato.","sourceUrl":"https://www.comune.roma.it/web/it/notizia/mun08-interventi-alberi-via-meropia.page"},
-        {"id":"roma-2023-paola-falconieri","year":"2023","date":"12 aprile 2023","locationName":"Via Paola Falconieri","district":"Municipio XII","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":4,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1035500"},
-        {"id":"roma-2023-fabiola","year":"2023","date":"12 aprile 2023","locationName":"Via Fabiola","district":"Municipio XII","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":1,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1035500"},
-        {"id":"roma-2023-algardi","year":"2023","date":"11–12 aprile 2023","locationName":"Via Algardi","district":"Municipio XII","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":3,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1035500"},
-        {"id":"roma-2023-via-mario","year":"2023","date":"8 agosto 2023","locationName":"Via Mario","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":2,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1079891"},
-        {"id":"roma-2023-serafico","year":"2023","date":"9 agosto 2023","locationName":"Via del Serafico · Giardino Mattia Preti","district":"Municipio VIII","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":null,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1079891"},
-        {"id":"roma-2023-quattro-venti","year":"2023","date":"9–26 agosto 2023","locationName":"Viale dei Quattro Venti","locationPrecision":"address","eventType":"decrement","status":"planned","quantity":8,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1079891"},
-        {"id":"roma-2023-gianicolense","year":"2023","date":"23–26 ottobre 2023","locationName":"Circonvallazione Gianicolense 35 e 161","district":"Municipio XII","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":2,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1099296"},
-        {"id":"roma-2023-vascello","year":"2023","date":"23–26 ottobre 2023","locationName":"Via del Vascello 9","district":"Municipio XII","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":2,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1099296"},
-        {"id":"roma-2023-san-giovanni-dio","year":"2023","date":"23–26 ottobre 2023","locationName":"Piazza San Giovanni di Dio 10","district":"Municipio XII","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":1,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1099296"},
-        {"id":"roma-2023-laurentina","year":"2023","date":"23–26 ottobre 2023","locationName":"Via Laurentina · Serafico–Tintoretto","district":"Municipio IX","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":4,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1099296"},
-        {"id":"roma-2024-piazza-venezia","year":"2024","date":"28 marzo 2024","locationName":"Piazza Venezia, Piazza San Marco e Ara Coeli","locationPrecision":"address","eventType":"planting","status":"completed","quantity":11,"sourceUrl":"https://www.comune.roma.it/web/it/notizia/verde-alberature-nel-quadrante-di-piazza-venezia.page"},
-        {"id":"roma-2025-togliatti","year":"2025","date":"aprile 2025","locationName":"Viale Palmiro Togliatti 1493–1091","locationPrecision":"address","eventType":"decrement","status":"emergency_completed","quantity":20,"sourceUrl":"https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1361217"}
+        {
+          "id": "roma-2026-fori-imperiali",
+          "year": "2026",
+          "date": "6 febbraio 2026",
+          "locationName": "Via dei Fori Imperiali",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "planned",
+          "quantity": 1,
+          "notes": "Pino domestico programmato per abbattimento dopo prova di trazione; escluso dal minimo documentato.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1526335"
+        },
+        {
+          "id": "roma-2026-villa-borghese-febbraio",
+          "year": "2026",
+          "date": "5–10 febbraio 2026",
+          "locationName": "Villa Borghese",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "planned",
+          "quantity": 1,
+          "notes": "Leccio programmato per abbattimento; escluso dal minimo documentato.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1526335"
+        },
+        {
+          "id": "roma-2026-via-ludovisi",
+          "year": "2026",
+          "date": "5–10 febbraio 2026",
+          "locationName": "Via Ludovisi",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "planned",
+          "quantity": 1,
+          "notes": "Leccio programmato per abbattimento; escluso dal minimo documentato.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1526335"
+        },
+        {
+          "id": "roma-2026-vitaliano-rotellini",
+          "year": "2026",
+          "date": "5 febbraio 2026",
+          "locationName": "Via Vitaliano Rotellini",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "emergency_completed",
+          "quantity": 7,
+          "notes": "Prunus pissardi indicati con data di esecuzione.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1526335"
+        },
+        {
+          "id": "roma-2026-pisana",
+          "year": "2026",
+          "date": "31 gennaio 2026",
+          "locationName": "Via della Pisana 950E",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "emergency_completed",
+          "quantity": 4,
+          "notes": "Pini domestici con intervento dichiarato eseguito.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1526335"
+        },
+        {
+          "id": "roma-2026-fratelli-bandiera",
+          "year": "2026",
+          "date": "17 febbraio 2026",
+          "locationName": "Istituto Comprensivo Fratelli Bandiera · Piazza Ruggero di Sicilia 2",
+          "district": "Municipio II",
+          "locationPrecision": "address",
+          "eventType": "planting",
+          "status": "planned",
+          "quantity": 19,
+          "notes": "Messa a dimora annunciata; esclusa dal minimo documentato in assenza di una conferma successiva dell'esecuzione.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/notizia/municipio-ii-nuovi-alberi-allistituto-fratelli-bandiera.page"
+        },
+        {
+          "id": "roma-2026-municipio-iii-completed",
+          "year": "2026",
+          "date": "25 febbraio 2026",
+          "locationName": "Municipio III · oltre 20 strade",
+          "district": "Municipio III",
+          "locationPrecision": "district",
+          "eventType": "planting",
+          "status": "completed",
+          "quantity": 473,
+          "notes": "Alberi dichiarati già messi a dimora alla data della pubblicazione.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/notizia/mun03-riqualificazione-arborea-con-oltre-700-nuovi-alberi.page"
+        },
+        {
+          "id": "roma-2026-municipio-iii-planned",
+          "year": "2026",
+          "date": "25 febbraio 2026",
+          "locationName": "Via Cimone, via Campi Flegrei, via Monte Rocchetta, parco Cinquina e parco Talenti",
+          "district": "Municipio III",
+          "locationPrecision": "district",
+          "eventType": "planting",
+          "status": "planned",
+          "quantity": 231,
+          "notes": "Alberi ancora da mettere a dimora nelle settimane successive; esclusi dal minimo documentato.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/notizia/mun03-riqualificazione-arborea-con-oltre-700-nuovi-alberi.page"
+        },
+        {
+          "id": "roma-2026-colombo-pini",
+          "year": "2026",
+          "date": "marzo 2026",
+          "locationName": "Via Cristoforo Colombo",
+          "locationPrecision": "address",
+          "eventType": "planting",
+          "status": "reported",
+          "quantity": 40,
+          "notes": "Interventi avviati su 40 pini selezionati; esclusi dal minimo finché la messa a dimora completa non è attestata.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/notizia/nuovi-pini-sulla-colombo-2026.page"
+        },
+        {
+          "id": "roma-2026-santa-petronilla",
+          "year": "2026",
+          "date": "marzo 2026",
+          "locationName": "Via di Santa Petronilla",
+          "locationPrecision": "address",
+          "eventType": "planting",
+          "status": "completed",
+          "quantity": 70,
+          "notes": "Ginkgo biloba messi a dimora.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/notizia/nuovi-pini-sulla-colombo-2026.page"
+        },
+        {
+          "id": "roma-2026-serafico",
+          "year": "2026",
+          "date": "marzo 2026",
+          "locationName": "Via del Serafico",
+          "locationPrecision": "address",
+          "eventType": "planting",
+          "status": "completed",
+          "quantity": 60,
+          "notes": "Ciliegi da fiore messi a dimora.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/notizia/nuovi-pini-sulla-colombo-2026.page"
+        },
+        {
+          "id": "roma-2026-ugo-della-seta",
+          "year": "2026",
+          "date": "17 marzo 2026",
+          "locationName": "Via Ugo della Seta",
+          "district": "Municipio III",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "emergency_completed",
+          "quantity": 6,
+          "notes": "Aceri abbattuti con intervento urgente.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1551137"
+        },
+        {
+          "id": "roma-2026-via-kobler",
+          "year": "2026",
+          "date": "16 marzo 2026",
+          "locationName": "Area 52 · Via Kobler",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "emergency_completed",
+          "quantity": 2,
+          "notes": "Un gelso nero e un fico indicati con data di esecuzione.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1551137"
+        },
+        {
+          "id": "roma-2026-villa-borghese",
+          "year": "2026",
+          "date": "23–31 marzo 2026",
+          "locationName": "Villa Borghese",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "planned",
+          "quantity": 19,
+          "notes": "Intervento programmato; escluso dal minimo documentato.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1555013"
+        },
+        {
+          "id": "roma-2026-castel-sant-angelo",
+          "year": "2026",
+          "date": "23–31 marzo 2026",
+          "locationName": "Castel Sant'Angelo",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "planned",
+          "quantity": 1,
+          "notes": "Intervento programmato; escluso dal minimo documentato.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1555013"
+        },
+        {
+          "id": "roma-2026-parco-scipioni",
+          "year": "2026",
+          "date": "23–31 marzo 2026",
+          "locationName": "Parco degli Scipioni",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "planned",
+          "quantity": 1,
+          "notes": "Intervento programmato; escluso dal minimo documentato.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1555013"
+        },
+        {
+          "id": "roma-2026-viale-giotto",
+          "year": "2026",
+          "date": "23–27 marzo 2026",
+          "locationName": "Viale Giotto",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "planned",
+          "quantity": 5,
+          "notes": "Intervento programmato; escluso dal minimo documentato.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1555013"
+        },
+        {
+          "id": "roma-2026-via-meropia",
+          "year": "2026",
+          "date": "8 giugno 2026",
+          "locationName": "Via Meropia",
+          "district": "Municipio VIII",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "planned",
+          "quantity": 37,
+          "notes": "Robinie in classe D inserite nella programmazione; escluse dal minimo documentato.",
+          "sourceUrl": "https://www.comune.roma.it/web/it/notizia/mun08-interventi-alberi-via-meropia.page"
+        },
+        {
+          "id": "roma-2023-paola-falconieri",
+          "year": "2023",
+          "date": "12 aprile 2023",
+          "locationName": "Via Paola Falconieri",
+          "district": "Municipio XII",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "emergency_completed",
+          "quantity": 4,
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1035500"
+        },
+        {
+          "id": "roma-2023-fabiola",
+          "year": "2023",
+          "date": "12 aprile 2023",
+          "locationName": "Via Fabiola",
+          "district": "Municipio XII",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "emergency_completed",
+          "quantity": 1,
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1035500"
+        },
+        {
+          "id": "roma-2023-algardi",
+          "year": "2023",
+          "date": "11–12 aprile 2023",
+          "locationName": "Via Algardi",
+          "district": "Municipio XII",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "emergency_completed",
+          "quantity": 3,
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1035500"
+        },
+        {
+          "id": "roma-2023-via-mario",
+          "year": "2023",
+          "date": "8 agosto 2023",
+          "locationName": "Via Mario",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "emergency_completed",
+          "quantity": 2,
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1079891"
+        },
+        {
+          "id": "roma-2023-serafico",
+          "year": "2023",
+          "date": "9 agosto 2023",
+          "locationName": "Via del Serafico · Giardino Mattia Preti",
+          "district": "Municipio VIII",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "emergency_completed",
+          "quantity": null,
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1079891"
+        },
+        {
+          "id": "roma-2023-quattro-venti",
+          "year": "2023",
+          "date": "9–26 agosto 2023",
+          "locationName": "Viale dei Quattro Venti",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "planned",
+          "quantity": 8,
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1079891"
+        },
+        {
+          "id": "roma-2023-gianicolense",
+          "year": "2023",
+          "date": "23–26 ottobre 2023",
+          "locationName": "Circonvallazione Gianicolense 35 e 161",
+          "district": "Municipio XII",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "emergency_completed",
+          "quantity": 2,
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1099296"
+        },
+        {
+          "id": "roma-2023-vascello",
+          "year": "2023",
+          "date": "23–26 ottobre 2023",
+          "locationName": "Via del Vascello 9",
+          "district": "Municipio XII",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "emergency_completed",
+          "quantity": 2,
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1099296"
+        },
+        {
+          "id": "roma-2023-san-giovanni-dio",
+          "year": "2023",
+          "date": "23–26 ottobre 2023",
+          "locationName": "Piazza San Giovanni di Dio 10",
+          "district": "Municipio XII",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "emergency_completed",
+          "quantity": 1,
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1099296"
+        },
+        {
+          "id": "roma-2023-laurentina",
+          "year": "2023",
+          "date": "23–26 ottobre 2023",
+          "locationName": "Via Laurentina · Serafico–Tintoretto",
+          "district": "Municipio IX",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "emergency_completed",
+          "quantity": 4,
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1099296"
+        },
+        {
+          "id": "roma-2024-piazza-venezia",
+          "year": "2024",
+          "date": "28 marzo 2024",
+          "locationName": "Piazza Venezia, Piazza San Marco e Ara Coeli",
+          "locationPrecision": "address",
+          "eventType": "planting",
+          "status": "completed",
+          "quantity": 11,
+          "sourceUrl": "https://www.comune.roma.it/web/it/notizia/verde-alberature-nel-quadrante-di-piazza-venezia.page"
+        },
+        {
+          "id": "roma-2025-togliatti",
+          "year": "2025",
+          "date": "aprile 2025",
+          "locationName": "Viale Palmiro Togliatti 1493–1091",
+          "locationPrecision": "address",
+          "eventType": "decrement",
+          "status": "emergency_completed",
+          "quantity": 20,
+          "sourceUrl": "https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1361217"
+        }
       ]
     },
-    "padova":{"name":"Padova","available":false,"reason":"Nessuna serie di eventi annuali verificata è inclusa in questa release."},
-    "bologna":{"name":"Bologna","available":false,"reason":"Il dataset di manutenzione non viene trasformato in abbattimenti o piantumazioni."},
-    "torino":{"name":"Torino","available":false,"reason":"Il censimento e i posti pianta non dimostrano eventi annuali documentati."}
+    "padova": {
+      "name": "Padova",
+      "available": false,
+      "reason": "Nessuna serie di eventi annuali verificata è inclusa in questa release."
+    },
+    "bologna": {
+      "name": "Bologna",
+      "available": false,
+      "reason": "Il dataset di manutenzione non viene trasformato in abbattimenti o piantumazioni."
+    },
+    "torino": {
+      "name": "Torino",
+      "available": false,
+      "reason": "Il censimento e i posti pianta non dimostrano eventi annuali documentati."
+    },
+    "guidonia-montecelio": {
+      "name": "Guidonia Montecelio",
+      "center": [
+        12.7268,
+        41.9938
+      ],
+      "zoom": 11.2,
+      "available": true,
+      "source": {
+        "publisher": "Città di Guidonia Montecelio",
+        "title": "Atti amministrativi e interventi arborei documentati",
+        "url": "https://www.guidonia.org/"
+      },
+      "events": [],
+      "aggregatePeriods": [],
+      "documentedEvents": [
+        {
+          "id": "guidonia-2024-forestazione-avr",
+          "year": "2024",
+          "date": "2024",
+          "locationName": "Territorio comunale di Guidonia Montecelio",
+          "locationPrecision": "city",
+          "coordinates": [
+            12.7268,
+            41.9938
+          ],
+          "eventType": "planting",
+          "status": "completed",
+          "quantity": 61,
+          "notes": "Prima fase documentata del progetto di forestazione urbana realizzato nell'ambito del protocollo con l'Amministrazione comunale.",
+          "sourceUrl": "https://avrgroup.it/forestazione-urbana-a-guidonia-montecelio-un-progetto-sostenibile-del-gruppo-avr/"
+        },
+        {
+          "id": "guidonia-2024-abbattimenti-reimpianti",
+          "year": "2024",
+          "date": "3 ottobre 2024",
+          "locationName": "Montecelio · Guidonia · Setteville · Colleverde · Villanova · Collefiorito · Albuccione",
+          "locations": [
+            "Montecelio",
+            "Guidonia",
+            "Setteville",
+            "Colleverde",
+            "Villanova",
+            "Collefiorito",
+            "Albuccione"
+          ],
+          "locationPrecision": "district",
+          "eventType": "unknown",
+          "status": "reported",
+          "quantity": null,
+          "notes": "Autorizzazione paesaggistica per abbattimento di alberature e successivo reimpianto; quantità e ripartizione territoriale non indicate nell'atto pubblicato.",
+          "sourceUrl": "https://guidonia.halleyweb.it/zf/index.php/atti-amministrativi/determine/dettaglio/atto/G1WpNM0T6UT0-A"
+        },
+        {
+          "id": "guidonia-valle-pilella-messa-dimora",
+          "year": "2024",
+          "date": "2024",
+          "locationName": "Parco di Valle Pilella",
+          "locationPrecision": "area",
+          "eventType": "planting",
+          "status": "reported",
+          "quantity": null,
+          "notes": "Chiusura del parco disposta per lavori di messa a dimora di alberature; quantità non indicata.",
+          "sourceUrl": "https://guidonia.halleyweb.it/zf/index.php/atti-amministrativi/ordinanze/index/table-ordinanze-public-page/553"
+        }
+      ]
+    }
   }
 }
+
