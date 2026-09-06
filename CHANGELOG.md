@@ -1,3 +1,10 @@
+# 0.7.4
+
+- Corretta la fusione tra eventi consolidati e D1: coordinate e geometrie vengono associate tramite `sourceKey`, non più scartate quando più eventi condividono la stessa `sourceUrl`.
+- Gli eventi `manual_confirmed` senza coordinate sono indicati come documentati con “geolocalizzazione in attesa”, distinguendoli dagli eventi realmente da verificare.
+- Aggiunta la migrazione `0009_retry_guidonia_geocoding.sql` per rimettere in coda tutte le località automatiche di Guidonia; gli override geografici approvati restano separati e continuano ad avere priorità.
+- Worker aggiornato alla versione `0.9.8`; app aggiornata alla versione `0.7.4` build 84, dataset invariato alla revisione 22.
+
 # 0.7.3
 
 - Ripristinato Valle Pilella nell'anno 2019 con il collegamento puntuale all'ordinanza n. 1/2019 e la quantità documentata di 50 alberi.

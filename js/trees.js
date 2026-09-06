@@ -25,7 +25,7 @@
   }
 
   async function catalog(){
-    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.7.3',{cache:'no-store'}).then(response=>{
+    if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.7.4',{cache:'no-store'}).then(response=>{
       if(!response.ok)throw new Error(`Dati arborei: HTTP ${response.status}`);
       return response.json()
     });
@@ -33,21 +33,21 @@
   }
 
   async function proxyConfig(){
-    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.7.3',{cache:'no-store'})
+    if(!proxyConfigPromise)proxyConfigPromise=fetch('data/trees-proxy.json?v=0.7.4',{cache:'no-store'})
       .then(response=>response.ok?response.json():null)
       .catch(()=>null);
     return proxyConfigPromise
   }
 
   async function coordinatesCatalog(){
-    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.7.3',{cache:'no-store'})
+    if(!coordinatesPromise)coordinatesPromise=fetch('data/tree-coordinates.json?v=0.7.4',{cache:'no-store'})
       .then(response=>response.ok?response.json():{events:{}})
       .catch(()=>({events:{}}));
     return coordinatesPromise
   }
 
   async function pathsCatalog(){
-    if(!pathsPromise)pathsPromise=fetch('data/tree-paths.json?v=0.7.3',{cache:'no-store'})
+    if(!pathsPromise)pathsPromise=fetch('data/tree-paths.json?v=0.7.4',{cache:'no-store'})
       .then(response=>response.ok?response.json():{events:{}})
       .catch(()=>({events:{}}));
     return pathsPromise
@@ -408,11 +408,28 @@
         return{...event,coordinates,markerCoordinates,locationPrecision:location?.precision||event.locationPrecision,ownPath,path:ownPath,source:{publisher:city.source?.publisher||city.name,url:event.sourceUrl}}
       });
     const dynamic=await dynamicEvents(cityId,selection);
-    const localSourceUrls=new Set(localDocumented.map(event=>event.sourceUrl));
+    const remoteByKey=new Map(dynamic.events.map(event=>[String(event.sourceKey||event.id).replace(/^dynamic-/,''),event]));
+    const consumedRemoteKeys=new Set();
+    const enrichedLocal=localDocumented.map(event=>{
+      const key=String(event.sourceKey||event.id).replace(/^dynamic-/,'');
+      const remote=remoteByKey.get(key);
+      if(!remote)return event;
+      consumedRemoteKeys.add(key);
+      return{
+        ...event,...remote,id:event.id,sourceKey:key,
+        notes:event.notes,
+        source:{publisher:city.source?.publisher||city.name,url:event.sourceUrl}
+      }
+    });
+    const localSourceUrls=new Set(enrichedLocal.map(event=>event.sourceUrl));
     const remoteDocumented=dynamic.events
-      .filter(event=>!localSourceUrls.has(event.sourceUrl))
+      .filter(event=>{
+        const key=String(event.sourceKey||event.id).replace(/^dynamic-/,'');
+        if(consumedRemoteKeys.has(key))return false;
+        return cityId==='roma'?!localSourceUrls.has(event.sourceUrl):true
+      })
       .map(event=>({...event,source:{publisher:`${city.source?.publisher||city.name} · aggiornamento automatico`,url:event.sourceUrl}}));
-    const documentedEvents=sortEventsNewestFirst(prepareDocumentedPaths([...localDocumented,...remoteDocumented]));
+    const documentedEvents=sortEventsNewestFirst(prepareDocumentedPaths([...enrichedLocal,...remoteDocumented]));
     const completed=documentedEvents.filter(event=>
       ['completed','emergency_completed'].includes(event.status)&&Number.isFinite(event.quantity)
     );
