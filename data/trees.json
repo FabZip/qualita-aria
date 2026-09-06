@@ -578,18 +578,6 @@
           "quantity": 109,
           "notes": "L'autorizzazione paesaggistica documenta 109 alberi da abbattere in 17 località o insiemi di vie e un successivo reimpianto sostitutivo. La quantità è complessiva e non viene ripartita tra le ubicazioni; l'atto non certifica l'esecuzione degli interventi.",
           "sourceUrl": "https://guidonia.halleyweb.it/zf/index.php/atti-amministrativi/determine/dettaglio/atto/G1WpNM0T6UT0-A"
-        },
-        {
-          "id": "guidonia-valle-pilella-messa-dimora",
-          "year": "2024",
-          "date": "2024",
-          "locationName": "Parco di Valle Pilella",
-          "locationPrecision": "area",
-          "eventType": "planting",
-          "status": "reported",
-          "quantity": null,
-          "notes": "Chiusura del parco disposta per lavori di messa a dimora di alberature; quantità non indicata.",
-          "sourceUrl": "https://guidonia.halleyweb.it/zf/index.php/atti-amministrativi/ordinanze/index/table-ordinanze-public-page/553"
         }
       ]
     }

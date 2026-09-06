@@ -1,3 +1,10 @@
+# 0.7.2
+
+- Rimosso l'evento `guidonia-valle-pilella-messa-dimora`: la fonte indicata non identifica un'ordinanza specifica e non consente di verificare l'intervento.
+- Aggiunta la migrazione `0007_remove_invalid_valle_pilella_event.sql` per rimuovere lo stesso record da D1 senza modificare la migrazione storica 0005.
+- Corretto l'errore `sourceKey is not defined` nell'invio di “Segnala evento”, centralizzando la risoluzione della chiave della fonte.
+- App aggiornata alla versione `0.7.2` build 82 e dataset alla revisione 21; Worker invariato alla versione `0.9.6`.
+
 # 0.7.1
 
 - Verificato il PDF ufficiale dell'autorizzazione paesaggistica 34/2024 di Guidonia Montecelio.

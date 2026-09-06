@@ -1,6 +1,6 @@
 # Proxy ambientale 0.9.6
 
-La release 0.9.6 abilita anche `city=guidonia-montecelio`. Applicare le migrazioni dati in ordine: `0005_guidonia_seed_events.sql` inserisce i riferimenti iniziali; `0006_guidonia_109_tree_authorization.sql` integra nel medesimo evento le 109 alberature e le ubicazioni verificate nel PDF ufficiale. Nessuna delle due migrazioni modifica le righe di Roma.
+La release 0.9.6 abilita anche `city=guidonia-montecelio`. Applicare le migrazioni dati in ordine: `0005_guidonia_seed_events.sql` inserisce i riferimenti iniziali; `0006_guidonia_109_tree_authorization.sql` integra nel medesimo evento le 109 alberature e le ubicazioni verificate nel PDF ufficiale; `0007_remove_invalid_valle_pilella_event.sql` elimina il riferimento non verificabile a Valle Pilella. Nessuna delle migrazioni modifica le righe di Roma.
 
 Worker Cloudflare dei moduli temperatura e aggiornamento eventi arborei di Qualità aria.
 

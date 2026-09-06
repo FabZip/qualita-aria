@@ -2910,11 +2910,16 @@ async function renderTemperatureMode(token){
   rememberViewportBaseline()
 }
 
+function treeEventSourceKey(event){
+  if(event?.sourceKey)return String(event.sourceKey);
+  try{return new URL(event?.sourceUrl).searchParams.get('contentId')||String(event?.id||'').replace(/^dynamic-/,'')}
+  catch{return String(event?.id||'').replace(/^dynamic-/,'')}
+}
+
 function treeListHtml(result,year,includeAggregate=true){
   const {city,events,aggregate,documentedEvents=[],documentedSummary,diagnostic={}}=result;
   const safe=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const safeUrl=value=>{try{const url=new URL(String(value));return url.protocol==='https:'?url.toString():'#'}catch{return'#'}};
-  const sourceKey=event=>{try{return event.sourceKey||new URL(event.sourceUrl).searchParams.get('contentId')||event.id}catch{return event.sourceKey||event.id}};
   if(!city)return'<div class="empty-state">Città non configurata per le statistiche arboree.</div>';
   if(!city.available)return`<div class="tree-period-note"><strong>${city.name}</strong><br>${city.reason}</div>`;
 
@@ -2957,11 +2962,11 @@ function treeListHtml(result,year,includeAggregate=true){
       const mapped=Number(event.path?.properties?.locationsMapped||0);
       const expected=Number(event.path?.properties?.locationsExpected||0);
       const pathDetail=located&&expected>1?`<br>${mapped} località evidenziate su ${expected} documentate; ripartizione delle quantità non specificata.`:'';
-      const reportKey=sourceKey(event);
+      const reportKey=treeEventSourceKey(event);
       const reportButton=located&&reportKey
-        ?`<button class="tree-event-report" type="button" data-tree-report="${safe(event.id)}" data-tree-source-key="${safe(sourceKey(event))}" data-tree-location-index="0">Segnala posizione</button>`
+        ?`<button class="tree-event-report" type="button" data-tree-report="${safe(event.id)}" data-tree-source-key="${safe(treeEventSourceKey(event))}" data-tree-location-index="0">Segnala posizione</button>`
         :!located&&reportKey
-          ?`<button class="tree-event-report" type="button" data-tree-event-report="${safe(event.id)}" data-tree-source-key="${safe(sourceKey(event))}">Segnala evento</button>`
+          ?`<button class="tree-event-report" type="button" data-tree-event-report="${safe(event.id)}" data-tree-source-key="${safe(treeEventSourceKey(event))}">Segnala evento</button>`
           :'';
       const statusLabel=plannedDateHasPassed(event)?'Programmato · data trascorsa':statusLabels[event.status]||event.status;
       const quantityTitle=Number.isFinite(event.quantity)?`${quantity} alberi`:'Quantità non specificata';
@@ -3445,7 +3450,7 @@ async function submitTreeEventReport(submitEvent){
   try{
     const base=await treeApiBase();if(!base)throw new Error('Proxy Alberi non configurato');
     const response=await fetch(`${base}/v1/trees/event-reports`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      sourceKey:sourceKey(event),eventId:event.id,reason:$('treeEventReportReason').value,
+      sourceKey:treeEventSourceKey(event),eventId:event.id,reason:$('treeEventReportReason').value,
       reporterName:$('treeEventReporterName').value,reporterEmail:$('treeEventReporterEmail').value
     })});
     const result=await response.json();if(!response.ok)throw new Error(result.error||`HTTP ${response.status}`);
@@ -3644,8 +3649,8 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.7.1',{cache:'no-store'}).then(r=>r.json()),
-    fetch('data/version.json?v=0.7.1',{cache:'no-store'}).then(r=>r.json())
+    fetch('version.json?v=0.7.2',{cache:'no-store'}).then(r=>r.json()),
+    fetch('data/version.json?v=0.7.2',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
   $('dataVersion').textContent=dataVersion.version
@@ -3661,7 +3666,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.7.1')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.2')
       .then(reg=>reg.update())
       .catch(console.error)
   }
@@ -3673,4 +3678,3 @@ boot().catch(err=>{
   diagnostics({error:String(err.message||err)});
   showToast(err.message||'Errore di inizializzazione')
 })
-
