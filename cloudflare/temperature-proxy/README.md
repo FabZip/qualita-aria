@@ -1,6 +1,6 @@
-# Proxy ambientale 0.9.8
+# Proxy ambientale 0.9.9
 
-La release 0.9.8 mantiene la coda geografica per Roma e Guidonia e aggiunge la migrazione `0009_retry_guidonia_geocoding.sql`, che rimette in coda le località di Guidonia dopo la correzione del contesto geografico. Gli override approvati dagli amministratori sono conservati nella tabella dedicata e continuano ad avere priorità nella risposta API. Applicare tutte le migrazioni in ordine fino alla 0009.
+La release 0.9.9 distingue la data di pubblicazione dalla data dell’intervento arboreo. Gli avvisi di Roma già pubblicati vengono acquisiti anche quando indicano lavori programmati nei mesi successivi, fino al 31 dicembre; gli interventi futuri restano esclusi dai totali degli eventi eseguiti. Non sono previste nuove migrazioni dopo la `0009_retry_guidonia_geocoding.sql`.
 
 Worker Cloudflare dei moduli temperatura e aggiornamento eventi arborei di Qualità aria.
 

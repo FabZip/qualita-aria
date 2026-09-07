@@ -1,3 +1,11 @@
+# 0.7.5
+
+- La scansione Roma distingue ora la data di pubblicazione dalla data prevista dell’intervento.
+- Gli avvisi pubblicati durante l’anno vengono acquisiti anche quando programmano lavori fino al 31 dicembre.
+- Le date esplicite di esecuzione, inizio lavori e intervallo programmato determinano l’anno e l’ordinamento dell’evento; in assenza di una data operativa resta valido il giorno di pubblicazione.
+- Gli interventi futuri restano classificati come programmati e non entrano nei totali degli eventi eseguiti.
+- Worker aggiornato alla versione `0.9.9`; app aggiornata alla versione `0.7.5` build 85, dataset invariato alla revisione 22.
+
 # 0.7.4
 
 - Corretta la fusione tra eventi consolidati e D1: coordinate e geometrie vengono associate tramite `sourceKey`, non più scartate quando più eventi condividono la stessa `sourceUrl`.

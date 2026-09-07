@@ -1513,6 +1513,45 @@ function sourceDate(text){
   return`${match[3]}-${String(italianMonth(match[2])).padStart(2,'0')}-${String(match[1]).padStart(2,'0')}`
 }
 
+function isoItalianDate(day,month,year){
+  const monthNumber=italianMonth(month);
+  if(!monthNumber)return null;
+  const candidate=`${year}-${String(monthNumber).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  const parsed=new Date(`${candidate}T00:00:00Z`);
+  return Number.isNaN(parsed.getTime())||parsed.getUTCDate()!==Number(day)?null:candidate
+}
+
+function sourcePublishedDate(html,text){
+  const patterns=[
+    /(?:property|name)=["'](?:article:published_time|datePublished|date)["'][^>]*content=["'](20\d{2}-\d{2}-\d{2})/i,
+    /content=["'](20\d{2}-\d{2}-\d{2})[^"']*["'][^>]*(?:property|name)=["'](?:article:published_time|datePublished|date)["']/i,
+    /["']datePublished["']\s*:\s*["'](20\d{2}-\d{2}-\d{2})/i,
+    /<time\b[^>]*datetime=["'](20\d{2}-\d{2}-\d{2})/i
+  ];
+  for(const pattern of patterns){
+    const match=html.match(pattern);
+    if(match)return match[1]
+  }
+  return sourceDate(text)
+}
+
+function treeExecutionDate(text,published){
+  const month='(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)';
+  const patterns=[
+    new RegExp(`Data (?:di )?(?:esecuzione|intervento|inizio(?: lavori)?)\\s*:?\\s*(?:dal|il|a partire dal)?\\s*(\\d{1,2})\\s+${month}\\s+(20\\d{2})`,'i'),
+    new RegExp(`(?:dal|tra il)\\s+(\\d{1,2})\\s+${month}\\s+(20\\d{2})\\s+(?:al|e il)\\s+\\d{1,2}`,'i'),
+    new RegExp(`(?:interventi|lavori|abbattimenti|piantumazioni)[^.]{0,120}?(?:previsti|programmati|avranno luogo|si svolgeranno|inizieranno)[^.]{0,80}?(?:dal|il|a partire dal)\\s+(\\d{1,2})\\s+${month}\\s+(20\\d{2})`,'i'),
+    new RegExp(`(?:entro|fino al)\\s+(\\d{1,2})\\s+${month}\\s+(20\\d{2})`,'i')
+  ];
+  for(const pattern of patterns){
+    const match=text.match(pattern);
+    if(!match)continue;
+    const candidate=isoItalianDate(match[1],match[2],match[3]);
+    if(candidate)return candidate
+  }
+  return published
+}
+
 function titleFromHtml(html){
   const h1=html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i);
   const title=html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
@@ -1569,8 +1608,9 @@ function classifyTreePage(html,url){
   if(excludedTreeSource(url))return null;
   const text=decodeHtml(html);
   if(!/alber|arbore|piantum|messa a dimora|abbattiment/i.test(text))return null;
-  const published=sourceDate(text);
-  const year=Number(published?.slice(0,4));
+  const published=sourcePublishedDate(html,text);
+  const eventDate=treeExecutionDate(text,published);
+  const year=Number(eventDate?.slice(0,4)||published?.slice(0,4));
   if(!Number.isInteger(year)||year<2022)return null;
   const hasPlanting=/piantum|mess[aei]\s+a dimora|nuov[ei]\s+alber/i.test(text);
   const hasCut=/abbattiment|alber[oi]\s+abbattut/i.test(text);
@@ -1591,7 +1631,7 @@ function classifyTreePage(html,url){
     :'automatic_pending';
   const sourceKey=new URL(url).searchParams.get('contentId')||new URL(url).pathname;
   return{
-    sourceKey,year,eventDate:published,locationName,locations,eventType,
+    sourceKey,year,eventDate,locationName,locations,eventType,
     quantity:Number.isFinite(quantity)?quantity:null,status,validation,
     title:titleFromHtml(html),sourceUrl:url,sourcePublishedAt:published,
     rawExcerpt:text.slice(0,1000)
@@ -2057,7 +2097,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.9.8',
+        version:'0.9.9',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,
