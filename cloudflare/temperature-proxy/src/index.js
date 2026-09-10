@@ -1538,7 +1538,7 @@ function sourcePublishedDate(html,text){
 function treeExecutionDate(text,published){
   const month='(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)';
   const patterns=[
-    new RegExp(`Data (?:di )?(?:esecuzione|intervento|inizio(?: lavori)?)\\s*:?\\s*(?:dal|il|a partire dal)?\\s*(\\d{1,2})\\s+${month}\\s+(20\\d{2})`,'i'),
+    new RegExp(`Data (?:di |dell?['’])?(?:esecuzione(?: intervento)?|intervento|inizio(?: lavori)?)\\s*:?\\s*(?:dal|il|a partire dal)?\\s*(\\d{1,2})(?:°|º)?\\s+${month}\\s+(20\\d{2})`,'i'),
     new RegExp(`(?:dal|tra il)\\s+(\\d{1,2})\\s+${month}\\s+(20\\d{2})\\s+(?:al|e il)\\s+\\d{1,2}`,'i'),
     new RegExp(`(?:interventi|lavori|abbattimenti|piantumazioni)[^.]{0,120}?(?:previsti|programmati|avranno luogo|si svolgeranno|inizieranno)[^.]{0,80}?(?:dal|il|a partire dal)\\s+(\\d{1,2})\\s+${month}\\s+(20\\d{2})`,'i'),
     new RegExp(`(?:entro|fino al)\\s+(\\d{1,2})\\s+${month}\\s+(20\\d{2})`,'i')
@@ -1550,6 +1550,19 @@ function treeExecutionDate(text,published){
     if(candidate)return candidate
   }
   return published
+}
+
+function treeLocationBlocks(text){
+  const starts=[...text.matchAll(/\bUbicazione\s*:\s*/gi)];
+  if(starts.length<2)return[];
+  return starts.map((match,index)=>{
+    const start=match.index;
+    const end=starts[index+1]?.index??text.length;
+    const block=text.slice(start,end).trim();
+    const location=block.match(/^Ubicazione\s*:\s*(.{2,240}?)(?=\s+(?:Caratteristiche botaniche|Ragioni che hanno condotto|Data (?:di |dell?['’])?(?:esecuzione|intervento)|Modalità|Bersaglio|$))/i)?.[1]
+      ?.trim().replace(/[,:;\s]+$/,'');
+    return location?{location,block}:null
+  }).filter(Boolean)
 }
 
 function titleFromHtml(html){
@@ -1604,38 +1617,43 @@ function treeGeocodeQueries(locationName){
   return[...new Set([...aliases,...preferredParts,expanded,areaStripped,stripped].filter(Boolean))]
 }
 
-function classifyTreePage(html,url){
+function classifyTreePage(html,url,city='roma'){
   if(excludedTreeSource(url))return null;
   const text=decodeHtml(html);
   if(!/alber|arbore|piantum|messa a dimora|abbattiment/i.test(text))return null;
   const published=sourcePublishedDate(html,text);
-  const eventDate=treeExecutionDate(text,published);
-  const year=Number(eventDate?.slice(0,4)||published?.slice(0,4));
-  if(!Number.isInteger(year)||year<2022)return null;
+  const fallbackEventDate=treeExecutionDate(text,published);
   const hasPlanting=/piantum|mess[aei]\s+a dimora|nuov[ei]\s+alber/i.test(text);
   const hasCut=/abbattiment|alber[oi]\s+abbattut/i.test(text);
   const eventType=hasPlanting&&!hasCut?'planting':hasCut&&!hasPlanting?'decrement':'unknown';
   if(eventType==='unknown')return null;
-  const structuredNotice=/\/informazione-di-servizio\.page/i.test(url);
-  const detectedQuantity=treeQuantity(text);
-  if(!structuredNotice&&!Number.isFinite(detectedQuantity))return null;
-  const locations=treeLocations(text);
-  const locationName=(locations[0]||'Roma').slice(0,180);
-  const planned=/saranno?\s+(?:messi|effettuat|abbattut)|(?:sarà|verrà|verranno?)\s+(?:mess[oa]|effettuat[oa]|abbattut[oa])|in previsione|programmati?|previsti?/i.test(text);
-  const executed=/sono stati effettuati|intervento eseguito|sono stati messi a dimora|già (?:messi a dimora|piantati)|data di esecuzione/i.test(text);
-  const documentedScope=structuredNotice&&locations.length>=1&&eventType!=='unknown';
-  const status=planned?'planned':executed&&documentedScope?(eventType==='decrement'?'emergency_completed':'completed'):'reported';
-  const quantity=documentedScope||!structuredNotice?detectedQuantity:null;
-  const validation=executed&&documentedScope&&Number.isFinite(quantity)
-    ?'automatic_confirmed'
-    :'automatic_pending';
-  const sourceKey=new URL(url).searchParams.get('contentId')||new URL(url).pathname;
-  return{
-    sourceKey,year,eventDate,locationName,locations,eventType,
-    quantity:Number.isFinite(quantity)?quantity:null,status,validation,
-    title:titleFromHtml(html),sourceUrl:url,sourcePublishedAt:published,
-    rawExcerpt:text.slice(0,1000)
-  }
+  const locationBlocks=treeLocationBlocks(text);
+  const structuredNotice=/\/informazione-di-servizio\.page/i.test(url)||locationBlocks.length>0;
+  const baseSourceKey=new URL(url).searchParams.get('contentId')||new URL(url).pathname;
+  const blocks=locationBlocks;
+  const scopes=blocks.length?blocks.map(({location,block})=>({locations:[location],text:block})):[{locations:treeLocations(text),text}];
+  return scopes.map((scope,index)=>{
+    const eventDate=treeExecutionDate(scope.text,fallbackEventDate);
+    const year=Number(eventDate?.slice(0,4)||published?.slice(0,4));
+    if(!Number.isInteger(year)||year<2022)return null;
+    const detectedQuantity=treeQuantity(scope.text);
+    if(!structuredNotice&&!Number.isFinite(detectedQuantity))return null;
+    const locations=scope.locations;
+    const locationName=(locations[0]||(city==='roma'?'Roma':'Guidonia Montecelio')).slice(0,180);
+    const planned=/saranno?\s+(?:messi|effettuat|abbattut)|(?:sarà|verrà|verranno?)\s+(?:mess[oa]|effettuat[oa]|abbattut[oa])|in previsione|programmati?|previsti?/i.test(scope.text);
+    const executed=/sono stati effettuati|intervento eseguito|sono stati messi a dimora|già (?:messi a dimora|piantati)|data (?:di |dell?['’])?esecuzione/i.test(scope.text);
+    const documentedScope=structuredNotice&&locations.length>=1&&eventType!=='unknown';
+    const status=planned?'planned':executed&&documentedScope?(eventType==='decrement'?'emergency_completed':'completed'):'reported';
+    const quantity=documentedScope||!structuredNotice?detectedQuantity:null;
+    const validation=executed&&documentedScope&&Number.isFinite(quantity)?'automatic_confirmed':'automatic_pending';
+    return{
+      sourceKey:index?`${baseSourceKey}--${index+1}`:baseSourceKey,sourceGroupKey:baseSourceKey,city,
+      year,eventDate,locationName,locations,eventType,
+      quantity:Number.isFinite(quantity)?quantity:null,status,validation,
+      title:titleFromHtml(html),sourceUrl:url,sourcePublishedAt:published,
+      rawExcerpt:scope.text.slice(0,1000)
+    }
+  }).filter(Boolean)
 }
 
 async function removeExcludedTreeEvents(db){
@@ -1675,7 +1693,7 @@ async function upsertTreeEvent(db,event,now){
       source_key,city,year,event_date,location_name,locations_json,event_type,quantity,status,
       validation,title,source_url,source_published_at,first_seen_at,last_checked_at,
       raw_excerpt,updated_at
-    ) VALUES (?, 'roma', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(source_key) DO UPDATE SET
       year=CASE WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.year ELSE excluded.year END,
       event_date=CASE WHEN tree_events.validation IN ('manual_confirmed','manual_rejected') THEN tree_events.event_date ELSE excluded.event_date END,
@@ -1699,7 +1717,7 @@ async function upsertTreeEvent(db,event,now){
       source_published_at=excluded.source_published_at,last_checked_at=excluded.last_checked_at,
       raw_excerpt=excluded.raw_excerpt,updated_at=excluded.updated_at
   `).bind(
-    event.sourceKey,event.year,event.eventDate,event.locationName,JSON.stringify(event.locations),event.eventType,
+    event.sourceKey,event.city||'roma',event.year,event.eventDate,event.locationName,JSON.stringify(event.locations),event.eventType,
     event.quantity,event.status,event.validation,event.title,event.sourceUrl,
     event.sourcePublishedAt,now,now,event.rawExcerpt,now
   ).run();
@@ -1775,10 +1793,11 @@ async function refreshTreeSources(env){
       try{
         const response=await fetch(link,{headers:{Accept:'text/html','User-Agent':'A.R.I.A. environmental-data-indexer/1.0'}});
         if(!response.ok)throw new Error(`HTTP ${response.status}`);
-        const event=classifyTreePage(await response.text(),link);
-        if(!event)continue;
-        const action=await upsertTreeEvent(env.TREE_DB,event,new Date().toISOString());
-        if(action==='inserted')inserted++;else updated++
+        const events=classifyTreePage(await response.text(),link,'roma')||[];
+        for(const event of events){
+          const action=await upsertTreeEvent(env.TREE_DB,event,new Date().toISOString());
+          if(action==='inserted')inserted++;else updated++
+        }
       }catch{errors++}
     }
     const geocoding=await geocodePendingTreeEvents(env.TREE_DB);
@@ -2097,7 +2116,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.9.9',
+        version:'0.9.10',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,

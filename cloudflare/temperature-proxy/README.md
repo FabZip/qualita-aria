@@ -1,6 +1,6 @@
-# Proxy ambientale 0.9.9
+# Proxy ambientale 0.9.10
 
-La release 0.9.9 distingue la data di pubblicazione dalla data dell’intervento arboreo. Gli avvisi di Roma già pubblicati vengono acquisiti anche quando indicano lavori programmati nei mesi successivi, fino al 31 dicembre; gli interventi futuri restano esclusi dai totali degli eventi eseguiti. Non sono previste nuove migrazioni dopo la `0009_retry_guidonia_geocoding.sql`.
+La release 0.9.10 suddivide le schede con più blocchi `Ubicazione` in record distinti, associando a ciascuno data, quantità e località del relativo blocco. Il primo record conserva la chiave storica della pagina; i successivi ricevono un suffisso stabile e condividono la stessa fonte. Il salvataggio è parametrizzato per Comune ed è utilizzabile anche per Guidonia Montecelio. Non sono previste nuove migrazioni dopo la `0009_retry_guidonia_geocoding.sql`.
 
 Worker Cloudflare dei moduli temperatura e aggiornamento eventi arborei di Qualità aria.
 

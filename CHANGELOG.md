@@ -1,3 +1,12 @@
+# 0.7.6
+
+- Le schede strutturate con più blocchi `Ubicazione` vengono suddivise in eventi distinti, ciascuno con data, quantità e posizione proprie.
+- Il caso `IDS1634378` produce correttamente due interventi del 31 agosto e quello di Villa Borghese del 1° settembre 2026.
+- Le chiavi derivate mantengono la pagina come gruppo comune, evitando duplicazioni e consentendo alla mappa di inquadrare insieme gli interventi della stessa fonte.
+- Il salvataggio non forza più la città `roma`: la medesima struttura è utilizzabile anche per Guidonia Montecelio, senza modificare le chiavi manuali già confermate.
+- Non è richiesta una nuova migrazione: al primo refresh il record originario viene aggiornato e le ubicazioni aggiuntive vengono inserite come record distinti.
+- Worker aggiornato alla versione `0.9.10`; app aggiornata alla versione `0.7.6` build 86, dataset invariato alla revisione 22.
+
 # 0.7.5
 
 - La scansione Roma distingue ora la data di pubblicazione dalla data prevista dell’intervento.
