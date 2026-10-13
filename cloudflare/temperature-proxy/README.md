@@ -1,3 +1,7 @@
+# Proxy ambientale 0.9.11
+
+La release 0.9.11 scandisce progressivamente gli archivi dell'anno corrente di Roma e Guidonia, una pagina per fonte a ogni esecuzione, conservando i cursori in D1. Vengono così recuperati anche gli avvisi pubblicati in precedenza ma con interventi programmati fino al 31 dicembre. Il refresh completo viene eseguito ogni giorno alle 03:00 UTC e restituisce lo stato di avanzamento di ciascuna fonte.
+
 # Proxy ambientale 0.9.10
 
 La release 0.9.10 suddivide le schede con più blocchi `Ubicazione` in record distinti, associando a ciascuno data, quantità e località del relativo blocco. Il primo record conserva la chiave storica della pagina; i successivi ricevono un suffisso stabile e condividono la stessa fonte. Il salvataggio è parametrizzato per Comune ed è utilizzabile anche per Guidonia Montecelio. Non sono previste nuove migrazioni dopo la `0009_retry_guidonia_geocoding.sql`.
@@ -38,7 +42,7 @@ Il Worker espone:
 - `POST /v1/trees/review` per confermare, correggere o rifiutare un evento;
 - `POST /v1/trees/location-reports` per le segnalazioni geografiche;
 - `POST /v1/trees/event-reports` per le segnalazioni sui dati dell’evento;
-- un refresh completo ogni lunedì alle 03:00 UTC e lo smaltimento della sola coda geografica ogni giorno alle 03:30 UTC.
+- un refresh completo ogni giorno alle 03:00 UTC e lo smaltimento della sola coda geografica ogni giorno alle 03:30 UTC.
 
 Gli eventi sono conservati in Cloudflare D1. Le pagine con più interventi o formulazioni ambigue vengono archiviate come `automatic_pending` e non incidono sui totali. Soltanto eventi con quantità nota e stato `completed` o `emergency_completed` vengono sommati dal frontend.
 
@@ -115,7 +119,7 @@ unset ARIA_TREE_TOKEN
 
 Il file `data/trees.json` rimane il dataset consolidato di fallback se D1 o il proxy non sono raggiungibili.
 
-Il Worker è identificato dalla versione proxy `0.9.5`.
+Il Worker è identificato dalla versione proxy `0.9.11`.
 
 ### Pubblicazione Worker
 
@@ -123,7 +127,7 @@ Nei progetti già configurati, aggiornare anche il file locale `wrangler.toml` (
 
 ```toml
 [triggers]
-crons = ["0 3 * * 1", "30 3 * * *"]
+crons = ["0 3 * * *", "30 3 * * *"]
 ```
 
 Poi distribuire il Worker:
@@ -133,7 +137,7 @@ cd cloudflare/temperature-proxy
 npx wrangler@latest deploy
 ```
 
-Al termine Wrangler deve mostrare entrambi gli schedule: `0 3 * * 1` e `30 3 * * *`. Non sono richieste migrazioni D1 né modifiche a `TREE_ADMIN_TOKEN`.
+Al termine Wrangler deve mostrare entrambi gli schedule: `0 3 * * *` e `30 3 * * *`. Applicare prima la migrazione `0010_tree_source_cursors.sql`; non sono richieste modifiche a `TREE_ADMIN_TOKEN`.
 
 ## 0.9.5
 

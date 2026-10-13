@@ -1,3 +1,7 @@
+# A.R.I.A. 0.7.7
+
+Il crawler arboreo esplora progressivamente le pagine degli archivi dell'anno corrente invece di leggere soltanto la prima pagina. Ogni fonte conserva in D1 un cursore indipendente: informazioni di servizio e notizie per Roma Capitale, determine e ordinanze per Guidonia Montecelio. Le date degli interventi programmati sono accettate fino al 31 dicembre. Il refresh espone pagine visitate, intervallo delle pubblicazioni, completamento della scansione ed eventi futuri trovati. App 0.7.7 build 87, dataset invariato alla revisione 22, Worker 0.9.11.
+
 # A.R.I.A. 0.7.6
 
 Le pagine arboree che contengono più blocchi `Ubicazione` vengono suddivise in interventi distinti, ognuno con la propria data, quantità e posizione. La pagina resta il gruppo comune per selezione, zoom e fonte ufficiale. La procedura non forza più Roma nel database ed è compatibile anche con gli eventi di Guidonia Montecelio, mantenendo inalterate le correzioni manuali già confermate. App 0.7.6 build 86, dataset invariato alla revisione 22, Worker 0.9.10.

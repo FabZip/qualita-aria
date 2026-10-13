@@ -1448,12 +1448,30 @@ async function observedResponse(ctx,cors,{pollutantSource,year,bbox}){
   }
 }
 
-const TREE_SOURCE_LISTS=[
-  'https://www.comune.roma.it/web/it/informazioni-di-servizio.page?tem=verde_urbano',
-  'https://www.comune.roma.it/web/it/notizie.page?tem=verde_urbano'
-];
 const TREE_SOURCE_ORIGIN='https://www.comune.roma.it';
 const TREE_MAX_PAGES_PER_RUN=40;
+const TREE_ARCHIVE_SOURCES=[
+  {
+    id:'roma-service',city:'roma',origin:TREE_SOURCE_ORIGIN,
+    pageUrl:page=>`https://www.comune.roma.it/web/it/informazioni-di-servizio.page?tem=verde_urbano&pagina=${page}`,
+    detailPattern:/(?:informazione-di-servizio\.page\?contentId=IDS\d+)/i
+  },
+  {
+    id:'roma-news',city:'roma',origin:TREE_SOURCE_ORIGIN,
+    pageUrl:page=>`https://www.comune.roma.it/web/it/notizie.page?tem=verde_urbano&pagina=${page}`,
+    detailPattern:/(?:notizia\/[^"'?#]+\.page)/i
+  },
+  {
+    id:'guidonia-determine',city:'guidonia-montecelio',origin:'https://guidonia.halleyweb.it',
+    pageUrl:page=>`https://guidonia.halleyweb.it/zf/index.php/atti-amministrativi/determine/index/table-determine-public-page/${page}`,
+    detailPattern:/atti-amministrativi\/determine\/dettaglio\/[^"'?#]+/i
+  },
+  {
+    id:'guidonia-ordinanze',city:'guidonia-montecelio',origin:'https://guidonia.halleyweb.it',
+    pageUrl:page=>`https://guidonia.halleyweb.it/zf/index.php/atti-amministrativi/ordinanze/index/table-ordinanze-public-page/${page}`,
+    detailPattern:/atti-amministrativi\/ordinanze\/dettaglio\/[^"'?#]+/i
+  }
+];
 const TREE_MAX_GEOCODES_PER_RUN=8;
 const ROME_GEOCODE_BBOX={west:12.15,south:41.65,east:12.85,north:42.15};
 const TREE_GEOCODE_AREAS={
@@ -1489,17 +1507,35 @@ function decodeHtml(value){
     .trim()
 }
 
-function treeSourceLinks(html){
+function treeSourceLinks(html,source){
   const links=new Set();
-  const pattern=/href=["']([^"']+(?:informazione-di-servizio|notizia)[^"']+)["']/gi;
+  const pattern=/href=["']([^"']+)["']/gi;
   let match;
   while((match=pattern.exec(html))&&links.size<TREE_MAX_PAGES_PER_RUN){
     try{
-      const url=new URL(match[1],TREE_SOURCE_ORIGIN);
-      if(url.origin===TREE_SOURCE_ORIGIN&&!excludedTreeSource(url))links.add(url.toString())
+      const url=new URL(decodeHtml(match[1]),source.origin);
+      if(url.origin===source.origin&&source.detailPattern.test(url.pathname+url.search)&&!excludedTreeSource(url))links.add(url.toString())
     }catch{}
   }
   return[...links]
+}
+
+function archivePublicationRange(text){
+  const dates=[];
+  const pattern=/\b(\d{1,2})\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\s+(20\d{2})\b/gi;
+  let match;
+  while((match=pattern.exec(text))){
+    const date=isoItalianDate(match[1],match[2],match[3]);
+    if(date)dates.push(date)
+  }
+  const numeric=/(?:reg\.?\s*gen\.?\s*\d+\s+del|Data registro generale)\s*(\d{1,2})[\/-](\d{1,2})[\/-](20\d{2})/gi;
+  while((match=numeric.exec(text))){
+    const candidate=`${match[3]}-${String(match[2]).padStart(2,'0')}-${String(match[1]).padStart(2,'0')}`;
+    const parsed=new Date(`${candidate}T00:00:00Z`);
+    if(!Number.isNaN(parsed.getTime())&&parsed.getUTCDate()===Number(match[1])&&parsed.getUTCMonth()+1===Number(match[2]))dates.push(candidate)
+  }
+  dates.sort();
+  return{earliest:dates[0]||null,latest:dates.at(-1)||null}
 }
 
 function italianMonth(value){
@@ -1508,9 +1544,19 @@ function italianMonth(value){
 }
 
 function sourceDate(text){
+  const registry=text.match(/Data registro generale\s*(\d{1,2})[\/-](\d{1,2})[\/-](20\d{2})/i);
+  if(registry){
+    const candidate=`${registry[3]}-${String(registry[2]).padStart(2,'0')}-${String(registry[1]).padStart(2,'0')}`;
+    const parsed=new Date(`${candidate}T00:00:00Z`);
+    if(!Number.isNaN(parsed.getTime())&&parsed.getUTCDate()===Number(registry[1])&&parsed.getUTCMonth()+1===Number(registry[2]))return candidate
+  }
   const match=text.match(/\b(\d{1,2})\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\s+(20\d{2})\b/i);
-  if(!match)return null;
-  return`${match[3]}-${String(italianMonth(match[2])).padStart(2,'0')}-${String(match[1]).padStart(2,'0')}`
+  if(match)return`${match[3]}-${String(italianMonth(match[2])).padStart(2,'0')}-${String(match[1]).padStart(2,'0')}`;
+  const numeric=text.match(/\b(\d{1,2})[\/-](\d{1,2})[\/-](20\d{2})\b/);
+  if(!numeric)return null;
+  const candidate=`${numeric[3]}-${String(numeric[2]).padStart(2,'0')}-${String(numeric[1]).padStart(2,'0')}`;
+  const parsed=new Date(`${candidate}T00:00:00Z`);
+  return Number.isNaN(parsed.getTime())||parsed.getUTCDate()!==Number(numeric[1])||parsed.getUTCMonth()+1!==Number(numeric[2])?null:candidate
 }
 
 function isoItalianDate(day,month,year){
@@ -1548,6 +1594,18 @@ function treeExecutionDate(text,published){
     if(!match)continue;
     const candidate=isoItalianDate(match[1],match[2],match[3]);
     if(candidate)return candidate
+  }
+  const numeric=text.match(/Data (?:di |dell?['’])?(?:esecuzione(?: intervento)?|intervento|inizio(?: lavori)?)\s*:?\s*(?:dal|il|a partire dal)?\s*(\d{1,2})[\/-](\d{1,2})[\/-](20\d{2})/i);
+  if(numeric){
+    const candidate=`${numeric[3]}-${String(numeric[2]).padStart(2,'0')}-${String(numeric[1]).padStart(2,'0')}`;
+    const parsed=new Date(`${candidate}T00:00:00Z`);
+    if(!Number.isNaN(parsed.getTime())&&parsed.getUTCDate()===Number(numeric[1])&&parsed.getUTCMonth()+1===Number(numeric[2]))return candidate
+  }
+  const scheduledNumeric=text.match(/(?:dal|a partire dal|con decorrenza)\s*(\d{1,2})[\/-](\d{1,2})[\/-](20\d{2})/i);
+  if(scheduledNumeric){
+    const candidate=`${scheduledNumeric[3]}-${String(scheduledNumeric[2]).padStart(2,'0')}-${String(scheduledNumeric[1]).padStart(2,'0')}`;
+    const parsed=new Date(`${candidate}T00:00:00Z`);
+    if(!Number.isNaN(parsed.getTime())&&parsed.getUTCDate()===Number(scheduledNumeric[1])&&parsed.getUTCMonth()+1===Number(scheduledNumeric[2]))return candidate
   }
   return published
 }
@@ -1617,6 +1675,15 @@ function treeGeocodeQueries(locationName){
   return[...new Set([...aliases,...preferredParts,expanded,areaStripped,stripped].filter(Boolean))]
 }
 
+function treePageSourceKey(url,city){
+  const parsed=new URL(url);
+  if(city==='guidonia-montecelio'){
+    const act=parsed.pathname.match(/\/atti-amministrativi\/(determine|ordinanze)\/dettaglio\/.*?\/atto\/([^/]+)/i);
+    if(act)return`guidonia-${act[1].toLowerCase()}-${act[2]}`
+  }
+  return parsed.searchParams.get('contentId')||parsed.pathname
+}
+
 function classifyTreePage(html,url,city='roma'){
   if(excludedTreeSource(url))return null;
   const text=decodeHtml(html);
@@ -1629,7 +1696,7 @@ function classifyTreePage(html,url,city='roma'){
   if(eventType==='unknown')return null;
   const locationBlocks=treeLocationBlocks(text);
   const structuredNotice=/\/informazione-di-servizio\.page/i.test(url)||locationBlocks.length>0;
-  const baseSourceKey=new URL(url).searchParams.get('contentId')||new URL(url).pathname;
+  const baseSourceKey=treePageSourceKey(url,city);
   const blocks=locationBlocks;
   const scopes=blocks.length?blocks.map(({location,block})=>({locations:[location],text:block})):[{locations:treeLocations(text),text}];
   return scopes.map((scope,index)=>{
@@ -1667,23 +1734,55 @@ async function removeExcludedTreeEvents(db){
   return results.reduce((sum,result,index)=>index%3===2?sum+Number(result?.meta?.changes||0):sum,0)
 }
 
-async function discoverTreePages(){
-  const links=new Set();
-  for(const sourceUrl of TREE_SOURCE_LISTS){
-    const response=await fetch(sourceUrl,{headers:{Accept:'text/html','User-Agent':'A.R.I.A. environmental-data-indexer/1.0'}});
-    if(!response.ok)throw new Error(`Fonte Roma Capitale HTTP ${response.status}`);
-    treeSourceLinks(await response.text()).forEach(link=>links.add(link))
+async function discoverTreePages(db){
+  const year=new Date().getUTCFullYear();
+  const links=[];
+  const sources=[];
+  for(const source of TREE_ARCHIVE_SOURCES){
+    const cursor=await db.prepare('SELECT next_page,scan_year,scan_complete,completed_year FROM tree_source_cursors WHERE source_id=?')
+      .bind(source.id).first();
+    const page=Number(cursor?.scan_year)===year&&!Number(cursor?.scan_complete)?Math.max(1,Number(cursor?.next_page)||1):1;
+    const response=await fetch(source.pageUrl(page),{headers:{Accept:'text/html','User-Agent':'A.R.I.A. environmental-data-indexer/1.0'}});
+    if(!response.ok){
+      sources.push({sourceId:source.id,city:source.city,page,error:`HTTP ${response.status}`,scanComplete:false});
+      continue
+    }
+    const html=await response.text();
+    const pageLinks=treeSourceLinks(html,source);
+    const range=archivePublicationRange(decodeHtml(html));
+    const scanComplete=pageLinks.length===0||Boolean(range.earliest&&Number(range.earliest.slice(0,4))<year);
+    for(const url of pageLinks)links.push({url,city:source.city,sourceId:source.id});
+    const now=new Date().toISOString();
+    await db.prepare(`
+      INSERT INTO tree_source_cursors(source_id,city,next_page,scan_year,scan_complete,completed_year,earliest_publication,last_scanned_at,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?)
+      ON CONFLICT(source_id) DO UPDATE SET
+        city=excluded.city,next_page=excluded.next_page,scan_year=excluded.scan_year,
+        scan_complete=excluded.scan_complete,earliest_publication=excluded.earliest_publication,
+        completed_year=CASE
+          WHEN excluded.scan_complete=1 THEN excluded.scan_year
+          WHEN tree_source_cursors.scan_year=excluded.scan_year THEN tree_source_cursors.completed_year
+          ELSE NULL
+        END,
+        last_scanned_at=excluded.last_scanned_at,updated_at=excluded.updated_at
+    `).bind(source.id,source.city,scanComplete?1:page+1,year,scanComplete?1:0,scanComplete?year:null,range.earliest,now,now).run();
+    sources.push({
+      sourceId:source.id,city:source.city,page,links:pageLinks.length,
+      earliestPublication:range.earliest,latestPublication:range.latest,
+      scanComplete:scanComplete||Number(cursor?.completed_year)===year
+    })
   }
-  return[...links].slice(0,TREE_MAX_PAGES_PER_RUN)
+  return{links:links.slice(0,TREE_MAX_PAGES_PER_RUN),sources}
 }
 
 async function staleTreePages(db,limit=20){
   const result=await db.prepare(`
-    SELECT source_url FROM tree_events
+    SELECT source_url,city FROM tree_events
     WHERE source_url LIKE 'https://www.comune.roma.it/web/it/%'
+       OR source_url LIKE 'https://guidonia.halleyweb.it/%'
     ORDER BY last_checked_at ASC, id ASC LIMIT ?
   `).bind(limit).all();
-  return(result.results||[]).map(row=>row.source_url).filter(Boolean)
+  return(result.results||[]).map(row=>({url:row.source_url,city:row.city})).filter(item=>item.url)
 }
 
 async function upsertTreeEvent(db,event,now){
@@ -1783,27 +1882,41 @@ async function refreshTreeSources(env){
   const run=await env.TREE_DB.prepare(
     "INSERT INTO tree_sync_runs(started_at,status) VALUES (?,'running') RETURNING id"
   ).bind(startedAt).first();
-  let discovered=0,inserted=0,updated=0,errors=0,excludedRemoved=0;
+  let discovered=0,inserted=0,updated=0,errors=0,excludedRemoved=0,futureEventsFound=0;
+  let archiveSources=[];
   try{
     excludedRemoved=await removeExcludedTreeEvents(env.TREE_DB);
-    const [currentLinks,staleLinks]=await Promise.all([discoverTreePages(),staleTreePages(env.TREE_DB,20)]);
-    const links=[...new Set([...currentLinks,...staleLinks])].slice(0,TREE_MAX_PAGES_PER_RUN);
+    const [discovery,staleLinks]=await Promise.all([discoverTreePages(env.TREE_DB),staleTreePages(env.TREE_DB,20)]);
+    archiveSources=discovery.sources;
+    const byUrl=new Map();
+    [...discovery.links,...staleLinks].forEach(item=>{if(item?.url&&!byUrl.has(item.url))byUrl.set(item.url,item)});
+    const links=[...byUrl.values()].slice(0,TREE_MAX_PAGES_PER_RUN);
     discovered=links.length;
-    for(const link of links){
+    for(const item of links){
       try{
+        const link=item.url;
         const response=await fetch(link,{headers:{Accept:'text/html','User-Agent':'A.R.I.A. environmental-data-indexer/1.0'}});
         if(!response.ok)throw new Error(`HTTP ${response.status}`);
-        const events=classifyTreePage(await response.text(),link,'roma')||[];
+        const events=classifyTreePage(await response.text(),link,item.city||'roma')||[];
         for(const event of events){
           const action=await upsertTreeEvent(env.TREE_DB,event,new Date().toISOString());
           if(action==='inserted')inserted++;else updated++
+          if(event.eventDate&&event.eventDate>startedAt.slice(0,10)&&event.eventDate<=`${new Date().getUTCFullYear()}-12-31`)futureEventsFound++
         }
       }catch{errors++}
     }
     const geocoding=await geocodePendingTreeEvents(env.TREE_DB);
     await env.TREE_DB.prepare(`UPDATE tree_sync_runs SET completed_at=?,status='completed',discovered=?,inserted=?,updated=?,errors=? WHERE id=?`)
       .bind(new Date().toISOString(),discovered,inserted,updated,errors,run.id).run();
-    return{ok:true,discovered,inserted,updated,excludedRemoved,errors,geocoding,startedAt,completedAt:new Date().toISOString()}
+    return{
+      ok:true,discovered,inserted,updated,excludedRemoved,errors,geocoding,
+      archivePagesScanned:archiveSources.length,
+      archiveSources,
+      scanComplete:archiveSources.length===TREE_ARCHIVE_SOURCES.length&&archiveSources.every(source=>source.scanComplete),
+      futureEventsFound,
+      scanThrough:`${new Date().getUTCFullYear()}-12-31`,
+      startedAt,completedAt:new Date().toISOString()
+    }
   }catch(error){
     await env.TREE_DB.prepare(`UPDATE tree_sync_runs SET completed_at=?,status='failed',discovered=?,inserted=?,updated=?,errors=?,detail=? WHERE id=?`)
       .bind(new Date().toISOString(),discovered,inserted,updated,errors+1,String(error?.message||error).slice(0,500),run.id).run();
@@ -2057,7 +2170,7 @@ export default{
       ctx.waitUntil(geocodePendingTreeEvents(env.TREE_DB));
       return
     }
-    if(controller.cron==='0 3 * * 1')ctx.waitUntil(refreshTreeSources(env))
+    if(controller.cron==='0 3 * * *')ctx.waitUntil(refreshTreeSources(env))
   },
   async fetch(request,env,ctx){
     const url=new URL(request.url);
@@ -2116,7 +2229,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.9.10',
+        version:'0.9.11',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,
@@ -2127,7 +2240,7 @@ export default{
         historicalFrom:1950,
         treeEventsDynamic:Boolean(env.TREE_DB),
         treeCities:['roma','guidonia-montecelio'],
-        treeSyncSchedule:'0 3 * * 1',
+        treeSyncSchedule:'0 3 * * *',
         treeGeocodeSchedule:'30 3 * * *',
         cacheSeconds:CACHE_TTL
       },200,{

@@ -1,3 +1,13 @@
+# 0.7.7
+
+- Sostituita la lettura della sola prima pagina con una scansione paginata e progressiva degli archivi dell'anno corrente.
+- Aggiunti connettori distinti per informazioni di servizio e notizie di Roma Capitale, determine e ordinanze di Guidonia Montecelio.
+- Aggiunta la migrazione D1 `0010_tree_source_cursors.sql`, che conserva il cursore di ogni fonte senza modificare gli eventi esistenti.
+- Il refresh restituisce `archivePagesScanned`, `archiveSources`, `scanComplete`, `futureEventsFound` e `scanThrough`.
+- Aggiunto il riconoscimento delle date numeriche usate negli atti Halley.
+- La scansione completa viene eseguita ogni giorno alle 03:00 UTC; la coda geografica continua alle 03:30 UTC.
+- Worker aggiornato alla versione `0.9.11`; app aggiornata alla versione `0.7.7` build 87, dataset invariato alla revisione 22.
+
 # 0.7.6
 
 - Le schede strutturate con più blocchi `Ubicazione` vengono suddivise in eventi distinti, ciascuno con data, quantità e posizione proprie.
