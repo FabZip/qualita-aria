@@ -1478,6 +1478,17 @@ const TREE_GEOCODE_AREAS={
   roma:{label:'Roma',bbox:ROME_GEOCODE_BBOX},
   'guidonia-montecelio':{label:'Guidonia Montecelio',bbox:{west:12.55,south:41.88,east:12.85,north:42.12}}
 };
+
+function treeGeocodeArea(city){
+  return TREE_GEOCODE_AREAS[String(city||'roma').toLowerCase()]||null
+}
+
+function coordinatesInsideTreeArea(longitude,latitude,city){
+  const area=treeGeocodeArea(city);
+  return Boolean(area)&&Number.isFinite(longitude)&&Number.isFinite(latitude)&&
+    longitude>=area.bbox.west&&longitude<=area.bbox.east&&
+    latitude>=area.bbox.south&&latitude<=area.bbox.north
+}
 const TREE_EXCLUDED_SOURCE_PATHS=new Set([
   '/web/it/notizia/chiusure-notturne-via-foro-italico-e-viale-newton.page',
   '/web/it/notizia/pui-tor-bella-monaca-cantiere-ciclabili-verde.page'
@@ -1511,13 +1522,22 @@ function treeSourceLinks(html,source){
   const links=new Set();
   const pattern=/href=["']([^"']+)["']/gi;
   let match;
-  while((match=pattern.exec(html))&&links.size<TREE_MAX_PAGES_PER_RUN){
+  while((match=pattern.exec(html))){
     try{
       const url=new URL(decodeHtml(match[1]),source.origin);
       if(url.origin===source.origin&&source.detailPattern.test(url.pathname+url.search)&&!excludedTreeSource(url))links.add(url.toString())
     }catch{}
   }
   return[...links]
+}
+
+function treeLinksSignature(links){
+  let hash=2166136261;
+  for(const character of links.join('\n')){
+    hash^=character.charCodeAt(0);
+    hash=Math.imul(hash,16777619)
+  }
+  return`${links.length}:${(hash>>>0).toString(16)}`
 }
 
 function archivePublicationRange(text){
@@ -1630,12 +1650,17 @@ function titleFromHtml(html){
 }
 
 function treeQuantity(text){
+  const botanicalSections=[...text.matchAll(
+    /Caratteristiche botaniche\s*:?\s*([\s\S]*?)(?=\s+(?:Ragioni che hanno condotto|Data (?:di |dell?['’])?(?:esecuzione|intervento)|Modalità|Bersaglio|Ubicazione\s*:)|$)/gi
+  )].map(match=>match[1]);
   const values=[];
   const numbered=/(?:\bn\.?|n°)\s*(\d{1,5})\s+(?![°^])/gi;
   let match;
-  while((match=numbered.exec(text)))values.push(Number(match[1]));
+  for(const section of botanicalSections){
+    while((match=numbered.exec(section)))values.push(Number(match[1]))
+  }
   if(values.length)return values.reduce((sum,value)=>sum+value,0);
-  const plain=text.match(/\b(\d{1,5})\s+(?:nuov[ei]\s+)?(?:alber(?:i|ature)|esemplari)\b/i);
+  const plain=text.match(/\b(\d{1,5})\s+(?:nuov[ei]\s+)?(?:alber(?:i|ature)|esemplari|piante)\b/i);
   return plain?Number(plain[1]):null
 }
 
@@ -1707,12 +1732,14 @@ function classifyTreePage(html,url,city='roma'){
     if(!structuredNotice&&!Number.isFinite(detectedQuantity))return null;
     const locations=scope.locations;
     const locationName=(locations[0]||(city==='roma'?'Roma':'Guidonia Montecelio')).slice(0,180);
-    const planned=/saranno?\s+(?:messi|effettuat|abbattut)|(?:sarà|verrà|verranno?)\s+(?:mess[oa]|effettuat[oa]|abbattut[oa])|in previsione|programmati?|previsti?/i.test(scope.text);
+    const futureDated=Boolean(eventDate&&eventDate>new Date().toISOString().slice(0,10));
+    const planned=futureDated||/saranno?\s+(?:messi|effettuat|abbattut)|(?:sarà|verrà|verranno?)\s+(?:mess[oa]|effettuat[oa]|abbattut[oa])|in previsione|programmati?|previsti?/i.test(scope.text);
     const executed=/sono stati effettuati|intervento eseguito|sono stati messi a dimora|già (?:messi a dimora|piantati)|data (?:di |dell?['’])?esecuzione/i.test(scope.text);
     const documentedScope=structuredNotice&&locations.length>=1&&eventType!=='unknown';
-    const status=planned?'planned':executed&&documentedScope?(eventType==='decrement'?'emergency_completed':'completed'):'reported';
+    const completed=!planned&&executed&&documentedScope;
+    const status=planned?'planned':completed?(eventType==='decrement'?'emergency_completed':'completed'):'reported';
     const quantity=documentedScope||!structuredNotice?detectedQuantity:null;
-    const validation=executed&&documentedScope&&Number.isFinite(quantity)?'automatic_confirmed':'automatic_pending';
+    const validation=completed&&Number.isFinite(quantity)?'automatic_confirmed':'automatic_pending';
     return{
       sourceKey:index?`${baseSourceKey}--${index+1}`:baseSourceKey,sourceGroupKey:baseSourceKey,city,
       year,eventDate,locationName,locations,eventType,
@@ -1738,10 +1765,25 @@ async function discoverTreePages(db){
   const year=new Date().getUTCFullYear();
   const links=[];
   const sources=[];
-  for(const source of TREE_ARCHIVE_SOURCES){
-    const cursor=await db.prepare('SELECT next_page,scan_year,scan_complete,completed_year FROM tree_source_cursors WHERE source_id=?')
+  const cursorUpdates=[];
+  const sourceStates=[];
+  for(const [index,source] of TREE_ARCHIVE_SOURCES.entries()){
+    const cursor=await db.prepare('SELECT next_page,next_link_offset,page_signature,scan_year,scan_complete,completed_year,last_scanned_at FROM tree_source_cursors WHERE source_id=?')
       .bind(source.id).first();
-    const page=Number(cursor?.scan_year)===year&&!Number(cursor?.scan_complete)?Math.max(1,Number(cursor?.next_page)||1):1;
+    sourceStates.push({source,cursor,index})
+  }
+  sourceStates.sort((a,b)=>
+    String(a.cursor?.last_scanned_at||'').localeCompare(String(b.cursor?.last_scanned_at||''))||a.index-b.index
+  );
+  for(const {source,cursor} of sourceStates){
+    const continuing=Number(cursor?.scan_year)===year&&!Number(cursor?.scan_complete);
+    const page=continuing?Math.max(1,Number(cursor?.next_page)||1):1;
+    const storedLinkOffset=continuing?Math.max(0,Number(cursor?.next_link_offset)||0):0;
+    const remaining=TREE_MAX_PAGES_PER_RUN-links.length;
+    if(remaining<=0){
+      sources.push({sourceId:source.id,city:source.city,page,links:0,deferred:true,scanComplete:Number(cursor?.completed_year)===year});
+      continue
+    }
     const response=await fetch(source.pageUrl(page),{headers:{Accept:'text/html','User-Agent':'A.R.I.A. environmental-data-indexer/1.0'}});
     if(!response.ok){
       sources.push({sourceId:source.id,city:source.city,page,error:`HTTP ${response.status}`,scanComplete:false});
@@ -1749,15 +1791,50 @@ async function discoverTreePages(db){
     }
     const html=await response.text();
     const pageLinks=treeSourceLinks(html,source);
+    const pageSignature=treeLinksSignature(pageLinks);
+    const pageChanged=storedLinkOffset>0&&cursor?.page_signature!==pageSignature;
+    const linkOffset=pageChanged?0:storedLinkOffset;
     const range=archivePublicationRange(decodeHtml(html));
-    const scanComplete=pageLinks.length===0||Boolean(range.earliest&&Number(range.earliest.slice(0,4))<year);
-    for(const url of pageLinks)links.push({url,city:source.city,sourceId:source.id});
+    const availableLinks=pageLinks.slice(linkOffset);
+    const selectedLinks=availableLinks.slice(0,remaining);
+    const pageConsumed=selectedLinks.length===availableLinks.length;
+    const archiveEnd=pageLinks.length===0||Boolean(range.earliest&&Number(range.earliest.slice(0,4))<year);
+    const scanComplete=pageConsumed&&archiveEnd;
+    const nextPage=pageConsumed?(scanComplete?1:page+1):page;
+    const nextLinkOffset=pageConsumed?0:linkOffset+selectedLinks.length;
+    const nextPageSignature=pageConsumed?null:pageSignature;
+    for(const url of selectedLinks)links.push({url,city:source.city,sourceId:source.id});
+    const sourceResult={
+      sourceId:source.id,city:source.city,page,links:selectedLinks.length,totalLinks:pageLinks.length,
+      linkOffset,partial:!pageConsumed,pageChanged,
+      earliestPublication:range.earliest,latestPublication:range.latest,
+      scanComplete:Number(cursor?.completed_year)===year,cursorAdvanced:false
+    };
+    sources.push(sourceResult);
+    cursorUpdates.push({
+      sourceId:source.id,city:source.city,page,year,scanComplete,nextPage,nextLinkOffset,nextPageSignature,
+      earliestPublication:range.earliest,
+      previouslyComplete:Number(cursor?.completed_year)===year,
+      sourceResult
+    })
+  }
+  return{links,sources,cursorUpdates}
+}
+
+async function persistTreeSourceCursors(db,cursorUpdates,failedSourceIds=new Set()){
+  let advanced=0;
+  for(const update of cursorUpdates){
+    if(failedSourceIds.has(update.sourceId)){
+      update.sourceResult.cursorAdvanced=false;
+      update.sourceResult.scanComplete=update.previouslyComplete;
+      continue
+    }
     const now=new Date().toISOString();
     await db.prepare(`
-      INSERT INTO tree_source_cursors(source_id,city,next_page,scan_year,scan_complete,completed_year,earliest_publication,last_scanned_at,updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?)
+      INSERT INTO tree_source_cursors(source_id,city,next_page,next_link_offset,page_signature,scan_year,scan_complete,completed_year,earliest_publication,last_scanned_at,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(source_id) DO UPDATE SET
-        city=excluded.city,next_page=excluded.next_page,scan_year=excluded.scan_year,
+        city=excluded.city,next_page=excluded.next_page,next_link_offset=excluded.next_link_offset,page_signature=excluded.page_signature,scan_year=excluded.scan_year,
         scan_complete=excluded.scan_complete,earliest_publication=excluded.earliest_publication,
         completed_year=CASE
           WHEN excluded.scan_complete=1 THEN excluded.scan_year
@@ -1765,14 +1842,16 @@ async function discoverTreePages(db){
           ELSE NULL
         END,
         last_scanned_at=excluded.last_scanned_at,updated_at=excluded.updated_at
-    `).bind(source.id,source.city,scanComplete?1:page+1,year,scanComplete?1:0,scanComplete?year:null,range.earliest,now,now).run();
-    sources.push({
-      sourceId:source.id,city:source.city,page,links:pageLinks.length,
-      earliestPublication:range.earliest,latestPublication:range.latest,
-      scanComplete:scanComplete||Number(cursor?.completed_year)===year
-    })
+    `).bind(
+      update.sourceId,update.city,update.nextPage,update.nextLinkOffset,update.nextPageSignature,update.year,
+      update.scanComplete?1:0,update.scanComplete?update.year:null,
+      update.earliestPublication,now,now
+    ).run();
+    update.sourceResult.cursorAdvanced=true;
+    update.sourceResult.scanComplete=update.scanComplete||update.previouslyComplete;
+    advanced++
   }
-  return{links:links.slice(0,TREE_MAX_PAGES_PER_RUN),sources}
+  return advanced
 }
 
 async function staleTreePages(db,limit=20){
@@ -1889,8 +1968,15 @@ async function refreshTreeSources(env){
     const [discovery,staleLinks]=await Promise.all([discoverTreePages(env.TREE_DB),staleTreePages(env.TREE_DB,20)]);
     archiveSources=discovery.sources;
     const byUrl=new Map();
-    [...discovery.links,...staleLinks].forEach(item=>{if(item?.url&&!byUrl.has(item.url))byUrl.set(item.url,item)});
+    [...discovery.links,...staleLinks].forEach(item=>{
+      if(!item?.url)return;
+      const existing=byUrl.get(item.url);
+      if(existing){
+        if(item.sourceId&&!existing.sourceIds.includes(item.sourceId))existing.sourceIds.push(item.sourceId)
+      }else byUrl.set(item.url,{...item,sourceIds:item.sourceId?[item.sourceId]:[]})
+    });
     const links=[...byUrl.values()].slice(0,TREE_MAX_PAGES_PER_RUN);
+    const failedSourceIds=new Set();
     discovered=links.length;
     for(const item of links){
       try{
@@ -1903,8 +1989,12 @@ async function refreshTreeSources(env){
           if(action==='inserted')inserted++;else updated++
           if(event.eventDate&&event.eventDate>startedAt.slice(0,10)&&event.eventDate<=`${new Date().getUTCFullYear()}-12-31`)futureEventsFound++
         }
-      }catch{errors++}
+      }catch{
+        errors++;
+        item.sourceIds.forEach(sourceId=>failedSourceIds.add(sourceId))
+      }
     }
+    await persistTreeSourceCursors(env.TREE_DB,discovery.cursorUpdates,failedSourceIds);
     const geocoding=await geocodePendingTreeEvents(env.TREE_DB);
     await env.TREE_DB.prepare(`UPDATE tree_sync_runs SET completed_at=?,status='completed',discovered=?,inserted=?,updated=?,errors=? WHERE id=?`)
       .bind(new Date().toISOString(),discovered,inserted,updated,errors,run.id).run();
@@ -2022,9 +2112,10 @@ async function createTreeLocationReport(request,env,cors){
   if(!sourceKey||!locationName||reason.length<5)return badRequest('Evento, località e descrizione del problema sono obbligatori',cors);
   if(!Number.isInteger(locationIndex)||locationIndex<0||locationIndex>100)return badRequest('Indice località non valido',cors);
   if(reporterEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reporterEmail))return badRequest('Indirizzo email non valido',cors);
-  if(!Number.isFinite(longitude)||!Number.isFinite(latitude)||longitude<ROME_GEOCODE_BBOX.west||longitude>ROME_GEOCODE_BBOX.east||latitude<ROME_GEOCODE_BBOX.south||latitude>ROME_GEOCODE_BBOX.north)return badRequest('Posizione proposta fuori dall’area di Roma',cors);
-  const event=await env.TREE_DB.prepare('SELECT source_key FROM tree_events WHERE source_key=?').bind(sourceKey).first();
+  const event=await env.TREE_DB.prepare('SELECT source_key,city FROM tree_events WHERE source_key=?').bind(sourceKey).first();
   if(!event)return json({error:'Evento dinamico non trovato'},404,{...cors,'Cache-Control':'no-store'});
+  const area=treeGeocodeArea(event.city);
+  if(!coordinatesInsideTreeArea(longitude,latitude,event.city))return badRequest(`Posizione proposta fuori dall’area di ${area?.label||'competenza'}`,cors);
   const ipHash=await requestFingerprint(request,env);
   const recent=await env.TREE_DB.prepare("SELECT COUNT(*) AS total FROM tree_location_reports WHERE reporter_ip_hash=? AND created_at>=datetime('now','-1 day')").bind(ipHash).first();
   if(Number(recent?.total||0)>=5)return json({error:'Limite giornaliero di segnalazioni raggiunto'},429,{...cors,'Cache-Control':'no-store'});
@@ -2061,11 +2152,14 @@ async function createTreeEventReport(request,env,cors){
 
 async function treeGeocodeSearchResponse(cors,url){
   const query=String(url.searchParams.get('q')||'').trim().slice(0,180);
+  const city=String(url.searchParams.get('city')||'roma').toLowerCase();
+  const area=treeGeocodeArea(city);
   if(query.length<3)return badRequest('Inserire almeno tre caratteri',cors);
+  if(!area)return badRequest('Città non supportata',cors);
   const target=new URL('https://nominatim.openstreetmap.org/search');
   target.searchParams.set('format','jsonv2');target.searchParams.set('limit','5');target.searchParams.set('countrycodes','it');
-  target.searchParams.set('viewbox',`${ROME_GEOCODE_BBOX.west},${ROME_GEOCODE_BBOX.north},${ROME_GEOCODE_BBOX.east},${ROME_GEOCODE_BBOX.south}`);
-  target.searchParams.set('bounded','1');target.searchParams.set('q',`${query}, Roma`);
+  target.searchParams.set('viewbox',`${area.bbox.west},${area.bbox.north},${area.bbox.east},${area.bbox.south}`);
+  target.searchParams.set('bounded','1');target.searchParams.set('q',`${query}, ${area.label}`);
   const response=await fetch(target,{headers:{Accept:'application/json','User-Agent':'A.R.I.A. location-report-search/0.9 (https://fabzip.github.io/qualita-aria/)','Referer':'https://fabzip.github.io/qualita-aria/'}});
   if(!response.ok)return json({error:`Ricerca indirizzo HTTP ${response.status}`},502,{...cors,'Cache-Control':'no-store'});
   const values=await response.json();
@@ -2089,7 +2183,7 @@ async function reviewTreeLocationReport(request,env,cors){
   const reportId=Number(body?.reportId);
   const action=String(body?.action||'');
   if(!Number.isInteger(reportId)||!['approve','reject','update_event','delete_event'].includes(action))return badRequest('Revisione non valida',cors);
-  const report=await env.TREE_DB.prepare("SELECT * FROM tree_location_reports WHERE id=? AND status='pending'").bind(reportId).first();
+  const report=await env.TREE_DB.prepare("SELECT r.*,e.city AS event_city FROM tree_location_reports r LEFT JOIN tree_events e ON e.source_key=r.source_key WHERE r.id=? AND r.status='pending'").bind(reportId).first();
   if(!report)return json({error:'Segnalazione non trovata o già revisionata'},404,{...cors,'Cache-Control':'no-store'});
   if(action==='reject'){
     await env.TREE_DB.prepare("UPDATE tree_location_reports SET status='rejected' WHERE id=?").bind(reportId).run();
@@ -2126,7 +2220,7 @@ async function reviewTreeLocationReport(request,env,cors){
   if(action!=='approve')return badRequest('Azione non valida per una segnalazione di posizione',cors);
   const longitude=Number(body?.longitude??report.suggested_longitude),latitude=Number(body?.latitude??report.suggested_latitude);
   const locationName=String(body?.locationName||report.location_name).trim().slice(0,300);
-  if(!Number.isFinite(longitude)||!Number.isFinite(latitude)||longitude<ROME_GEOCODE_BBOX.west||longitude>ROME_GEOCODE_BBOX.east||latitude<ROME_GEOCODE_BBOX.south||latitude>ROME_GEOCODE_BBOX.north)return badRequest('Coordinate di approvazione non valide',cors);
+  if(!coordinatesInsideTreeArea(longitude,latitude,report.event_city))return badRequest('Coordinate di approvazione non valide',cors);
   let geometryJson=null;
   if(body?.geometry){
     const geometry=body.geometry;
@@ -2229,7 +2323,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.9.11',
+        version:'0.9.12',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,

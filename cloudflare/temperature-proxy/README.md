@@ -1,3 +1,7 @@
+# Proxy ambientale 0.9.12
+
+La release 0.9.12 rende affidabile la scansione progressiva: i cursori avanzano soltanto dopo l’elaborazione riuscita dei dettagli e le pagine con più di 40 link vengono riprese tramite offset e firma persistenti. Corregge inoltre classificazione delle date future, riconoscimento delle quantità, distribuzione del budget fra le fonti e area geografica delle segnalazioni di Guidonia Montecelio. Richiede la migrazione `0011_tree_source_cursor_offsets.sql`.
+
 # Proxy ambientale 0.9.11
 
 La release 0.9.11 scandisce progressivamente gli archivi dell'anno corrente di Roma e Guidonia, una pagina per fonte a ogni esecuzione, conservando i cursori in D1. Vengono così recuperati anche gli avvisi pubblicati in precedenza ma con interventi programmati fino al 31 dicembre. Il refresh completo viene eseguito ogni giorno alle 03:00 UTC e restituisce lo stato di avanzamento di ciascuna fonte.
@@ -119,7 +123,7 @@ unset ARIA_TREE_TOKEN
 
 Il file `data/trees.json` rimane il dataset consolidato di fallback se D1 o il proxy non sono raggiungibili.
 
-Il Worker è identificato dalla versione proxy `0.9.11`.
+Il Worker è identificato dalla versione proxy `0.9.12`.
 
 ### Pubblicazione Worker
 
@@ -137,7 +141,7 @@ cd cloudflare/temperature-proxy
 npx wrangler@latest deploy
 ```
 
-Al termine Wrangler deve mostrare entrambi gli schedule: `0 3 * * *` e `30 3 * * *`. Applicare prima la migrazione `0010_tree_source_cursors.sql`; non sono richieste modifiche a `TREE_ADMIN_TOKEN`.
+Al termine Wrangler deve mostrare entrambi gli schedule: `0 3 * * *` e `30 3 * * *`. Applicare prima le migrazioni `0010_tree_source_cursors.sql` e `0011_tree_source_cursor_offsets.sql`; la seconda permette di riprendere senza perdite una pagina archivio con più di 40 link. Non sono richieste modifiche a `TREE_ADMIN_TOKEN`.
 
 ## 0.9.5
 

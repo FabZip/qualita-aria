@@ -3385,7 +3385,7 @@ function treeLocationCoordinates(event,index){
   if(Array.isArray(point)&&point.length===2)return point;
   const marker=event?.markerCoordinates?.[index];
   if(Array.isArray(marker)&&marker.length===2)return marker;
-  return Array.isArray(event?.coordinates)?event.coordinates:ROME.center
+  return Array.isArray(event?.coordinates)?event.coordinates:(TREE_CITY_CONFIG[eeaCity()]?.center||ROME.center)
 }
 
 function positionTreeReportMarker(event,index){
@@ -3474,11 +3474,12 @@ async function searchTreeReportAddress(){
   results.textContent='Ricerca in corso…';
   try{
     const base=await treeApiBase();
-    const response=await fetch(`${base}/v1/trees/geocode?q=${encodeURIComponent(query)}`,{cache:'no-store'});
+    const cityId=eeaCity();
+    const response=await fetch(`${base}/v1/trees/geocode?q=${encodeURIComponent(query)}&city=${encodeURIComponent(cityId)}`,{cache:'no-store'});
     const data=await response.json();if(!response.ok)throw new Error(data.error||`HTTP ${response.status}`);
     results.innerHTML=(data.results||[]).length
       ?data.results.map(item=>`<button type="button" data-tree-address-lon="${Number(item.coordinates[0])}" data-tree-address-lat="${Number(item.coordinates[1])}">${String(item.label).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}</button>`).join('')
-      :'Nessun indirizzo trovato nell’area di Roma.'
+      :`Nessun indirizzo trovato nell’area di ${TREE_CITY_CONFIG[cityId]?.name||'competenza'}.`
   }catch(error){results.textContent=error.message||error}
 }
 
@@ -3658,7 +3659,7 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.7.6',{cache:'no-store'}).then(r=>r.json()),
+    fetch('version.json?v=0.7.8',{cache:'no-store'}).then(r=>r.json()),
     fetch('data/version.json?v=0.7.6',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
@@ -3675,7 +3676,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.7.6')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.8')
       .then(reg=>reg.update())
       .catch(console.error)
   }

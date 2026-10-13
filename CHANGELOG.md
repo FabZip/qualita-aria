@@ -1,3 +1,15 @@
+# 0.7.8
+
+- I totali minimi escludono gli eventi `automatic_pending` e `manual_rejected`, anche quando riportano quantità e stato apparentemente completato.
+- Le date di esecuzione future restano programmate e non vengono confermate automaticamente.
+- Il parser non interpreta più il numero di determine e ordinanze come quantità arborea; riconosce invece quantità esplicite di alberi, esemplari e piante.
+- La fusione tra dataset consolidato e D1 distingue gli interventi della stessa pagina tramite data, località, tipo e quantità, senza perdere le chiavi derivate.
+- Ricerca indirizzi, coordinate proposte e approvazioni geografiche usano l’area corretta di Roma o Guidonia Montecelio.
+- I cursori vengono salvati soltanto dopo l’elaborazione riuscita dei dettagli; una fonte in errore viene ritentata senza bloccare le altre.
+- Le pagine archivio con più di 40 link vengono elaborate in blocchi senza perdite tramite offset e firma della pagina, introdotti dalla migrazione `0011_tree_source_cursor_offsets.sql`.
+- Aggiunti test automatici per riepiloghi, parser, date future, distribuzione equa delle fonti, retry dei cursori, pagine oltre il limite e ricerca geografica per Comune.
+- Worker aggiornato alla versione `0.9.12`; app aggiornata alla versione `0.7.8` build 88, dataset invariato alla revisione 22.
+
 # 0.7.7
 
 - Sostituita la lettura della sola prima pagina con una scansione paginata e progressiva degli archivi dell'anno corrente.

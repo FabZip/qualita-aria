@@ -16,13 +16,13 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.7` |
+| Applicazione | `0.7.8` |
 | Build | `87` |
-| Worker ambientale | `0.9.11` |
+| Worker ambientale | `0.9.12` |
 | Dataset arboreo consolidato | `22` |
-| Ultima migrazione D1 prevista | `0010_tree_source_cursors.sql` |
+| Ultima migrazione D1 prevista | `0011_tree_source_cursor_offsets.sql` |
 
-Lo stato effettivo di commit, push, migrazione e deploy della release `0.7.7` è **Da verificare**.
+Lo stato effettivo di commit, push, migrazione e deploy della release `0.7.8` è **Da verificare**.
 
 ## 2. Funzionalità principali
 
@@ -130,7 +130,7 @@ Binding:
 TREE_DB
 ```
 
-Le migrazioni note vanno da `0001_tree_events.sql` a `0010_tree_source_cursors.sql` e gestiscono eventi, sincronizzazioni, coordinate, località multiple, segnalazioni, override geografici e cursori delle fonti.
+Le migrazioni note vanno da `0001_tree_events.sql` a `0011_tree_source_cursor_offsets.sql` e gestiscono eventi, sincronizzazioni, coordinate, località multiple, segnalazioni, override geografici, cursori delle fonti e ripresa parziale dei link.
 
 ## 4. Struttura del repository
 
@@ -152,7 +152,8 @@ Le migrazioni note vanno da `0001_tree_events.sql` a `0010_tree_source_cursors.s
 │       │   ├── 0007_remove_invalid_valle_pilella_event.sql
 │       │   ├── 0008_guidonia_verified_tree_events.sql
 │       │   ├── 0009_retry_guidonia_geocoding.sql
-│       │   └── 0010_tree_source_cursors.sql
+│       │   ├── 0010_tree_source_cursors.sql
+│       │   └── 0011_tree_source_cursor_offsets.sql
 │       ├── src/index.js
 │       ├── README.md
 │       ├── wrangler.toml
@@ -304,7 +305,7 @@ POST /v1/trees/refresh
 Authorization: Bearer <TREE_ADMIN_TOKEN>
 ```
 
-Campi diagnostici previsti dalla `0.9.11`:
+Campi diagnostici previsti dalla `0.9.12`:
 
 - `discovered`;
 - `inserted`;
@@ -554,7 +555,7 @@ Lo stato di pubblicazione in produzione di ciascuna funzione è **Da verificare*
 
 ## 11. Problemi noti, limitazioni e rischi
 
-- Deploy effettivo di app `0.7.7`, Worker `0.9.11` e migrazione `0010`: **Da verificare**.
+- Deploy effettivo di app `0.7.8`, Worker `0.9.12` e migrazioni `0010`/`0011`: **Da verificare**.
 - Account Cloudflare errato può produrre errori `7403` o `7404`.
 - Gli allegati PDF di Guidonia possono contenere informazioni non presenti nell’HTML.
 - `scanComplete` certifica la scansione dell’archivio configurato, non la completezza delle pubblicazioni comunali.
@@ -573,10 +574,10 @@ Lo stato di pubblicazione in produzione di ciascuna funzione è **Da verificare*
 
 ### Priorità alta
 
-- verificare commit e deploy della `0.7.7`;
-- applicare `0010_tree_source_cursors.sql`;
+- verificare commit e deploy della `0.7.8`;
+- applicare `0010_tree_source_cursors.sql` e `0011_tree_source_cursor_offsets.sql`;
 - aggiornare il `wrangler.toml` reale;
-- distribuire il Worker `0.9.11`;
+- distribuire il Worker `0.9.12`;
 - completare il backfill fino a `scanComplete: true`;
 - verificare gli eventi futuri trovati per Roma e Guidonia;
 - controllare i falsi positivi Halley;

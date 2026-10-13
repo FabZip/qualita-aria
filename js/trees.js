@@ -24,6 +24,39 @@
     return events.sort((a,b)=>eventTimestamp(b)-eventTimestamp(a)||String(a.id||'').localeCompare(String(b.id||''),'it'))
   }
 
+  function normalizedEventText(value){
+    return String(value||'')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g,'')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g,' ')
+      .trim()
+  }
+
+  function eventLocations(event){
+    const values=Array.isArray(event?.locations)&&event.locations.length?event.locations:[event?.locationName];
+    return[...new Set(values.map(normalizedEventText).filter(Boolean))]
+  }
+
+  function sameDocumentedEvent(local,remote){
+    if(!local?.sourceUrl||local.sourceUrl!==remote?.sourceUrl)return false;
+    const localDate=eventTimestamp(local);
+    const remoteDate=eventTimestamp(remote);
+    if(localDate&&remoteDate&&localDate!==remoteDate)return false;
+    if(local.eventType&&remote.eventType&&local.eventType!==remote.eventType)return false;
+    const localHasQuantity=Number.isFinite(local.quantity);
+    const remoteHasQuantity=Number.isFinite(remote.quantity);
+    if(localHasQuantity!==remoteHasQuantity)return false;
+    if(localHasQuantity&&local.quantity!==remote.quantity)return false;
+    const localLocations=eventLocations(local);
+    const remoteLocations=eventLocations(remote);
+    return localLocations.some(localLocation=>remoteLocations.some(remoteLocation=>
+      localLocation===remoteLocation||
+      (Math.min(localLocation.length,remoteLocation.length)>=8&&
+        (localLocation.includes(remoteLocation)||remoteLocation.includes(localLocation)))
+    ))
+  }
+
   async function catalog(){
     if(!catalogPromise)catalogPromise=fetch('data/trees.json?v=0.7.6',{cache:'no-store'}).then(response=>{
       if(!response.ok)throw new Error(`Dati arborei: HTTP ${response.status}`);
@@ -421,17 +454,18 @@
         source:{publisher:city.source?.publisher||city.name,url:event.sourceUrl}
       }
     });
-    const localSourceUrls=new Set(enrichedLocal.map(event=>event.sourceUrl));
     const remoteDocumented=dynamic.events
       .filter(event=>{
         const key=String(event.sourceKey||event.id).replace(/^dynamic-/,'');
         if(consumedRemoteKeys.has(key))return false;
-        return cityId==='roma'?!localSourceUrls.has(event.sourceUrl):true
+        return !enrichedLocal.some(local=>sameDocumentedEvent(local,event))
       })
       .map(event=>({...event,source:{publisher:`${city.source?.publisher||city.name} · aggiornamento automatico`,url:event.sourceUrl}}));
     const documentedEvents=sortEventsNewestFirst(prepareDocumentedPaths([...enrichedLocal,...remoteDocumented]));
     const completed=documentedEvents.filter(event=>
-      ['completed','emergency_completed'].includes(event.status)&&Number.isFinite(event.quantity)
+      ['completed','emergency_completed'].includes(event.status)&&
+      Number.isFinite(event.quantity)&&
+      !['automatic_pending','manual_rejected'].includes(event.validation)
     );
     const plantings=completed
       .filter(event=>event.eventType==='planting')
