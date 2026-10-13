@@ -17,12 +17,12 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Componente | Versione |
 | --- | --- |
 | Applicazione | `0.7.8` |
-| Build | `87` |
+| Build | `88` |
 | Worker ambientale | `0.9.12` |
 | Dataset arboreo consolidato | `22` |
 | Ultima migrazione D1 prevista | `0011_tree_source_cursor_offsets.sql` |
 
-Lo stato effettivo di commit, push, migrazione e deploy della release `0.7.8` è **Da verificare**.
+Il commit e il push della release sono stati verificati su `main` al commit `1cef1d3`. Il 13 ottobre 2026 sono stati verificati in produzione il Worker `0.9.12`, le migrazioni D1 `0010`/`0011` e un refresh manuale completo senza errori. La pubblicazione effettiva del frontend `0.7.8` build 88 resta da verificare nella PWA pubblica.
 
 ## 2. Funzionalità principali
 
@@ -473,6 +473,14 @@ unset ARIA_TREE_TOKEN
 
 Per il primo backfill può essere necessario ripetere il refresh fino a `scanComplete: true`.
 
+Esito della verifica in produzione del 13 ottobre 2026:
+
+- `/health` ha restituito la versione Worker `0.9.12`;
+- il refresh manuale ha restituito `ok: true`, `discovered: 40`, `inserted: 7`, `updated: 22` ed `errors: 0`;
+- la geocodifica ha elaborato 7 candidati, risolvendone 5 e rifiutandone 2;
+- `scanComplete: false` conferma che il backfill progressivo deve ancora raggiungere la fine di tutti gli archivi configurati;
+- l’esecuzione riuscita conferma insieme autenticazione amministrativa, binding D1 e disponibilità dello schema introdotto dalle migrazioni `0010`/`0011`.
+
 ### Rigenerazione token
 
 ```bash
@@ -549,13 +557,15 @@ sha256sum qualita-aria-vX.Y.Z-patch.zip
 - correzione coordinate e colori EEA;
 - riposizionamento OpenAQ;
 - calcolo corretto delle temperature annuali;
-- pulsante “Installa app” nascosto quando la PWA è già aperta come app.
+- pulsante “Installa app” nascosto quando la PWA è già aperta come app;
+- suite di test versionata per parser, cursori, fusione degli eventi e riepiloghi arborei.
 
-Lo stato di pubblicazione in produzione di ciascuna funzione è **Da verificare**.
+La catena backend Alberi è stata verificata in produzione il 13 ottobre 2026 con Worker `0.9.12` e refresh privo di errori. Restano da verificare nella PWA pubblica il frontend `0.7.8` build 88 e, progressivamente, le singole funzionalità che dipendono dai dati dinamici.
 
 ## 11. Problemi noti, limitazioni e rischi
 
-- Deploy effettivo di app `0.7.8`, Worker `0.9.12` e migrazioni `0010`/`0011`: **Da verificare**.
+- La pubblicazione effettiva del frontend `0.7.8` build 88 è ancora da verificare nella PWA pubblica.
+- Il primo refresh del Worker `0.9.12` è riuscito senza errori, ma il backfill non è ancora completo (`scanComplete: false`).
 - Account Cloudflare errato può produrre errori `7403` o `7404`.
 - Gli allegati PDF di Guidonia possono contenere informazioni non presenti nell’HTML.
 - `scanComplete` certifica la scansione dell’archivio configurato, non la completezza delle pubblicazioni comunali.
@@ -564,7 +574,6 @@ Lo stato di pubblicazione in produzione di ciascuna funzione è **Da verificare*
 - Non tutte le vie dispongono di una geometria attendibile.
 - Il flusso EEA UTD può scaricare file validi senza produrre stazioni visualizzabili.
 - Dopo un deploy può servire ricaricare forzatamente o riaprire la PWA.
-- La presenza di una suite di test automatica versionata è **Da verificare**.
 - Il Worker monolitico aumenta il rischio di regressioni tra temperatura e Alberi.
 - Le fonti pubbliche possono cambiare HTML e rompere i parser.
 - Esistono limiti Cloudflare e limiti di cortesia dei servizi di geocodifica.
@@ -574,10 +583,7 @@ Lo stato di pubblicazione in produzione di ciascuna funzione è **Da verificare*
 
 ### Priorità alta
 
-- verificare commit e deploy della `0.7.8`;
-- applicare `0010_tree_source_cursors.sql` e `0011_tree_source_cursor_offsets.sql`;
-- aggiornare il `wrangler.toml` reale;
-- distribuire il Worker `0.9.12`;
+- verificare la pubblicazione del frontend `0.7.8` build 88 nella PWA pubblica;
 - completare il backfill fino a `scanComplete: true`;
 - verificare gli eventi futuri trovati per Roma e Guidonia;
 - controllare i falsi positivi Halley;
