@@ -306,12 +306,6 @@
     </details>`
   }
 
-  function renderPollutantButtons(selected){
-    return FORECAST_POLLUTANTS.map(item=>
-      `<button type="button" data-forecast-pollutant="${item.value}" class="${item.value===selected?'active':''}" aria-pressed="${item.value===selected}">${escapeHtml(item.label)}</button>`
-    ).join('')
-  }
-
   function selectedCity(){
     return state.eeaCities.get(eeaCity())||state.eeaCities.get(EEA_DEFAULT_CITY)
   }
@@ -342,7 +336,6 @@
       focusCity(city);
       $('forecastTitle').textContent=`${forecast.label} · ${city.name}`;
       $('forecastSubtitle').textContent='Previsione per i prossimi cinque giorni';
-      $('forecastPollutants').innerHTML=renderPollutantButtons(pollutant);
       days.innerHTML=forecast.days.length
         ?forecast.days.map((day,index)=>renderDay(day,index,forecast.unit)).join('')
         :'<div class="forecast-empty">Nessuna previsione disponibile.</div>';
@@ -373,12 +366,4 @@
     render()
   });
 
-  document.addEventListener('click',event=>{
-    const button=event.target.closest('[data-forecast-pollutant]');
-    if(!button||!isForecast())return;
-    const pollutant=button.dataset.forecastPollutant;
-    if(!POLLUTANTS[pollutant])return;
-    $('pollutantSelect').value=pollutant;
-    render()
-  })
 })();

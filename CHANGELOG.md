@@ -1,3 +1,9 @@
+# 0.7.11
+
+- Rimossa dalla vista previsionale la seconda barra di pulsanti degli inquinanti: PM10, PM2.5, CO, SO₂, O₃ e NO₂ si selezionano ora soltanto dal controllo principale.
+- Eliminati markup, stili e gestori di evento non più necessari, mantenendo invariato il caricamento delle previsioni.
+- App aggiornata alla versione `0.7.11` build 91; dataset e Worker restano invariati.
+
 # 0.7.10
 
 - Aumentate di `0.2rem` tutte le dimensioni tipografiche dell’app, comprese le viste responsive, le previsioni, le schede stazione, Temperatura, Alberi e lo splash iniziale.

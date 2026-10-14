@@ -17,29 +17,6 @@
   color:var(--muted);
   font-size:.9rem;
 }
-.forecast-pollutants{
-  display:flex;
-  gap:7px;
-  overflow-x:auto;
-  padding:0 14px 13px;
-  scrollbar-width:thin;
-}
-.forecast-pollutants button{
-  flex:0 0 auto;
-  min-height:36px;
-  border:1px solid #6d7b8a;
-  border-radius:999px;
-  padding:7px 11px;
-  background:transparent;
-  color:var(--text);
-  font-size:.9rem;
-  cursor:pointer;
-}
-.forecast-pollutants button.active{
-  border-color:#4aa9ed;
-  background:#12639b;
-  color:#fff;
-}
 .forecast-day{
   border-top:1px solid var(--line);
   background:rgba(255,255,255,.015);
