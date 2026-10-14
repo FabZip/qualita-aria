@@ -110,7 +110,7 @@
   display: flex;
   align-items: baseline;
   margin-top: -20px;
-  font-size: clamp(3.6rem, 11vw, 7.6rem);
+  font-size: calc(clamp(3.6rem, 11vw, 7.6rem) + .2rem);
   font-weight: 300;
   letter-spacing: .035em;
   line-height: .9;
@@ -119,7 +119,7 @@
 
 #aria-splash .aria-splash__wordmark span,
 #aria-splash .aria-splash__wordmark i { display: inline-block; opacity: 0; transform: translateY(14px); animation: aria-splash-letter-in .35s cubic-bezier(.2,.85,.3,1) forwards; }
-#aria-splash .aria-splash__wordmark i { color: var(--aria-splash-green); font-style: normal; font-size: .58em; margin-inline: .01em .03em; }
+#aria-splash .aria-splash__wordmark i { color: var(--aria-splash-green); font-style: normal; font-size: calc(.58em + .2rem); margin-inline: .01em .03em; }
 #aria-splash .aria-splash__wordmark span:nth-child(1) { animation-delay: .36s; }
 #aria-splash .aria-splash__wordmark i:nth-child(2) { animation-delay: .45s; }
 #aria-splash .aria-splash__wordmark span:nth-child(3) { animation-delay: .54s; }
@@ -129,10 +129,10 @@
 #aria-splash .aria-splash__wordmark span:nth-child(7) { animation-delay: .9s; }
 #aria-splash .aria-splash__wordmark i:nth-child(8) { animation-delay: .99s; }
 
-#aria-splash .aria-splash__subtitle { position: relative; z-index: 2; max-width: 680px; margin: 28px auto 0; padding: 0 12px; color: #e2f2f4; font-size: clamp(.94rem, 2.4vw, 1.22rem); font-weight: 400; line-height: 1.45; letter-spacing: .025em; text-align: center; opacity: 0; transform: translateY(9px); animation: aria-splash-subtitle-in .45s .95s ease-out forwards; }
+#aria-splash .aria-splash__subtitle { position: relative; z-index: 2; max-width: 680px; margin: 28px auto 0; padding: 0 12px; color: #e2f2f4; font-size: calc(clamp(.94rem, 2.4vw, 1.22rem) + .2rem); font-weight: 400; line-height: 1.45; letter-spacing: .025em; text-align: center; opacity: 0; transform: translateY(9px); animation: aria-splash-subtitle-in .45s .95s ease-out forwards; }
 #aria-splash .aria-splash__spectrum { position: relative; z-index: 2; width: min(410px, 66vw); height: 2px; margin-top: 24px; overflow: hidden; border-radius: 99px; background: #ffffff1a; opacity: 0; animation: aria-splash-fade-in .3s 1.18s forwards; }
 #aria-splash .aria-splash__spectrum span { display: block; width: 100%; height: 100%; background: linear-gradient(90deg, #66cdec, #55d6a8 45%, #f0c84c 72%, #ef6b57); transform: scaleX(0); transform-origin: left; animation: aria-splash-scale-line .55s 1.2s ease-out forwards; }
-#aria-splash .aria-splash__signal { position: relative; z-index: 2; margin: 12px 0 0; color: #9ab8bf; font-size: .64rem; letter-spacing: .25em; opacity: 0; animation: aria-splash-fade-in .35s 1.42s forwards; }
+#aria-splash .aria-splash__signal { position: relative; z-index: 2; margin: 12px 0 0; color: #9ab8bf; font-size: .84rem; letter-spacing: .25em; opacity: 0; animation: aria-splash-fade-in .35s 1.42s forwards; }
 #aria-splash .aria-splash__sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
 @keyframes aria-splash-draw-line { to { stroke-dashoffset: 0; } }
@@ -148,15 +148,15 @@
 
 @media (max-width: 600px) {
   #aria-splash .aria-splash__intro { width: 100vw; min-height: 340px; }
-  #aria-splash .aria-splash__wordmark { font-size: clamp(3.25rem, 19vw, 5.8rem); }
-  #aria-splash .aria-splash__subtitle { max-width: 340px; margin-top: 22px; font-size: .94rem; }
+  #aria-splash .aria-splash__wordmark { font-size: calc(clamp(3.25rem, 19vw, 5.8rem) + .2rem); }
+  #aria-splash .aria-splash__subtitle { max-width: 340px; margin-top: 22px; font-size: 1.14rem; }
   #aria-splash .aria-splash__environment { transform: scale(1.12); }
-  #aria-splash .aria-splash__signal { font-size: .56rem; letter-spacing: .18em; }
+  #aria-splash .aria-splash__signal { font-size: .76rem; letter-spacing: .18em; }
 }
 
 @media (max-height: 430px) and (orientation: landscape) {
   #aria-splash .aria-splash__intro { min-height: 270px; transform: scale(.84); }
-  #aria-splash .aria-splash__wordmark { font-size: clamp(3rem, 13vh, 5rem); }
+  #aria-splash .aria-splash__wordmark { font-size: calc(clamp(3rem, 13vh, 5rem) + .2rem); }
   #aria-splash .aria-splash__subtitle { margin-top: 18px; }
   #aria-splash .aria-splash__spectrum { margin-top: 16px; }
   #aria-splash .aria-splash__skip { top: 10px; right: 12px; }

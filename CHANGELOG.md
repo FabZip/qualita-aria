@@ -1,3 +1,9 @@
+# 0.7.10
+
+- Aumentate di `0.2rem` tutte le dimensioni tipografiche dell’app, comprese le viste responsive, le previsioni, le schede stazione, Temperatura, Alberi e lo splash iniziale.
+- Aggiornate le chiavi di cache dei fogli di stile e la cache PWA per distribuire immediatamente le nuove dimensioni.
+- App aggiornata alla versione `0.7.10` build 90; dataset e Worker restano invariati.
+
 # 0.7.9
 
 - Aggiunta la fonte separata `Previsioni qualità dell’aria`, basata sui dati modellistici Open-Meteo/CAMS e distinta dalle misure EEA, ARPA e OpenAQ.

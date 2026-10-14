@@ -10,12 +10,12 @@
 }
 .forecast-panel-head h2{
   margin:0;
-  font-size:1rem;
+  font-size:1.2rem;
 }
 .forecast-panel-head p{
   margin:4px 0 0;
   color:var(--muted);
-  font-size:.7rem;
+  font-size:.9rem;
 }
 .forecast-pollutants{
   display:flex;
@@ -32,7 +32,7 @@
   padding:7px 11px;
   background:transparent;
   color:var(--text);
-  font-size:.7rem;
+  font-size:.9rem;
   cursor:pointer;
 }
 .forecast-pollutants button.active{
@@ -57,22 +57,22 @@
 .forecast-day summary::after{
   content:'+';
   color:var(--muted);
-  font-size:1.05rem;
+  font-size:1.25rem;
   justify-self:end;
 }
 .forecast-day[open] summary::after{content:'−'}
 .forecast-date{
-  font-size:.82rem;
+  font-size:1.02rem;
   font-weight:800;
   text-transform:capitalize;
 }
 .forecast-day summary>span:not(.forecast-date):not(.forecast-quality){
-  font-size:.72rem;
+  font-size:.92rem;
   white-space:nowrap;
 }
 .forecast-day summary small{
   color:var(--muted);
-  font-size:.62rem;
+  font-size:.82rem;
 }
 .forecast-quality{
   display:inline-flex;
@@ -82,7 +82,7 @@
   border:1px solid currentColor;
   border-radius:7px;
   padding:4px 7px;
-  font-size:.62rem;
+  font-size:.82rem;
   font-weight:800;
   white-space:nowrap;
 }
@@ -98,7 +98,7 @@
 }
 .forecast-day-detail h3{
   margin:2px 0 7px;
-  font-size:.73rem;
+  font-size:.93rem;
   font-weight:800;
 }
 .forecast-period{
@@ -108,11 +108,11 @@
   gap:10px;
   min-height:42px;
   border-top:1px solid var(--line);
-  font-size:.7rem;
+  font-size:.9rem;
 }
 .forecast-period-name{color:#dce5ee}
-.forecast-period strong{font-size:.75rem;font-weight:700}
-.forecast-period strong small{color:var(--muted);font-size:.62rem;font-weight:500}
+.forecast-period strong{font-size:.95rem;font-weight:700}
+.forecast-period strong small{color:var(--muted);font-size:.82rem;font-weight:500}
 .forecast-scale{
   position:relative;
   display:block;
@@ -138,7 +138,7 @@
   padding:10px 15px 13px;
   border-top:1px solid var(--line);
   color:var(--muted);
-  font-size:.62rem;
+  font-size:.82rem;
   line-height:1.45;
 }
 .forecast-attribution a{color:#81cbff}
@@ -147,9 +147,12 @@
   border-top:1px solid var(--line);
   color:var(--muted);
   text-align:center;
-  font-size:.75rem;
+  font-size:.95rem;
 }
 @media(max-width:580px){
+  .forecast-source #pollutantSourceField{
+    grid-column:1/-1;
+  }
   .forecast-day summary{
     grid-template-columns:minmax(82px,1fr) auto;
   }
@@ -159,8 +162,8 @@
   }
   .forecast-day summary::after{display:none}
   .forecast-period{
-    grid-template-columns:70px minmax(78px,.7fr) minmax(80px,1fr);
-    gap:7px;
+    grid-template-columns:88px minmax(98px,.8fr) minmax(72px,1fr);
+    gap:6px;
   }
   .forecast-period .forecast-quality{
     grid-column:2/4;

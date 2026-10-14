@@ -1,3 +1,7 @@
+# A.R.I.A. 0.7.10
+
+La leggibilità dell’intera interfaccia è stata aumentata applicando `+0.2rem` a tutte le dimensioni dei caratteri, comprese le viste responsive, le previsioni, le schede delle stazioni, Temperatura, Alberi e lo splash iniziale. App 0.7.10 build 90, dataset invariato alla revisione 22, Worker invariato alla versione 0.9.12.
+
 # A.R.I.A. 0.7.9
 
 La nuova fonte `Previsioni qualità dell’aria` mostra per la città selezionata cinque giorni di stime modellistiche Open-Meteo/CAMS. Sono disponibili PM10, PM2.5, CO, SO₂, O₃ e NO₂, con media e massimo giornalieri e dettaglio per notte, mattina, pomeriggio e sera. Le previsioni restano chiaramente separate dalle misure di stazione e dalle valutazioni annuali. L’interfaccia è stata inoltre alleggerita rimuovendo diagnostica e spiegazioni tecniche non utili alla lettura dei dati. App 0.7.9 build 89, dataset invariato alla revisione 22, Worker invariato alla versione 0.9.12.
