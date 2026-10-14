@@ -70,6 +70,11 @@ assert.equal(pm10.days.length,2);
 assert.equal(pm10.unit,'µg/m³');
 assert.equal(pm10.days[0].mean,11.5);
 assert.equal(pm10.days[0].max,23);
+assert.equal(pm10.days[0].hourly.length,24);
+assert.deepEqual(
+  Array.from(pm10.days[0].hourly,value=>[value.hour,value.value,value.quality.label]).filter((_,index)=>index===0||index===23),
+  [[0,0,'Ottima'],[23,23,'Scarsa']]
+);
 assert.deepEqual(
   Array.from(pm10.days[0].periods,value=>value.value),
   [2.5,8.5,14.5,20.5]

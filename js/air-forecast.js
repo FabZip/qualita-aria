@@ -115,6 +115,10 @@
         max:maximum(entries.map(entry=>entry.value)),
         quality:qualityFromAqi(maximum(entries.map(entry=>entry.aqi)),config.aqiScale),
         periods,
+        hourly:entries.map(entry=>({
+          ...entry,
+          quality:qualityFromAqi(entry.aqi,config.aqiScale)
+        })),
         samples:entries.length
       }
     });
@@ -163,6 +167,8 @@
   const baseConfigureSourceUI=configureSourceUI;
   const baseSetLoading=setLoading;
   const baseRender=render;
+  let selectedForecastDate='';
+  let lastForecastView=null;
 
   SOURCE_INFO.forecast={
     name:'Previsioni qualità dell’aria',
@@ -272,38 +278,127 @@
     return index===0?`Oggi · ${formatted}`:formatted
   }
 
+  function dayPickerLabel(date,index){
+    const parsed=new Date(`${date}T12:00:00`);
+    if(Number.isNaN(parsed.getTime()))return date;
+    const weekday=new Intl.DateTimeFormat('it-IT',{weekday:'short'}).format(parsed);
+    const day=new Intl.DateTimeFormat('it-IT',{day:'numeric'}).format(parsed);
+    return{eyebrow:index===0?'Oggi':weekday,label:index===0?`${weekday} ${day}`:day}
+  }
+
   function qualityBadge(quality){
     if(!quality)return'<span class="forecast-quality forecast-quality-neutral">Valore previsto</span>';
     return`<span class="forecast-quality forecast-quality-${quality.level}">${escapeHtml(quality.label)}</span>`
   }
 
-  function scaleHtml(quality){
-    if(!quality)return'<span class="forecast-scale forecast-scale-neutral"></span>';
-    return`<span class="forecast-scale"><i style="--forecast-position:${quality.position.toFixed(1)}%"></i></span>`
-  }
-
-  function renderPeriod(period,unit){
-    return`<div class="forecast-period">
-      <span class="forecast-period-name">${escapeHtml(period.label)}</span>
-      <strong>${formatValue(period.value)} <small>${escapeHtml(unit)}</small></strong>
-      ${scaleHtml(period.quality)}
-      ${qualityBadge(period.quality)}
+  function renderHourlyChart(day,unit){
+    const entries=(day.hourly||[]).filter(entry=>Number.isFinite(entry.value));
+    if(entries.length<2)return'<div class="forecast-chart-empty">Andamento orario non disponibile.</div>';
+    const width=640,height=190,left=24,right=18,top=18,bottom=34;
+    const plotWidth=width-left-right;
+    const plotHeight=height-top-bottom;
+    const maximumValue=Math.max(1,...entries.map(entry=>entry.value));
+    const ceiling=Math.ceil(maximumValue*1.12*10)/10;
+    const point=entry=>({
+      x:left+(Math.max(0,Math.min(23,entry.hour))/23)*plotWidth,
+      y:top+(1-entry.value/ceiling)*plotHeight
+    });
+    const points=entries.map(point);
+    const line=points.map((item,index)=>`${index?'L':'M'} ${item.x.toFixed(1)} ${item.y.toFixed(1)}`).join(' ');
+    const area=`M ${points[0].x.toFixed(1)} ${(top+plotHeight).toFixed(1)} ${line.replace(/^M/, 'L')} L ${points.at(-1).x.toFixed(1)} ${(top+plotHeight).toFixed(1)} Z`;
+    const grid=[.25,.5,.75].map(ratio=>{
+      const y=top+plotHeight*ratio;
+      return`<line x1="${left}" y1="${y.toFixed(1)}" x2="${width-right}" y2="${y.toFixed(1)}" />`
+    }).join('');
+    const dots=entries.filter(entry=>entry.hour%3===0).map(entry=>{
+      const item=point(entry);
+      return`<circle cx="${item.x.toFixed(1)}" cy="${item.y.toFixed(1)}" r="3"><title>${String(entry.hour).padStart(2,'0')}:00 · ${formatValue(entry.value)} ${escapeHtml(unit)}</title></circle>`
+    }).join('');
+    const labels=[0,6,12,18,23].map(hour=>{
+      const x=left+(hour/23)*plotWidth;
+      return`<text x="${x.toFixed(1)}" y="${height-9}" text-anchor="${hour===0?'start':hour===23?'end':'middle'}">${String(hour).padStart(2,'0')}</text>`
+    }).join('');
+    return`<div class="forecast-chart" role="img" aria-label="Andamento orario previsto: da ${formatValue(entries[0].value)} a ${formatValue(entries.at(-1).value)} ${escapeHtml(unit)}">
+      <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id="forecastAreaGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#55d6a8" stop-opacity=".42"/><stop offset="1" stop-color="#55d6a8" stop-opacity="0"/></linearGradient></defs>
+        <g class="forecast-chart-grid">${grid}</g>
+        <path class="forecast-chart-area" d="${area}"/>
+        <path class="forecast-chart-line" d="${line}"/>
+        <g class="forecast-chart-dots">${dots}</g>
+        <g class="forecast-chart-labels">${labels}</g>
+      </svg>
     </div>`
   }
 
-  function renderDay(day,index,unit){
-    return`<details class="forecast-day" ${index===0?'open':''}>
-      <summary>
-        <span class="forecast-date">${escapeHtml(dayLabel(day.date,index))}</span>
+  function periodIcon(id){
+    return id==='night'?'🌙':id==='morning'?'☀️':id==='afternoon'?'◐':'🌆'
+  }
+
+  function renderPeriodCard(period,unit){
+    return`<article class="forecast-period-card">
+      <div class="forecast-period-card-head"><span aria-hidden="true">${periodIcon(period.id)}</span><strong>${escapeHtml(period.label)}</strong></div>
+      <div class="forecast-period-value">${formatValue(period.value)} <small>${escapeHtml(unit)}</small></div>
+      ${qualityBadge(period.quality)}
+    </article>`
+  }
+
+  function highestPeriod(day){
+    return day.periods.reduce((highest,period)=>
+      Number.isFinite(period.value)&&(!highest||period.value>highest.value)?period:highest
+    ,null)
+  }
+
+  function renderDayPicker(days,selectedDate,unit){
+    return`<nav class="forecast-day-picker" aria-label="Scegli il giorno della previsione">
+      ${days.map((day,index)=>{
+        const label=dayPickerLabel(day.date,index);
+        const selected=day.date===selectedDate;
+        return`<button type="button" data-forecast-day="${day.date}" class="${selected?'active':''}" aria-pressed="${selected}">
+          <span>${escapeHtml(label.eyebrow)}</span>
+          <strong>${escapeHtml(label.label)}</strong>
+          <small>${formatValue(day.mean)} ${escapeHtml(unit)}</small>
+        </button>`
+      }).join('')}
+    </nav>`
+  }
+
+  function renderSelectedDay(day,index,forecast){
+    const peakPeriod=highestPeriod(day);
+    return`<section class="forecast-overview" aria-labelledby="forecastSelectedDay">
+      <header class="forecast-overview-head">
+        <div><span class="forecast-kicker">Giorno selezionato</span><h3 id="forecastSelectedDay">${escapeHtml(dayLabel(day.date,index))}</h3></div>
         ${qualityBadge(day.quality)}
-        <span><small>Max</small> ${formatValue(day.max)} ${escapeHtml(unit)}</span>
-        <span><small>Media</small> ${formatValue(day.mean)} ${escapeHtml(unit)}</span>
-      </summary>
-      <div class="forecast-day-detail">
-        <h3>Dettaglio della giornata</h3>
-        ${day.periods.map(period=>renderPeriod(period,unit)).join('')}
+      </header>
+      <div class="forecast-metrics">
+        <article><span>Media prevista</span><strong>${formatValue(day.mean)}</strong><small>${escapeHtml(forecast.unit)}</small></article>
+        <article><span>Picco orario</span><strong>${formatValue(day.max)}</strong><small>${escapeHtml(forecast.unit)}</small></article>
+        <article><span>Fascia più alta</span><strong>${escapeHtml(peakPeriod?.label||'—')}</strong><small>${peakPeriod?`${formatValue(peakPeriod.value)} ${escapeHtml(forecast.unit)}`:'—'}</small></article>
       </div>
-    </details>`
+      <section class="forecast-chart-card">
+        <div><span class="forecast-kicker">Profilo giornaliero</span><h3>Andamento nelle 24 ore</h3></div>
+        ${renderHourlyChart(day,forecast.unit)}
+      </section>
+      <section class="forecast-period-section" aria-labelledby="forecastPeriodsTitle">
+        <div><span class="forecast-kicker">Momenti della giornata</span><h3 id="forecastPeriodsTitle">Valori medi previsti</h3></div>
+        <div class="forecast-period-grid">${day.periods.map(period=>renderPeriodCard(period,forecast.unit)).join('')}</div>
+      </section>
+    </section>`
+  }
+
+  function renderForecastContent(forecast,city){
+    const days=$('forecastDays');
+    if(!days)return;
+    if(!forecast.days.length){
+      days.innerHTML='<div class="forecast-empty">Nessuna previsione disponibile.</div>';
+      return
+    }
+    if(!forecast.days.some(day=>day.date===selectedForecastDate))selectedForecastDate=forecast.days[0].date;
+    const index=Math.max(0,forecast.days.findIndex(day=>day.date===selectedForecastDate));
+    const selectedDay=forecast.days[index];
+    $('forecastTitle').textContent=`${forecast.label} · ${city.name}`;
+    $('forecastSubtitle').textContent='Profilo orario e valori medi per fascia';
+    days.innerHTML=`${renderSelectedDay(selectedDay,index,forecast)}${renderDayPicker(forecast.days,selectedDay.date,forecast.unit)}`;
+    lastForecastView={forecast,city}
   }
 
   function selectedCity(){
@@ -334,11 +429,7 @@
       const forecast=aggregateForecast(payload,pollutant);
       if(token!==state.renderToken)return;
       focusCity(city);
-      $('forecastTitle').textContent=`${forecast.label} · ${city.name}`;
-      $('forecastSubtitle').textContent='Previsione per i prossimi cinque giorni';
-      days.innerHTML=forecast.days.length
-        ?forecast.days.map((day,index)=>renderDay(day,index,forecast.unit)).join('')
-        :'<div class="forecast-empty">Nessuna previsione disponibile.</div>';
+      renderForecastContent(forecast,city);
       $('forecastAttribution').innerHTML='Previsioni modellistiche · <a href="https://open-meteo.com/en/docs/air-quality-api" target="_blank" rel="noopener noreferrer">Open-Meteo / CAMS</a>. Non sono misure di stazione.';
       diagnostics({
         source:'Open-Meteo / CAMS',city:city.name,pollutant:forecast.label,
@@ -364,6 +455,13 @@
   $('eeaCitySelect')?.addEventListener('change',()=>{
     if(!isForecast())return;
     render()
+  });
+
+  document.addEventListener('click',event=>{
+    const button=event.target.closest('[data-forecast-day]');
+    if(!button||!isForecast()||!lastForecastView)return;
+    selectedForecastDate=button.dataset.forecastDay;
+    renderForecastContent(lastForecastView.forecast,lastForecastView.city)
   });
 
 })();

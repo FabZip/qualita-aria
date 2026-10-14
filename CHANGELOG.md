@@ -1,3 +1,11 @@
+# 0.7.12
+
+- Ridisegnata la vista previsionale con un’impostazione originale A.R.I.A.: riepilogo del giorno selezionato, metriche principali e navigazione orizzontale tra i cinque giorni.
+- Sostituite le righe espandibili e le barre segmentate con un grafico continuo delle 24 ore e quattro schede compatte per notte, mattina, pomeriggio e sera.
+- Aggiunti al modello visuale i valori orari già forniti da Open-Meteo/CAMS, mantenendo separati dati modellistici e misure di stazione.
+- Estesi i test automatici al profilo orario e verificati cambio giorno, cambio inquinante e layout mobile senza overflow.
+- App aggiornata alla versione `0.7.12` build 92; dataset e Worker restano invariati.
+
 # 0.7.11
 
 - Rimossa dalla vista previsionale la seconda barra di pulsanti degli inquinanti: PM10, PM2.5, CO, SO₂, O₃ e NO₂ si selezionano ora soltanto dal controllo principale.
