@@ -1,3 +1,12 @@
+# 0.7.9
+
+- Aggiunta la fonte separata `Previsioni qualità dell’aria`, basata sui dati modellistici Open-Meteo/CAMS e distinta dalle misure EEA, ARPA e OpenAQ.
+- Le previsioni coprono PM10, PM2.5, CO, SO₂, O₃ e NO₂ per cinque giorni, con media, massimo e dettaglio per notte, mattina, pomeriggio e sera.
+- Le classi qualitative usano gli indici disponibili per ciascun inquinante; i valori mancanti non vengono più interpretati come zero.
+- Rimossi dall’interfaccia i dettagli tecnici su proxy, cache, Worker, formati interni e pannello diagnostico.
+- Aggiunti test automatici per URL, sei inquinanti, aggregazioni temporali, indici qualitativi, valori mancanti e cache previsionale.
+- App aggiornata alla versione `0.7.9` build 89; dataset e Worker restano invariati.
+
 # 0.7.8
 
 - I totali minimi escludono gli eventi `automatic_pending` e `manual_rejected`, anche quando riportano quantità e stato apparentemente completato.

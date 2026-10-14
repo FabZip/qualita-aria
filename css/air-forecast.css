@@ -1,0 +1,169 @@
+.forecast-panel{
+  margin:12px 0 0;
+  border:1px solid var(--line);
+  border-radius:18px;
+  overflow:hidden;
+  background:var(--panel);
+}
+.forecast-panel-head{
+  padding:14px 15px 10px;
+}
+.forecast-panel-head h2{
+  margin:0;
+  font-size:1rem;
+}
+.forecast-panel-head p{
+  margin:4px 0 0;
+  color:var(--muted);
+  font-size:.7rem;
+}
+.forecast-pollutants{
+  display:flex;
+  gap:7px;
+  overflow-x:auto;
+  padding:0 14px 13px;
+  scrollbar-width:thin;
+}
+.forecast-pollutants button{
+  flex:0 0 auto;
+  min-height:36px;
+  border:1px solid #6d7b8a;
+  border-radius:999px;
+  padding:7px 11px;
+  background:transparent;
+  color:var(--text);
+  font-size:.7rem;
+  cursor:pointer;
+}
+.forecast-pollutants button.active{
+  border-color:#4aa9ed;
+  background:#12639b;
+  color:#fff;
+}
+.forecast-day{
+  border-top:1px solid var(--line);
+  background:rgba(255,255,255,.015);
+}
+.forecast-day summary{
+  display:grid;
+  grid-template-columns:minmax(70px,.8fr) auto minmax(105px,1fr) minmax(105px,1fr);
+  align-items:center;
+  gap:10px;
+  padding:13px 15px;
+  cursor:pointer;
+  list-style:none;
+}
+.forecast-day summary::-webkit-details-marker{display:none}
+.forecast-day summary::after{
+  content:'+';
+  color:var(--muted);
+  font-size:1.05rem;
+  justify-self:end;
+}
+.forecast-day[open] summary::after{content:'−'}
+.forecast-date{
+  font-size:.82rem;
+  font-weight:800;
+  text-transform:capitalize;
+}
+.forecast-day summary>span:not(.forecast-date):not(.forecast-quality){
+  font-size:.72rem;
+  white-space:nowrap;
+}
+.forecast-day summary small{
+  color:var(--muted);
+  font-size:.62rem;
+}
+.forecast-quality{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:max-content;
+  border:1px solid currentColor;
+  border-radius:7px;
+  padding:4px 7px;
+  font-size:.62rem;
+  font-weight:800;
+  white-space:nowrap;
+}
+.forecast-quality-0{color:#76e2b0;background:rgba(53,208,127,.08)}
+.forecast-quality-1{color:#bddd62;background:rgba(179,213,73,.08)}
+.forecast-quality-2{color:#f0c64a;background:rgba(240,198,74,.08)}
+.forecast-quality-3{color:#ff9d58;background:rgba(255,145,77,.08)}
+.forecast-quality-4{color:#ff7284;background:rgba(255,88,100,.08)}
+.forecast-quality-5{color:#b99cff;background:rgba(151,113,255,.1)}
+.forecast-quality-neutral{color:#9eb0c3;background:rgba(145,161,181,.07)}
+.forecast-day-detail{
+  padding:0 15px 12px;
+}
+.forecast-day-detail h3{
+  margin:2px 0 7px;
+  font-size:.73rem;
+  font-weight:800;
+}
+.forecast-period{
+  display:grid;
+  grid-template-columns:90px minmax(90px,.8fr) minmax(110px,1.2fr) auto;
+  align-items:center;
+  gap:10px;
+  min-height:42px;
+  border-top:1px solid var(--line);
+  font-size:.7rem;
+}
+.forecast-period-name{color:#dce5ee}
+.forecast-period strong{font-size:.75rem;font-weight:700}
+.forecast-period strong small{color:var(--muted);font-size:.62rem;font-weight:500}
+.forecast-scale{
+  position:relative;
+  display:block;
+  height:7px;
+  border-radius:999px;
+  background:linear-gradient(90deg,#78e5b4 0 16.6%,#bddd62 16.6% 33.2%,#f0c64a 33.2% 49.8%,#ff9d58 49.8% 66.4%,#ff7284 66.4% 83%,#9275ff 83%);
+}
+.forecast-scale i{
+  position:absolute;
+  top:50%;
+  left:var(--forecast-position);
+  width:13px;
+  height:13px;
+  border:1px solid #fff;
+  border-radius:50%;
+  background:#35414d;
+  transform:translate(-50%,-50%);
+  box-shadow:0 0 0 1px rgba(0,0,0,.35);
+}
+.forecast-scale-neutral{background:#334457}
+.forecast-attribution{
+  margin:0;
+  padding:10px 15px 13px;
+  border-top:1px solid var(--line);
+  color:var(--muted);
+  font-size:.62rem;
+  line-height:1.45;
+}
+.forecast-attribution a{color:#81cbff}
+.forecast-empty{
+  padding:28px 15px;
+  border-top:1px solid var(--line);
+  color:var(--muted);
+  text-align:center;
+  font-size:.75rem;
+}
+@media(max-width:580px){
+  .forecast-day summary{
+    grid-template-columns:minmax(82px,1fr) auto;
+  }
+  .forecast-day summary>span:nth-of-type(3),
+  .forecast-day summary>span:nth-of-type(4){
+    grid-column:auto;
+  }
+  .forecast-day summary::after{display:none}
+  .forecast-period{
+    grid-template-columns:70px minmax(78px,.7fr) minmax(80px,1fr);
+    gap:7px;
+  }
+  .forecast-period .forecast-quality{
+    grid-column:2/4;
+    margin:-2px 0 7px;
+  }
+}

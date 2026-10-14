@@ -1,10 +1,10 @@
-const CACHE='qualita-aria-v0.7.8';
+const CACHE='qualita-aria-v0.7.9';
 const CORE=[
   './','./index.html',
-  './css/app.css?v=0.2.0','./css/aria-splash.css?v=0.5.14','./css/header-overrides.css?v=0.5.19','./css/trees.css?v=0.6.4','./js/aria-splash.js?v=0.5.14','./js/app.js?v=0.7.8','./js/trees.js?v=0.7.8','./data/trees.json?v=0.7.6','./data/tree-coordinates.json?v=0.7.6','./data/tree-paths.json?v=0.7.6','./data/trees-proxy.json?v=0.7.6','./assets/branding/aria-logo-header.svg','./js/eea-utd.js?v=0.2.16',
-  './css/station-list.css?v=0.2.2','./css/openaq-world.css?v=0.2.4','./js/station-list.js?v=0.2.11',
-  './js/openaq-proxy.js?v=0.2.11','./js/eea-proxy.js?v=0.2.14','./data/eea-proxy.json?v=0.2.14','./js/temperature-proxy.js?v=0.3.9','./js/temperature-overlay.js?v=0.3.9','./data/temperature-proxy.json?v=0.3.9','./css/temperature.css?v=0.3.8','./js/openaq-world.js?v=0.3.8',
-  './manifest.json?v=0.2.0','./version.json?v=0.7.8','./data/version.json?v=0.7.6','./data/italian-capitals.json?v=0.6.1',
+  './css/app.css?v=0.2.1','./css/aria-splash.css?v=0.5.14','./css/header-overrides.css?v=0.5.19','./css/trees.css?v=0.6.4','./js/aria-splash.js?v=0.5.14','./js/app.js?v=0.7.9','./js/trees.js?v=0.7.8','./data/trees.json?v=0.7.6','./data/tree-coordinates.json?v=0.7.6','./data/tree-paths.json?v=0.7.6','./data/trees-proxy.json?v=0.7.6','./assets/branding/aria-logo-header.svg','./js/eea-utd.js?v=0.2.17',
+  './css/station-list.css?v=0.2.2','./css/openaq-world.css?v=0.2.4','./css/air-forecast.css?v=0.7.9','./js/station-list.js?v=0.2.12','./js/air-forecast.js?v=0.7.9',
+  './js/openaq-proxy.js?v=0.2.11','./js/eea-proxy.js?v=0.2.14','./data/eea-proxy.json?v=0.2.14','./js/temperature-proxy.js?v=0.3.9','./js/temperature-overlay.js?v=0.3.9','./data/temperature-proxy.json?v=0.3.9','./css/temperature.css?v=0.3.8','./js/openaq-world.js?v=0.3.9',
+  './manifest.json?v=0.2.0','./version.json?v=0.7.9','./data/version.json?v=0.7.6','./data/italian-capitals.json?v=0.6.1',
   './assets/icons/icon.svg','./assets/icons/icon-192.png','./assets/icons/icon-512.png'
 ];
 
@@ -28,6 +28,7 @@ self.addEventListener('fetch',event=>{
 
   if(
     url.hostname==='discodata.eea.europa.eu' ||
+    url.hostname==='air-quality-api.open-meteo.com' ||
     url.hostname==='dati.lazio.it' ||
     url.hostname==='www.arpalazio.it' ||
     url.hostname==='raw.githubusercontent.com' ||

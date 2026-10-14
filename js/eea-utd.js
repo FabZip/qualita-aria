@@ -409,10 +409,10 @@ WHERE CountryCode='IT'
   }
 
   function verificationLabel(code){
-    if(code===1)return'UTD · verificato nel flusso preliminare';
-    if(code===2)return'UTD · preliminarmente verificato';
-    if(code===3)return'UTD · non verificato';
-    return'UTD · stato di verifica non dichiarato'
+    if(code===1)return'Dato preliminare verificato';
+    if(code===2)return'Dato preliminare verificato';
+    if(code===3)return'Dato preliminare non verificato';
+    return'Stato di verifica non dichiarato'
   }
 
   async function mapLimit(items,limit,fn){
@@ -607,7 +607,7 @@ WHERE CountryCode='IT'
         kind:'station',
         provider:'EEA · UTD/E2a',
         dataStatus:'preliminary',
-        statusLabel:'◐ Preliminare UTD',
+        statusLabel:'◐ Dato preliminare',
         sourceFlow:'E2a/UTD',
         aggregation:candidate.kind,
         samplePoint:candidate.sample,
@@ -680,7 +680,7 @@ WHERE CountryCode='IT'
       const rows=validated.map(row=>({
         ...row,
         dataStatus:'validated',
-        statusLabel:'✓ Validato E1a',
+        statusLabel:'✓ Dato validato',
         sourceFlow:'E1a'
       }));
       diagnostics({
@@ -712,21 +712,21 @@ WHERE CountryCode='IT'
     if(source()!=='eea')return baseSourceNotice(rows);
 
     if(rows.some(row=>row.dataStatus==='preliminary')){
-      return`EEA · ${currentEeaScope().label} · ◐ dati preliminari UTD/E2a`
+      return`EEA · ${currentEeaScope().label} · ◐ dati preliminari`
     }
 
     if(rows.some(row=>row.dataStatus==='validated')){
-      return`EEA · ${currentEeaScope().label} · ✓ dati validati E1a`
+      return`EEA · ${currentEeaScope().label} · ✓ dati validati`
     }
 
     if(Number($('yearSelect')?.value)>=UTD_MIN_YEAR&&isEeaCityScope()){
-      return`EEA · ${currentEeaScope().label} · nessun dato validato o UTD utilizzabile`
+      return`EEA · ${currentEeaScope().label} · nessun dato utilizzabile`
     }
 
     return baseSourceNotice(rows)
   };
 
-  SOURCE_INFO.eea.hint='EEA usa un proxy Cloudflare dedicato con cache condivisa. I dati validati E1a vengono memorizzati all’edge; per gli UTD anche elenco e file Parquet sono memorizzati dal Worker. Nel browser resta una seconda cache per città/anno/inquinante. Dopo un pan/zoom il refresh parte dopo 2 secondi.';
+  SOURCE_INFO.eea.hint='I punti rappresentano stazioni reali. La sfumatura aiuta a leggerne la distribuzione e non descrive una concentrazione uniforme sul territorio.';
 
   globalThis.QualitaAriaEEAUTD={
     fetchUtdRows,

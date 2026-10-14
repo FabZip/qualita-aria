@@ -16,19 +16,19 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.8` |
-| Build | `88` |
+| Applicazione | `0.7.9` |
+| Build | `89` |
 | Worker ambientale | `0.9.12` |
 | Dataset arboreo consolidato | `22` |
 | Ultima migrazione D1 prevista | `0011_tree_source_cursor_offsets.sql` |
 
-Il commit e il push della release sono stati verificati su `main` al commit `1cef1d3`. Il 13 ottobre 2026 sono stati verificati in produzione il Worker `0.9.12`, le migrazioni D1 `0010`/`0011` e un refresh manuale completo senza errori. La pubblicazione effettiva del frontend `0.7.8` build 88 resta da verificare nella PWA pubblica.
+Il commit e il push della release `0.7.8` sono stati verificati su `main` al commit `1cef1d3`. Il 13 ottobre 2026 sono stati verificati in produzione il Worker `0.9.12`, le migrazioni D1 `0010`/`0011` e un refresh manuale completo senza errori. La release frontend `0.7.9` build 89 è in preparazione e non è ancora pubblicata.
 
 ## 2. Funzionalità principali
 
 ### Qualità dell’aria
 
-L’utente può selezionare fonte, città o Comune, anno, inquinante e modalità di visualizzazione. Gli inquinanti trattati comprendono almeno PM2.5, PM10 e NO₂. La CO₂ non viene ricavata dai dataset disponibili e non deve essere confusa con il CO.
+L’utente può selezionare fonte, città o Comune, anno, inquinante e modalità di visualizzazione. Le fonti osservazionali trattano PM2.5, PM10 e NO₂ secondo la rispettiva disponibilità. La fonte previsionale separata tratta PM10, PM2.5, CO, SO₂, O₃ e NO₂ per i cinque giorni successivi. La CO₂ non viene ricavata dai dataset disponibili e non deve essere confusa con il CO.
 
 Le stazioni vengono mostrate tramite posizione geografica, elenco sotto la mappa, valore annuale, copertura della serie e stato di validazione quando disponibile. I colori sulla mappa devono usare le stesse soglie dell’elenco.
 
@@ -560,11 +560,11 @@ sha256sum qualita-aria-vX.Y.Z-patch.zip
 - pulsante “Installa app” nascosto quando la PWA è già aperta come app;
 - suite di test versionata per parser, cursori, fusione degli eventi e riepiloghi arborei.
 
-La catena backend Alberi è stata verificata in produzione il 13 ottobre 2026 con Worker `0.9.12` e refresh privo di errori. Restano da verificare nella PWA pubblica il frontend `0.7.8` build 88 e, progressivamente, le singole funzionalità che dipendono dai dati dinamici.
+La catena backend Alberi è stata verificata in produzione il 13 ottobre 2026 con Worker `0.9.12` e refresh privo di errori. Restano da pubblicare e verificare nella PWA il frontend `0.7.9` build 89 e, progressivamente, le singole funzionalità che dipendono dai dati dinamici.
 
 ## 11. Problemi noti, limitazioni e rischi
 
-- La pubblicazione effettiva del frontend `0.7.8` build 88 è ancora da verificare nella PWA pubblica.
+- La pubblicazione effettiva del frontend `0.7.9` build 89 è ancora da eseguire e verificare nella PWA pubblica.
 - Il primo refresh del Worker `0.9.12` è riuscito senza errori, ma il backfill non è ancora completo (`scanComplete: false`).
 - Account Cloudflare errato può produrre errori `7403` o `7404`.
 - Gli allegati PDF di Guidonia possono contenere informazioni non presenti nell’HTML.
@@ -583,7 +583,7 @@ La catena backend Alberi è stata verificata in produzione il 13 ottobre 2026 co
 
 ### Priorità alta
 
-- verificare la pubblicazione del frontend `0.7.8` build 88 nella PWA pubblica;
+- pubblicare e verificare il frontend `0.7.9` build 89 nella PWA pubblica;
 - completare il backfill fino a `scanComplete: true`;
 - verificare gli eventi futuri trovati per Roma e Guidonia;
 - controllare i falsi positivi Halley;

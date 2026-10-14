@@ -30,10 +30,6 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
 
 .co2-note{margin:5px 2px 10px;color:var(--muted);font-size:.64rem;line-height:1.4}
 .co2-note strong{color:var(--text)}
-.diagnostics{margin:14px 0 8px;border:1px solid var(--line);border-radius:14px;background:rgba(9,25,40,.72);overflow:hidden}
-.diagnostics summary{cursor:pointer;padding:11px 13px;color:var(--muted);font-size:.7rem;font-weight:700;user-select:none}
-.diagnostics[open] summary{border-bottom:1px solid var(--line)}
-.diagnostics pre{margin:0;padding:12px 13px;max-height:320px;overflow:auto;white-space:pre-wrap;word-break:break-word;color:#b8c9d8;font-size:.61rem;line-height:1.45}
 
 /* v0.1.5: basemap chiara e neutra per dare priorità ai dati cromatici */
 .map-card{background:#e8ebed}

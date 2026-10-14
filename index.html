@@ -9,11 +9,12 @@
   <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
   <link rel="stylesheet" href="css/aria-splash.css?v=0.5.14">
-  <link rel="stylesheet" href="css/app.css?v=0.2.0">
+  <link rel="stylesheet" href="css/app.css?v=0.2.1">
   <link rel="stylesheet" href="css/station-list.css?v=0.2.2">
   <link rel="stylesheet" href="css/openaq-world.css?v=0.2.4">
   <link rel="stylesheet" href="css/temperature.css?v=0.3.8">
   <link rel="stylesheet" href="css/trees.css?v=0.6.4">
+  <link rel="stylesheet" href="css/air-forecast.css?v=0.7.9">
   <link rel="stylesheet" href="css/header-overrides.css?v=0.5.19">
   <title>Qualità dell'aria</title>
 </head>
@@ -78,6 +79,7 @@
           <option value="eea" selected>EEA · stazioni</option>
           <option value="arpa">ARPA Lazio</option>
           <option value="openaq">Globale · OpenAQ</option>
+          <option value="forecast">Previsioni qualità dell’aria</option>
           <option value="trees">Alberi · fonti comunali</option>
         </select>
       </label>
@@ -125,6 +127,16 @@
       <button class="tab" data-mode="compare" type="button">Confronto</button>
       <button class="tab" data-mode="difference" type="button">Differenza</button>
     </nav>
+
+    <section id="forecastPanel" class="forecast-panel hidden" aria-labelledby="forecastTitle">
+      <div class="forecast-panel-head">
+        <h2 id="forecastTitle">Previsioni qualità dell’aria</h2>
+        <p id="forecastSubtitle">Previsione per i prossimi cinque giorni</p>
+      </div>
+      <div id="forecastPollutants" class="forecast-pollutants" aria-label="Inquinanti previsionali"></div>
+      <div id="forecastDays" aria-live="polite"></div>
+      <p id="forecastAttribution" class="forecast-attribution"></p>
+    </section>
 
     <section id="comparePanel" class="compare-panel hidden">
       <div><span>Periodo A</span><select id="compareYearA"></select></div>
@@ -221,11 +233,6 @@
     </section>
 
 
-    <details class="diagnostics">
-      <summary>Diagnostica dati ricevuti</summary>
-      <pre id="diagnosticsContent">In attesa del primo caricamento…</pre>
-    </details>
-
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
     <dialog id="treeReportDialog" class="tree-dialog">
@@ -266,7 +273,7 @@
     </dialog>
 
     <footer class="app-footer">
-      v<span id="appVersion" role="button" tabindex="0" aria-label="Versione applicazione">0.7.8</span> · dataset <span id="dataVersion">22</span>
+      v<span id="appVersion" role="button" tabindex="0" aria-label="Versione applicazione">0.7.9</span> · dataset <span id="dataVersion">22</span>
     </footer>
   </main>
 
@@ -277,10 +284,11 @@
   <script src="js/eea-proxy.js?v=0.2.14" defer></script>
   <script src="js/temperature-proxy.js?v=0.3.9" defer></script>
   <script src="js/trees.js?v=0.7.8" defer></script>
-  <script src="js/app.js?v=0.7.8" defer></script>
-  <script src="js/eea-utd.js?v=0.2.16" defer></script>
-  <script src="js/openaq-world.js?v=0.3.8" defer></script>
+  <script src="js/app.js?v=0.7.9" defer></script>
+  <script src="js/eea-utd.js?v=0.2.17" defer></script>
+  <script src="js/openaq-world.js?v=0.3.9" defer></script>
   <script src="js/temperature-overlay.js?v=0.3.9" defer></script>
-  <script src="js/station-list.js?v=0.2.11" defer></script>
+  <script src="js/station-list.js?v=0.2.12" defer></script>
+  <script src="js/air-forecast.js?v=0.7.9" defer></script>
 </body>
 </html>

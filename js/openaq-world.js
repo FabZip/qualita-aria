@@ -16,8 +16,8 @@
   SOURCE_INFO.openaq={
     name:'OpenAQ',
     years:['latest'],
-    description:'<strong>OpenAQ:</strong> monitor di riferimento fissi nell’area attualmente visibile. La mappa carica solo la zona inquadrata e impedisce di allontanarsi fino alla vista mondiale.',
-    hint:'Sposta o ingrandisci la mappa per aggiornare le stazioni OpenAQ. Se una zona contiene troppe stazioni, aumenta lo zoom: il proxy non restituisce risultati parziali.'
+    description:'<strong>OpenAQ:</strong> misure recenti dei monitor fissi presenti nell’area visualizzata.',
+    hint:'Sposta o ingrandisci la mappa per vedere le stazioni della zona. Se l’area è troppo ampia, aumenta lo zoom.'
   };
 
   const baseFillYears=fillYears;
@@ -307,7 +307,7 @@
 
     $('avgLabel').textContent='Media ultimi dati';
     $('countLabel').textContent='Stazioni';
-    $('countUnit').textContent='reference-grade';
+    $('countUnit').textContent='visualizzate';
     $('listTitle').textContent='Stazioni OpenAQ nell’area visibile';
 
     setOpenAqPollutantAvailability(true);
@@ -431,7 +431,7 @@
 
   sourceNotice=function(rows){
     if(!isOpenAQ())return baseSourceNotice(rows);
-    return `OpenAQ · area visibile · reference monitor · ultimo dato ≤ ${maxAgeDays()}gg`
+    return `OpenAQ · ultimo dato disponibile entro ${maxAgeDays()} giorni`
   };
 
   render=async function(){

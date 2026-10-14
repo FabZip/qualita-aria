@@ -306,9 +306,9 @@
       : '';
 
     const dataStatus = row.dataStatus === 'preliminary'
-      ? ' · ◐ preliminare UTD'
+      ? ' · ◐ dato preliminare'
       : row.dataStatus === 'validated'
-        ? ' · ✓ validato'
+        ? ' · ✓ dato validato'
         : '';
 
     const detail = row.kind === 'station'

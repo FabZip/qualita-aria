@@ -125,13 +125,13 @@ const SOURCE_INFO={
   eea:{
     name:'EEA',
     years:EEA_YEARS,
-    description:'<strong>EEA:</strong> statistiche annuali delle stazioni ufficialmente riportate dai Paesi europei. Le richieste passano da un proxy Cloudflare con cache condivisa; il capoluogo serve come punto di partenza e, spostando la mappa, i dati vengono aggiornati per l’area visibile dopo 2 secondi.',
-    hint:"EEA mostra stazioni reali nell’area selezionata o nella zona visibile dopo uno spostamento della mappa. Il refresh parte 2 secondi dopo l’ultimo movimento. La sfumatura è solo una visualizzazione attorno alle stazioni, non una superficie modellata continua."
+    description:'<strong>EEA:</strong> statistiche annuali delle stazioni ufficialmente riportate dai Paesi europei.',
+    hint:'I punti rappresentano stazioni reali. La sfumatura aiuta a leggerne la distribuzione e non descrive una concentrazione uniforme sul territorio.'
   },
   arpa:{
     name:'ARPA Lazio',
     years:ARPA_YEARS,
-    description:'<strong>ARPA Lazio:</strong> stime comunali ufficiali. I dati sono letti dai file annuali pubblicati da ARPA, senza dipendere dal Data API CKAN.',
+    description:'<strong>ARPA Lazio:</strong> stime comunali ufficiali pubblicate annualmente da ARPA.',
     hint:'Il colore copre il territorio amministrativo del comune selezionato per mostrare a quale area si riferisce il dato. Non significa che la concentrazione sia uniforme in ogni punto del territorio.'
   },
   temperature:{
@@ -145,6 +145,7 @@ const SOURCE_INFO={
 function source(){return $('sourceSelect').value}
 function isTemperature(){return state.mode==='temperature'}
 function isTrees(){return source()==='trees'}
+function isForecast(){return source()==='forecast'}
 function eeaScope(){return $('eeaScopeSelect')?.value||'italy'}
 function eeaCity(){return $('eeaCitySelect')?.value||EEA_DEFAULT_CITY}
 function arpaMunicipality(){return $('arpaCitySelect')?.value||'058091'}
@@ -1917,8 +1918,8 @@ function addAirLayers(map,prefix='air'){
     }else{
       const coverage=Number(p.coverage);
       if(Number.isFinite(coverage)&&coverage>0)extra=`<br>Copertura dati: ${fmt(coverage)}%`;
-      if(p.dataStatus==='preliminary')extra+=`<br>◐ Preliminare · EEA UTD/E2a`;
-      if(p.dataStatus==='validated')extra+=`<br>✓ Validato · EEA E1a`;
+      if(p.dataStatus==='preliminary')extra+=`<br>◐ Dato preliminare`;
+      if(p.dataStatus==='validated')extra+=`<br>✓ Dato validato`;
     }
     new maplibregl.Popup({offset:18})
       .setLngLat(f.geometry.coordinates)
@@ -2684,7 +2685,7 @@ function mapRefreshSuppressed(){
 
 async function refreshForVisibleMap(map){
   if(!map||mapRefreshSuppressed())return;
-  if(isTrees())return;
+  if(isTrees()||isForecast())return;
 
   /*
    * La temperatura usa una chiave indipendente dalla cache generica.
@@ -2831,9 +2832,9 @@ function sourceNotice(rows){
   }
   if(source()==='arpa')return'ARPA Lazio · Standard comunali';
   const scope=currentEeaScope().label;
-  if(!rows.length)return`EEA · ${scope} · nessuna statistica annuale P1Y per questa selezione`;
+  if(!rows.length)return`EEA · ${scope} · nessun dato annuale per questa selezione`;
   const unverified=rows.some(r=>normalizeText(r.verification).includes('unverified'));
-  return unverified?`EEA · ${scope} · presenti dati non verificati`:`EEA · ${scope} · statistiche annuali P1Y`
+  return unverified?`EEA · ${scope} · presenti dati non verificati`:`EEA · ${scope} · dati annuali`
 }
 
 async function updateCompareMaps(token=state.renderToken){
@@ -3659,7 +3660,7 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.7.8',{cache:'no-store'}).then(r=>r.json()),
+    fetch('version.json?v=0.7.9',{cache:'no-store'}).then(r=>r.json()),
     fetch('data/version.json?v=0.7.6',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
@@ -3676,7 +3677,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.7.8')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.9')
       .then(reg=>reg.update())
       .catch(console.error)
   }
