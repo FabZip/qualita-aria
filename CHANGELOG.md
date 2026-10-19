@@ -1,3 +1,10 @@
+# 0.7.14
+
+- OpenAQ usa la geolocalizzazione con inquadratura iniziale a livello cittadino e periodo predefinito `Oggi`; rimosso il selettore città.
+- In assenza di misure, la mappa allarga progressivamente la ricerca fino al limite di zoom 5, mantenendo periodo e inquinante.
+- Ripristinato il selettore inquinante con PM2.5, PM10, NO₂, O₃, SO₂ e CO. Il proxy normalizza i gas da ppm/ppb a µg/m³ a 25 °C e 1 atm (volume molare 24,45 L/mol).
+- App `0.7.14` build 94; proxy OpenAQ `0.4.2`, da distribuire prima del frontend.
+
 # 0.7.13
 
 - Aggiunta l’opzione `Oggi` al selettore del periodo OpenAQ, accanto agli intervalli di 7, 15 e 30 giorni.

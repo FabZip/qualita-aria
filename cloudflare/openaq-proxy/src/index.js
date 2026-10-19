@@ -394,9 +394,7 @@ async function latestForLocation(env,ctx,location,pollutant,cutoffIso){
 }
 
 async function viewportLatest(request,env,ctx,origin,cors,pollutant,bbox,maxAgeDays,datetimeMin=''){
-  if(!['pm25','pm10'].includes(pollutant.key)){
-    return badRequest('La mappa OpenAQ supporta per ora PM2.5 e PM10 in µg/m³',cors)
-  }
+  const molarMass={no2:46.0055,o3:48,so2:64.066,co:28.01};
 
   const width=bbox[2]-bbox[0];
   const height=bbox[3]-bbox[1];
@@ -490,6 +488,13 @@ async function viewportLatest(request,env,ctx,origin,cors,pollutant,bbox,maxAgeD
       const datetimeUtc=measurement?.datetime?.utc||'';
       const time=Date.parse(datetimeUtc);
 
+      const sensor=(location.sensors||[]).find(item=>Number(item.id)===Number(measurement.sensorsId));
+      const unit=String(sensor?.parameter?.units||pollutant.units).replace('μ','µ').toLowerCase();
+      let value=Number(measurement.value);
+      if(unit==='ppm'&&molarMass[pollutant.key])value=value*molarMass[pollutant.key]*1000/24.45;
+      else if(unit==='ppb'&&molarMass[pollutant.key])value=value*molarMass[pollutant.key]/24.45;
+      else if(!['µg/m³','ug/m3','µg/m3'].includes(unit))return;
+
       if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||!Number.isFinite(time))return;
 
       latestRows.push({
@@ -502,7 +507,7 @@ async function viewportLatest(request,env,ctx,origin,cors,pollutant,bbox,maxAgeD
         providerName:location.provider?.name||'',
         latitude,
         longitude,
-        value:Number(measurement.value),
+        value,
         datetimeUtc,
         datetimeLocal:measurement.datetime?.local||'',
         ageHours:+((Date.now()-time)/3600_000).toFixed(1),
@@ -522,7 +527,7 @@ async function viewportLatest(request,env,ctx,origin,cors,pollutant,bbox,maxAgeD
         key:pollutant.key,
         id:pollutant.id,
         label:pollutant.label,
-        units:pollutant.units
+        units:'µg/m³'
       },
       bbox,
       period:datetimeMin?'today':'recent',
@@ -870,7 +875,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-openaq-proxy',
-        version:'0.4.1',
+        version:'0.4.2',
         openaqConfigured:Boolean(env.OPENAQ_API_KEY),
         upstream:'OpenAQ API v3',
         worldLatest:true,

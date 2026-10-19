@@ -114,7 +114,10 @@ const ARPA_BOUNDARY_URLS={
 const POLLUTANTS={
   'PM2.5':{eeaCode:6001,label:'PM2.5',arpaPrefix:'PM2.5 media annua'},
   'PM10':{eeaCode:5,label:'PM10',arpaPrefix:'PM10 media annua'},
-  'NO2':{eeaCode:8,label:'NO₂',arpaPrefix:'NO2 media annua'}
+  'NO2':{eeaCode:8,label:'NO₂',arpaPrefix:'NO2 media annua'},
+  O3:{label:'O₃'},
+  SO2:{label:'SO₂'},
+  CO:{label:'CO'}
 };
 
 const EEA_YEARS=Array.from({length:13},(_,i)=>String(2025-i));
@@ -3563,7 +3566,7 @@ function bind(){
       $('compareYearB').value='2020'
     }
     configureSourceUI();
-    if(source()==='openaq')$('eeaCityField')?.classList.remove('hidden');
+    if(source()==='openaq')$('eeaCityField')?.classList.add('hidden');
     if(source()==='eea')focusSelectedEeaScope();
     render()
   });
@@ -3660,7 +3663,7 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.7.13',{cache:'no-store'}).then(r=>r.json()),
+    fetch('version.json?v=0.7.14',{cache:'no-store'}).then(r=>r.json()),
     fetch('data/version.json?v=0.7.6',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
@@ -3677,7 +3680,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.7.13')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.14')
       .then(reg=>reg.update())
       .catch(console.error)
   }

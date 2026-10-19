@@ -58,7 +58,7 @@ const health=await workerContext.worker.fetch(
   {waitUntil(){}}
 );
 const healthPayload=await health.json();
-assert.equal(healthPayload.version,'0.4.1');
+assert.equal(healthPayload.version,'0.4.2');
 assert.equal(healthPayload.viewportToday,true);
 
 const invalidDate=await workerContext.worker.fetch(
@@ -125,5 +125,28 @@ assert.equal(todayPayload.meta.datetimeMin,'2026-10-13T22:00:00.000Z');
 assert.equal(todayPayload.meta.maxAgeDays,null);
 assert.equal(todayPayload.results.length,1);
 assert.equal(todayPayload.results[0].name,'Roma oggi');
+
+const particulateFetch=workerContext.fetch;
+workerContext.fetch=async resource=>{
+  const response=await particulateFetch(resource);
+  const payload=await response.json();
+  if(new URL(String(resource)).pathname==='/v3/locations'){
+    for(const location of payload.results){
+      location.sensors[0].parameter={id:7,units:'ppm'}
+    }
+  }else{
+    payload.results[0].value=.01
+  }
+  return Response.json(payload)
+};
+const gasResponse=await workerContext.worker.fetch(
+  new Request('https://worker.test/v1/viewport/latest?pollutant=no2&bbox=12,41,13,42&datetime_min=2026-10-13T22:00:00.000Z'),
+  {OPENAQ_API_KEY:'test'},
+  {waitUntil(){}}
+);
+assert.equal(gasResponse.status,200);
+const gasPayload=await gasResponse.json();
+assert.equal(gasPayload.meta.pollutant.units,'µg/m³');
+assert.ok(Math.abs(gasPayload.results[0].value-18.8161554)<.0001);
 
 console.log('openaq-today: ok');

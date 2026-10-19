@@ -5,7 +5,11 @@
   const DEFAULT_MAX_AGE_DAYS=30;
   const OPENAQ_POLLUTANTS={
     'PM2.5':{proxy:'pm25',label:'PM2.5'},
-    'PM10':{proxy:'pm10',label:'PM10'}
+    'PM10':{proxy:'pm10',label:'PM10'},
+    NO2:{proxy:'no2',label:'NO₂'},
+    O3:{proxy:'o3',label:'O₃'},
+    SO2:{proxy:'so2',label:'SO₂'},
+    CO:{proxy:'co',label:'CO'}
   };
 
   function startOfTodayIso(now=new Date()){
@@ -44,6 +48,20 @@
   state.openaqSuppressMove=false;
   state.openaqLastViewportKey='';
   state.openaqMoveTimer=null;
+  let entering=true;
+  let locationPromise=null;
+  let searchSequence=0;
+
+  async function locateUser(){
+    if(!locationPromise)locationPromise=new Promise(resolve=>{
+      if(!navigator.geolocation){showToast('Geolocalizzazione non disponibile: sposta la mappa sulla tua zona.');resolve(null);return}
+      navigator.geolocation.getCurrentPosition(position=>resolve(position.coords),()=>{
+        showToast('Posizione non disponibile: consenti la geolocalizzazione oppure sposta la mappa.');resolve(null)
+      },{enableHighAccuracy:false,timeout:10000,maximumAge:300000})
+    });
+    const coords=await locationPromise;
+    if(coords&&isOpenAQ())withMapRefreshSuppressed(()=>state.map.jumpTo({center:[coords.longitude,coords.latitude],zoom:11}));
+  }
 
   SOURCE_INFO.openaq={
     name:'OpenAQ',
@@ -104,7 +122,7 @@
       '<option value="15">Ultimi 15 giorni</option>',
       '<option value="30">Ultimi 30 giorni</option>'
     ].join('');
-    select.value=['today','7','15','30'].includes(previous)?previous:String(DEFAULT_MAX_AGE_DAYS);
+    select.value=!entering&&['today','7','15','30'].includes(previous)?previous:'today';
     select.disabled=false;
     select.title='Periodo entro cui cercare l’ultima misura disponibile della stazione.'
   }
@@ -180,15 +198,21 @@
     const select=$('pollutantSelect');
     if(!select)return;
 
-    const no2=select.querySelector('option[value="NO2"]');
-    if(no2)no2.disabled=active;
+    if(active){
+      const previous=select.value;
+      select.replaceChildren(...Object.entries(OPENAQ_POLLUTANTS).map(([value,item])=>{
+        const option=document.createElement('option');option.value=value;option.textContent=item.label;return option
+      }));
+      select.value=OPENAQ_POLLUTANTS[previous]?previous:'PM2.5';
+      select.dataset.pollutantSet='openaq'
+    }
 
     if(active&&!OPENAQ_POLLUTANTS[select.value]){
       select.value='PM2.5'
     }
 
     select.title=active
-      ?'OpenAQ usa per ora PM2.5 e PM10 in µg/m³, per mantenere unità omogenee.'
+      ?'Inquinante misurato dalle stazioni OpenAQ; disponibilità variabile per zona.'
       :''
   }
 
@@ -320,6 +344,8 @@
 
   configureSourceUI=function(){
     if(!isOpenAQ()||isTemperature()){
+      entering=true;
+      searchSequence++;
       setModeLock(false);
       setOpenAqPollutantAvailability(false);
       applyOpenAqMapConstraints(false);
@@ -334,6 +360,10 @@
     $('sourceDescription').innerHTML=info.description;
     $('eeaScopeField').classList.add('hidden');
     $('singleYearField')?.classList.add('hidden');
+    $('eeaCityField')?.classList.add('hidden');
+    $('arpaCityField')?.classList.add('hidden');
+    $('pollutantField')?.classList.remove('hidden');
+    $('temperatureMetricField')?.classList.add('hidden');
 
     configureRecencyControl();
 
@@ -349,7 +379,7 @@
 
   function parseOpenAQRows(payload){
     const expected=openAqPollutant();
-    if(!expected)throw new Error('OpenAQ supporta per ora PM2.5 e PM10.');
+    if(!expected)throw new Error('Inquinante OpenAQ non supportato.');
 
     const meta=payload?.meta||{};
     const unit=String(meta?.pollutant?.units||'');
@@ -389,7 +419,7 @@
 
   async function fetchOpenAQViewportRows(){
     const pollutant=openAqPollutant();
-    if(!pollutant)throw new Error('OpenAQ supporta per ora PM2.5 e PM10.');
+    if(!pollutant)throw new Error('Inquinante OpenAQ non supportato.');
     if(!globalThis.QualitaAriaOpenAQProxy){
       throw new Error('Client proxy OpenAQ non disponibile.')
     }
@@ -446,7 +476,22 @@
   }
 
   rowsFor=async function(year){
-    if(isOpenAQ())return fetchOpenAQViewportRows();
+    if(isOpenAQ()){
+      const sequence=++searchSequence;
+      if(entering){entering=false;await locateUser()}
+      while(isOpenAQ()&&sequence===searchSequence){
+        const rows=await fetchOpenAQViewportRows();
+        if(!isOpenAQ()||sequence!==searchSequence)return [];
+        if(rows.length)return rows;
+        if(state.map.getZoom()<=OPENAQ_MIN_ZOOM){
+          showToast('Nessuna stazione disponibile nel periodo scelto nell’area esplorata. Prova un altro periodo o inquinante.');
+          return rows
+        }
+        $('loadingText').textContent='Cerco stazioni in un’area più ampia…';
+        withMapRefreshSuppressed(()=>state.map.jumpTo({zoom:Math.max(OPENAQ_MIN_ZOOM,state.map.getZoom()-1)}))
+      }
+      return []
+    }
     return baseRowsFor(year)
   };
 
@@ -474,10 +519,6 @@
      * In OpenAQ la camera appartiene all'utente: cambiare inquinante, periodo
      * o ricaricare i dati non deve rifare fit/jump sulla mappa.
      */
-    const preserveCamera=isOpenAQ()&&state.mode==='map'
-      ?cameraSnapshot(state.map)
-      :null;
-
     await baseRender();
     if(!isOpenAQ()||state.mode!=='map')return;
 
@@ -486,7 +527,7 @@
     // il controllo Periodo (Oggi/7/15/30 giorni).
     $('singleYearField')?.classList.add('hidden');
 
-    restoreOpenAqCamera(state.map,preserveCamera);
+    // La ricerca può aver ampliato la vista per includere le stazioni trovate.
     keepGeographicLabelsVisible(state.map,'air');
 
     const pollutant=openAqPollutant();

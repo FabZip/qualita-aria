@@ -1,3 +1,7 @@
+# A.R.I.A. 0.7.14
+
+OpenAQ parte dalla posizione del dispositivo e dal periodo `Oggi`. La mappa si allarga progressivamente quando mancano misure, fino allo zoom 5. Il selettore propone PM2.5, PM10, NO₂, O₃, SO₂ e CO; la disponibilità dipende dalle stazioni. Se la posizione non è disponibile, è possibile spostare la mappa manualmente. App 0.7.14 build 94 e proxy OpenAQ 0.4.2, da distribuire prima del frontend.
+
 # A.R.I.A. 0.7.13
 
 OpenAQ consente ora di scegliere `Oggi` nel selettore del periodo. La PWA richiede esclusivamente misure registrate dalla mezzanotte locale, mantenendo disponibili anche gli intervalli mobili di 7, 15 e 30 giorni. App 0.7.13 build 93, proxy OpenAQ 0.4.1, dataset invariato alla revisione 22 e Worker ambientale invariato alla versione 0.9.12.

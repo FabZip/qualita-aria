@@ -1,5 +1,7 @@
 # Proxy OpenAQ — Qualità aria
 
+Versione preparata: `0.4.2`. `/v1/viewport/latest` supporta PM2.5, PM10, NO₂, O₃, SO₂ e CO; normalizza ppm/ppb in µg/m³ usando 25 °C e 1 atm (24,45 L/mol). Le unità non riconosciute vengono escluse. Distribuire questa versione prima del frontend `0.7.14`.
+
 Questo Worker protegge `OPENAQ_API_KEY`: la chiave resta come Secret Cloudflare e non viene mai inviata alla PWA.
 
 ## Endpoint esposti
