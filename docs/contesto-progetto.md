@@ -16,15 +16,25 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.22` |
-| Build | `102` |
+| Applicazione | `0.7.23` |
+| Build | `103` |
 | Proxy EEA | `0.2.0` |
-| Worker ambientale | `0.9.12` |
+| Worker ambientale | `0.9.13` |
 | Proxy OpenAQ | `0.4.2` |
 | Dataset arboreo consolidato | `22` |
 | Ultima migrazione D1 prevista | `0011_tree_source_cursor_offsets.sql` |
 
-Il commit e il push della release `0.7.13` sono stati verificati su `main` al commit `96bf262`. Il 13 ottobre 2026 sono stati verificati in produzione il Worker `0.9.12`, le migrazioni D1 `0010`/`0011` e un refresh manuale completo senza errori. La release frontend `0.7.14` build 94 e il proxy OpenAQ `0.4.2`, con geolocalizzazione, ricerca progressiva e sei inquinanti, sono in preparazione e non sono ancora pubblicati.
+La release precedente `0.7.22` è su `main` al commit `32ad49e`. La release `0.7.23` prepara il Worker `0.9.13`: va distribuito dal computer autenticato con `npx wrangler@latest deploy --config ./wrangler.toml` nella cartella `cloudflare/temperature-proxy`. Nessuna nuova migrazione D1 né rotazione dei secret. L'ultimo Worker verificato in produzione resta `0.9.12`; l'ambiente cloud non dispone di autenticazione Cloudflare e non può verificare l'endpoint remoto (accesso HTTP negato).
+
+### Correzioni Alberi 0.7.23 / Worker 0.9.13
+
+- Il parser scartava avvisi futuri non strutturati senza quantità; ora conserva quelli programmati come `planned`/`automatic_pending`, esclusi dai totali. Migliorate date a intervallo, giorni multipli e campi senza anno.
+- Il backfill poteva ritardare la scoperta delle nuove pubblicazioni: ogni refresh ricontrolla la prima pagina di tutte le fonti, con i primi due link fissi e gli altri a rotazione, e mantiene separati i cursori storici. Una data vecchia isolata non interrompe pagine contenenti date correnti. Restano massimo 40 dettagli per refresh, con spazio per i ricontrolli.
+- La revisione dell'evento cancellava le coordinate e rinviava la ricerca al cron. Ora, se le località cambiano, invalida le posizioni vecchie, geocodifica subito l'evento corretto (massimo otto luoghi) e aggiorna lista e mappa. Se cambia solo il titolo conserva coordinate e override. Il frontend non riusa il vecchio tracciato consolidato dopo una correzione manuale.
+- I vecchi eventi `manual_confirmed` senza alcuna coordinata vengono ritentati dopo 24 ore, senza modificare la revisione. I fallimenti di rete restano in coda; indirizzi non risolti o fuori area non ricevono coordinate inventate.
+- Risposte eventi `no-store`, URL frontend aggiornato e stato Programmato visibile anche per eventi senza posizione.
+- Dopo il deploy avviare un refresh con `TREE_ADMIN_TOKEN`, oppure attendere i cron; il completamento progressivo resta indicato da `scanComplete`. Nessuna modifica ai secret.
+- Verifica automatica: 13 file di test superati, compresi database SQLite con tutte le migrazioni, parser, refresh durante backfill, revisione di località senza puntatore, conservazione delle coordinate, errori temporanei e aggiornamento del frontend. Prova Chromium riuscita: evento Guidonia 2025 senza puntatore → correzione località → puntatore presente senza ricaricare la pagina, con risposte simulate. Dry-run Wrangler riuscito con binding `TREE_DB`. Non equivale a una verifica dei dati in produzione.
 
 ## 2. Funzionalità principali
 
@@ -586,11 +596,11 @@ sha256sum qualita-aria-vX.Y.Z-patch.zip
 - pulsante “Installa app” nascosto quando la PWA è già aperta come app;
 - suite di test versionata per parser, cursori, fusione degli eventi e riepiloghi arborei.
 
-La catena backend Alberi è stata verificata in produzione il 13 ottobre 2026 con Worker `0.9.12` e refresh privo di errori. Restano da pubblicare e verificare il frontend `0.7.14` build 94 e il proxy OpenAQ `0.4.2`; prosegue inoltre la verifica progressiva delle funzionalità che dipendono dai dati dinamici.
+La catena backend Alberi è stata verificata in produzione il 13 ottobre 2026 con Worker `0.9.12`. Sono disponibili i commit frontend fino a `0.7.22`; la release `0.7.23` prepara le correzioni descritte nella sezione iniziale. Restano da distribuire e verificare in produzione il Worker ambientale `0.9.13` e il relativo frontend; lo stato del deploy OpenAQ `0.4.2` non è verificabile da questo ambiente.
 
 ## 11. Problemi noti, limitazioni e rischi
 
-- La pubblicazione effettiva del frontend `0.7.14` build 94 e del proxy OpenAQ `0.4.2` è ancora da eseguire e verificare nella PWA pubblica.
+- La pubblicazione effettiva del frontend `0.7.23` build 103 e del Worker ambientale `0.9.13` deve essere verificata nella PWA pubblica; anche il deploy OpenAQ `0.4.2` resta da confermare.
 - Il primo refresh del Worker `0.9.12` è riuscito senza errori, ma il backfill non è ancora completo (`scanComplete: false`).
 - Account Cloudflare errato può produrre errori `7403` o `7404`.
 - Gli allegati PDF di Guidonia possono contenere informazioni non presenti nell’HTML.
@@ -609,7 +619,7 @@ La catena backend Alberi è stata verificata in produzione il 13 ottobre 2026 co
 
 ### Priorità alta
 
-- pubblicare e verificare il proxy OpenAQ `0.4.2` e il frontend `0.7.14` build 94 nella PWA pubblica;
+- distribuire il Worker ambientale `0.9.13`, verificare il frontend `0.7.23` build 103 e confermare il deploy del proxy OpenAQ `0.4.2`;
 - completare il backfill fino a `scanComplete: true`;
 - verificare gli eventi futuri trovati per Roma e Guidonia;
 - controllare i falsi positivi Halley;

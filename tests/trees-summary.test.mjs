@@ -97,4 +97,22 @@ assert.ok(withDistinctSameSource.documentedEvents.some(event=>event.sourceKey===
 assert.equal(withDistinctSameSource.documentedSummary.plantings,610);
 assert.equal(withDistinctSameSource.documentedSummary.decrements,19);
 
+const planned={...pending,id:'dynamic-future',sourceKey:'future',date:'2026-12-20',status:'planned',quantity:null};
+const withFuture=await(await treeStats([planned])).rows('roma','2026');
+assert.equal(withFuture.documentedEvents[0].sourceKey,'future');
+assert.equal(withFuture.documentedSummary.plantings,603);
+assert.equal(withFuture.documentedSummary.decrements,19);
+
+// Una revisione remota non deve riutilizzare la geometria locale della vecchia ubicazione.
+const revised={...localEvent,sourceKey:localEvent.id,id:`dynamic-${localEvent.id}`,locationName:'Via corretta',validation:'manual_confirmed',coordinates:[12.51,41.91],path:undefined};
+const withRevision=await(await treeStats([revised])).rows('roma','2026');
+const corrected=withRevision.documentedEvents.find(event=>event.id===localEvent.id);
+assert.equal(corrected.locationName,'Via corretta');
+assert.equal(corrected.path,null);
+assert.deepEqual([...corrected.coordinates],[12.51,41.91]);
+const unresolvedRevision=await(await treeStats([{...revised,coordinates:undefined}])).rows('roma','2026');
+const unresolved=unresolvedRevision.documentedEvents.find(event=>event.id===localEvent.id);
+assert.equal(unresolved.coordinates,undefined);
+assert.equal(unresolved.path,null);
+
 console.log('trees-summary: ok');

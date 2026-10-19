@@ -94,6 +94,7 @@
       const url=new URL(`${baseUrl}/v1/trees/events`);
       url.searchParams.set('city',cityId);
       url.searchParams.set('year',String(year));
+      url.searchParams.set('v','0.9.13');
       const response=await fetch(url,{mode:'cors',cache:'no-store',headers:{Accept:'application/json'}});
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       const payload=await response.json();
@@ -450,6 +451,10 @@
       consumedRemoteKeys.add(key);
       return{
         ...event,...remote,id:event.id,sourceKey:key,
+        ...(remote.validation==='manual_confirmed'?{
+          ownPath:null,path:remote.path||null,coordinates:remote.coordinates,
+          markerCoordinates:remote.markerCoordinates,markerLocationIndexes:remote.markerLocationIndexes
+        }:{}),
         notes:event.notes,
         source:{publisher:city.source?.publisher||city.name,url:event.sourceUrl}
       }

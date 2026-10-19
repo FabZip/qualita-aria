@@ -53,6 +53,22 @@ assert.equal(future.eventDate,'2026-12-20');
 assert.equal(future.status,'planned');
 assert.equal(future.validation,'automatic_pending');
 
+for(const date of ['dal 20 al 24 dicembre 2026','20 e 21 dicembre 2026','20 dicembre','2026-12-20']){
+  const event=context.classifyTreePage(notice(date),sourceUrl)[0];
+  assert.equal(event.eventDate,'2026-12-20',date);
+  assert.equal(event.status,'planned',date)
+}
+const futureWithoutQuantity=context.classifyTreePage(`
+  <h1>Abbattimenti programmati</h1>
+  <meta property="article:published_time" content="2026-10-01">
+  <p>Gli abbattimenti programmati si svolgeranno il 20 dicembre 2026. Ubicazione: Via Roma</p>
+`,'https://www.comune.roma.it/web/it/notizia/abbattimenti-programmati.page')[0];
+assert.equal(futureWithoutQuantity.eventDate,'2026-12-20');
+assert.equal(futureWithoutQuantity.quantity,null);
+assert.equal(futureWithoutQuantity.status,'planned');
+assert.equal(futureWithoutQuantity.validation,'automatic_pending');
+assert.equal(context.classifyTreePage('<h1>Abbattimenti e manutenzioni</h1><p>1 ottobre 2026</p>','https://www.comune.roma.it/web/it/notizia/generica.page').length,0);
+
 const past=context.classifyTreePage(notice('20 settembre 2026'),sourceUrl)[0];
 assert.equal(past.eventDate,'2026-09-20');
 assert.equal(past.status,'emergency_completed');
@@ -211,6 +227,26 @@ const completedPageCursor=offsetSqlite.prepare("SELECT next_page,next_link_offse
 assert.equal(completedPageCursor.next_page,2);
 assert.equal(completedPageCursor.next_link_offset,0);
 assert.equal(completedPageCursor.page_signature,null);
+
+// Una data vecchia nella pagina non interrompe una pagina contenente avvisi del 2026.
+context.fetch=async resource=>new Response(String(resource).includes('/informazioni-di-servizio.page')
+  ?'<p>1 ottobre 2026</p><p>1 gennaio 2020</p><a href="/web/it/informazione-di-servizio.page?contentId=IDS3333333">Avviso</a>'
+  :'');
+const mixedDates=await context.discoverTreePages(offsetDb);
+assert.equal(mixedDates.cursorUpdates.find(source=>source.sourceId==='roma-service').scanComplete,false);
+
+// La prima pagina viene ricontrollata anche se il cursore è già su pagine storiche.
+context.fetch=async resource=>new Response(String(resource).includes('/informazioni-di-servizio.page')
+  ?Array.from({length:10},(_,i)=>`<a href="/web/it/informazione-di-servizio.page?contentId=IDS${4000000+i}">Avviso</a>`).join('')
+  :'');
+const freshLinks=new Set();
+for(let run=0;run<5;run++){
+  const recent=await context.recentTreePages(new Map(),run);
+  assert.equal(recent.links.length,4);
+  assert.ok(recent.links.some(link=>link.url.includes('IDS4000000')));
+  recent.links.forEach(link=>freshLinks.add(link.url))
+}
+assert.equal(freshLinks.size,10);
 
 const cursorWrites=[];
 const refreshDb={

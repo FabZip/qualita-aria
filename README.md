@@ -1,3 +1,16 @@
+# A.R.I.A. 0.7.23
+
+Gli avvisi arborei programmati vengono conservati anche senza quantità dichiarata; migliorato il riconoscimento delle date e ricontrollate le prime pagine durante il recupero degli archivi. Una revisione della località cerca subito la nuova posizione e aggiorna elenco e puntatori senza cambiare selezione. Le coordinate già approvate restano se cambia soltanto il titolo; nessun punto viene inventato quando la posizione non è risolvibile. App `0.7.23` build 103, Worker ambientale `0.9.13` da distribuire; nessuna nuova migrazione D1 e nessun cambio dei secret.
+
+```bash
+cd /mnt/linux-data/www/qualita-aria
+git pull --ff-only origin main
+cd cloudflare/temperature-proxy
+npx wrangler@latest deploy --config ./wrangler.toml
+```
+
+Dopo il deploy eseguire un refresh arboreo con `TREE_ADMIN_TOKEN` (procedura in [README del Worker](cloudflare/temperature-proxy/README.md#forzare-manualmente-laggiornamento-arboreo)), oppure attendere il cron. Il refresh recupera anche le correzioni manuali già salvate rimaste senza coordinate; gli indirizzi irrisolvibili vengono ritentati dopo almeno 24 ore. `scanComplete: false` richiede ulteriori passaggi per completare l'archivio: non implica che gli avvisi recenti siano esclusi.
+
 # A.R.I.A. 0.7.22
 
 Corretto anche in OpenAQ il nome `MILANO PASCAL CITTÀ STUDI`. Una normalizzazione condivisa gestisce nomi e testi visualizzati da EEA, OpenAQ, ARPA e temperature, compresi elenco, ricerca e cartografia. Accenti già corretti, identificativi e URL restano invariati. App 0.7.22 build 102; nessun nuovo deploy dei Worker.

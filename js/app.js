@@ -3029,9 +3029,7 @@ function treeListHtml(result,year,includeAggregate=true){
       const quantityTitle=Number.isFinite(event.quantity)?`${quantity} alberi`:'Quantità non specificata';
       const eventDetail=located
         ?`${type} · ${statusLabel}${validation}`
-        :event.validation==='manual_confirmed'
-          ?`${type} · ${statusLabel} · geolocalizzazione in attesa`
-          :'da verificare';
+        :`${type} · ${statusLabel}${validation} · posizione non disponibile`;
       return`<div class="tree-event-row" data-tree-event-index="${index}" data-tree-event-id="${safe(event.id)}"><button class="tree-event-focus" type="button" data-tree-focus="${safe(event.id)}" ${located?'':`disabled title="Coordinate non ancora disponibili"`}><span class="tree-list-symbol"><i class="tree-list-icon ${event.eventType==='planting'?'is-planted':'is-cut'} ${event.status==='planned'?'is-planned':''}">${TreeStats.iconSvg(event)}</i><b class="tree-list-quantity" title="${safe(quantityTitle)}">${safe(quantity)}</b></span><span><strong>${safe(event.locationName)}</strong><small>${safe(event.date)}${event.district?` · ${safe(event.district)}`:''}<br>${safe(eventDetail)}${pathDetail}</small></span></button><span class="tree-event-links"><a href="${safeUrl(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a>${reportButton}</span></div>`
     }).join('')}</div>${documentedEvents.length>TREE_EVENTS_PER_PAGE?`<nav class="tree-pagination" data-tree-pagination aria-label="Pagine degli eventi"><button type="button" data-tree-page="prev">Precedente</button><span data-tree-page-status></span><button type="button" data-tree-page="next">Successiva</button></nav>`:''}`
     :'';
@@ -3577,11 +3575,14 @@ async function reviewTreeAdminReport(article,action){
     body={...body,longitude:Number(article.querySelector('[data-admin-lon]').value),latitude:Number(article.querySelector('[data-admin-lat]').value),locationName:article.querySelector('[data-admin-location]').value,geometry}
   }
   const base=await treeApiBase();
+  $('treeAdminStatus').textContent=action==='update_event'?'Salvataggio e ricerca della posizione…':'Salvataggio…';
   const response=await fetch(`${base}/v1/trees/location-reports/review`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${password}`},body:JSON.stringify(body)});
   const result=await response.json();if(!response.ok){showToast(result.error||`HTTP ${response.status}`);return}
   article.remove();
   if(result.notificationEmail){$('treeAdminStatus').innerHTML=`Revisione salvata. <a href="mailto:${encodeURIComponent(result.notificationEmail)}?subject=${encodeURIComponent('A.R.I.A. – esito segnalazione posizione')}">Invia conferma al segnalante</a>.`}
   else $('treeAdminStatus').textContent='Revisione salvata.'
+  if(result.geocoding?.attempted&&result.geocoding.geocoded===0)$('treeAdminStatus').append(' Posizione non trovata: nessun puntatore aggiunto.');
+  if(isTrees()&&action!=='reject')await render();
 }
 
 function bind(){
@@ -3711,7 +3712,7 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.7.22',{cache:'no-store'}).then(r=>r.json()),
+    fetch('version.json?v=0.7.23',{cache:'no-store'}).then(r=>r.json()),
     fetch('data/version.json?v=0.7.6',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
@@ -3728,7 +3729,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.7.22')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.23')
       .then(reg=>reg.update())
       .catch(console.error)
   }

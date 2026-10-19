@@ -1,3 +1,12 @@
+# 0.7.23
+
+- Conservati gli avvisi arborei programmati senza quantità dichiarata, esclusi dai totali degli interventi eseguiti. Riconosciute date ISO, intervalli e giorni multipli, con anno di pubblicazione come fallback nei campi data.
+- Ricontrollate le prime pagine degli archivi a ogni refresh, con rotazione dei link oltre i primi due, senza attendere la conclusione del backfill. Budget riservato al ricontrollo dei vecchi avvisi; date vecchie isolate non interrompono pagine contenenti pubblicazioni dell'anno corrente.
+- Le revisioni delle località avviano subito la geocodifica dell'evento e ricaricano lista e mappa. Titolo e altri metadati non cancellano le coordinate se le località restano uguali; i vecchi tracciati locali non prevalgono sulle correzioni manuali.
+- Ricerca limitata all'area della città, errori temporanei ritentabili e recupero delle correzioni manuali precedenti senza posizione. Risposte degli eventi non memorizzate in cache; stato Programmato visibile anche senza coordinate.
+- App `0.7.23` build 103, cache PWA aggiornata; Worker ambientale `0.9.13` da distribuire, nessuna nuova migrazione o modifica dei secret.
+- Aggiunti test di revisione su SQLite con tutte le migrazioni, refresh durante backfill, geocodifica, conservazione dei puntatori, fusione dei tracciati e aggiornamento dell'interfaccia.
+
 # 0.7.22
 
 - Estesa a OpenAQ la correzione di `MILANO PASCAL CITTÀ STUDI`, prima limitata a EEA.

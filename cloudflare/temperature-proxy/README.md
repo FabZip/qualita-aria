@@ -1,3 +1,18 @@
+# Proxy ambientale 0.9.13
+
+Gli avvisi futuri senza quantità esplicita vengono conservati come `planned`/`automatic_pending`, senza contribuire ai totali eseguiti. Le date supportano anche intervalli e giorni multipli. Ogni refresh ricontrolla fino a quattro link della prima pagina di ciascuna fonte (i primi due e altri a rotazione), continua il backfill e riserva fino a otto dettagli al ricontrollo degli avvisi già acquisiti, mantenendo il limite complessivo di 40 dettagli. L'HTML degli archivi è riutilizzato soltanto all'interno dello stesso refresh.
+
+`update_event` ricalcola immediatamente la posizione dell'evento corretto, fino a otto località; le altre restano in coda. Le coordinate e gli override precedenti vengono cancellati solo se cambia l'elenco delle località. I risultati sono vincolati all'area della città; nessun risultato significa nessun puntatore. Gli errori di rete restano ritentabili. Le revisioni manuali già salvate senza alcuna coordinata vengono riprese dopo almeno 24 ore dal precedente tentativo, dando precedenza agli eventi mai completati. Il frontend ricarica elenco e mappa al termine della revisione; `GET /v1/trees/events` usa `Cache-Control: no-store`.
+
+Distribuire usando esplicitamente la configurazione locale che contiene il binding `TREE_DB` e i due cron:
+
+```bash
+cd cloudflare/temperature-proxy
+npx wrangler@latest deploy --config ./wrangler.toml
+```
+
+Non servono nuove migrazioni né modifiche a `TREE_ADMIN_TOKEN` o `TREE_ADMIN_PASSWORD`. Dopo il deploy, un refresh manuale accelera il recupero degli avvisi e delle correzioni precedenti; può richiedere più esecuzioni. I nuovi campi `recentPagesChecked` e `recentSourceErrors` distinguono il controllo delle prime pagine dall'avanzamento storico. La versione attesa su `/health` è `0.9.13`.
+
 # Proxy ambientale 0.9.12
 
 La release 0.9.12 rende affidabile la scansione progressiva: i cursori avanzano soltanto dopo l’elaborazione riuscita dei dettagli e le pagine con più di 40 link vengono riprese tramite offset e firma persistenti. Corregge inoltre classificazione delle date future, riconoscimento delle quantità, distribuzione del budget fra le fonti e area geografica delle segnalazioni di Guidonia Montecelio. Richiede la migrazione `0011_tree_source_cursor_offsets.sql`.
@@ -123,7 +138,7 @@ unset ARIA_TREE_TOKEN
 
 Il file `data/trees.json` rimane il dataset consolidato di fallback se D1 o il proxy non sono raggiungibili.
 
-Il Worker è identificato dalla versione proxy `0.9.12`.
+Il Worker è identificato dalla versione proxy `0.9.13`.
 
 ### Pubblicazione Worker
 
