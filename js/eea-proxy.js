@@ -136,20 +136,20 @@
       })
     },
 
-    utdFiles({country='IT',city='',pollutant='PM2.5'}={}){
+    utdFiles({country='IT',city='',pollutant='PM2.5',bbox='',year=new Date().getFullYear()}={}){
       return request('/v1/utd/files',{
         country,
         city,
-        pollutant
+        pollutant,year,bbox:Array.isArray(bbox)?bbox.join(','):bbox
       })
     },
 
-    utdFile({country='IT',city='',pollutant='PM2.5',index=0}={}){
+    utdFile({country='IT',city='',pollutant='PM2.5',index=0,bbox='',year=new Date().getFullYear()}={}){
       return binaryRequest('/v1/utd/file',{
         country,
         city,
         pollutant,
-        index
+        index,year,bbox:Array.isArray(bbox)?bbox.join(','):bbox
       })
     }
   }

@@ -3673,7 +3673,7 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.7.18',{cache:'no-store'}).then(r=>r.json()),
+    fetch('version.json?v=0.7.19',{cache:'no-store'}).then(r=>r.json()),
     fetch('data/version.json?v=0.7.6',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
@@ -3690,7 +3690,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.7.18')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.19')
       .then(reg=>reg.update())
       .catch(console.error)
   }

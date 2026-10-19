@@ -1,3 +1,7 @@
+# A.R.I.A. 0.7.19
+
+Corretto il recupero delle misure EEA: il filtro testuale della città poteva restituire zero file anche con stazioni presenti. Il proxy ora cerca il catalogo nazionale e seleziona i file usando le stazioni dell’area geografica; non tronca il catalogo ai primi file. App 0.7.19 build 99. È necessario distribuire il Worker EEA 0.2.0; il frontend segnala esplicitamente un proxy precedente.
+
 # A.R.I.A. 0.7.18
 
 In EEA, `Oggi` mostra l’ultima misura disponibile per stazione anche se precedente alla giornata corrente. Il badge indica l’inquinante seguito da `- ultima misura` e il riquadro Periodo mostra la data più recente tra le stazioni visualizzate. Nell’elenco resta disponibile l’orario di ogni misura; la temperatura continua a riferirsi a oggi. App 0.7.18 build 98, senza modifiche ai Worker.

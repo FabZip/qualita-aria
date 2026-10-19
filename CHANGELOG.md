@@ -1,3 +1,12 @@
+# 0.7.19
+
+- Rimossa la dipendenza dal nome città nella richiesta EEA UTD: il servizio restituisce un catalogo nazionale filtrato per Paese ISO e nome dell’inquinante.
+- Il proxy usa bounding box e metadati per selezionare i file con codici stazione riconoscibili; i file non classificabili vengono conservati e filtrati per sampling point nel browser.
+- Eliminati i troncamenti ai primi 100 file del proxy e 60 del browser; cataloghi oltre il limite di sicurezza di 2000 file producono un errore esplicito. Segnalati anche aggiornamento proxy richiesto e letture parziali.
+- Cache nazionale e binaria separate dalla vecchia cache cittadina; i file binari sono identificati dall’URL effettivo anziché dall’indice.
+- Test con 329 file nazionali e stazione rilevante oltre il vecchio limite, filtro geografico, nomi non classificabili e download coerente.
+- App `0.7.19` build 99; Worker EEA `0.2.0`, da distribuire per attivare la correzione.
+
 # 0.7.18
 
 - Il periodo EEA `Oggi` mostra ora l’ultima misura disponibile per stazione anche quando risale a giornate precedenti, mantenendo esclusi valori futuri e medie giornaliere.

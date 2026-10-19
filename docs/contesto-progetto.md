@@ -16,8 +16,9 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.18` |
-| Build | `98` |
+| Applicazione | `0.7.19` |
+| Build | `99` |
+| Proxy EEA | `0.2.0` |
 | Worker ambientale | `0.9.12` |
 | Proxy OpenAQ | `0.4.2` |
 | Dataset arboreo consolidato | `22` |
@@ -216,6 +217,8 @@ AirQualityDataFlows.latest.AirQualityStatistics
 ```
 
 ### EEA E2a/UTD
+
+Correzione `0.7.19` build 99 / Worker EEA `0.2.0`: verifiche manuali del servizio hanno mostrato che `IT` e `PM2.5` restituiscono file, mentre `cities: ["Milano"]` li azzera. Non è un problema delle coordinate GPS. La richiesta upstream ora omette il filtro città (`cities: []`). Il frontend passa bbox e anno a elenco e download; il proxy usa i metadati dell’area per filtrare i codici stazione nei nomi dei file. I file dal nome non riconoscibile vengono mantenuti e le osservazioni filtrate tramite i sampling point dei metadati. Nessun troncamento ai primi 60/100 file; oltre 2000 viene segnalato un errore. La cache è versionata separatamente e il frontend rifiuta il vecchio contratto senza `meta.spatialSelection`. Occorre distribuire il Worker EEA `0.2.0`; la verifica con servizi reali in questo ambiente resta limitata dall’accesso a workers.dev e dalle credenziali Cloudflare non configurate.
 
 Aggiornamento `0.7.18` build 98: il valore `today` nel selettore Periodo identifica la vista delle ultime misure, senza limite alla giornata corrente. `selectLatestCandidates` sceglie il timestamp orario/subgiornaliero più recente non futuro per sampling point; la fusione conserva il più recente per stazione. Il riquadro Periodo riporta la data massima delle stazioni effettivamente visualizzate; i singoli timestamp restano nell’elenco. Il badge usa `<inquinante> - ultima misura`. Il percorso usa i file disponibili nel catalogo UTD, non garantisce che una stazione trasmetta in tempo reale e non sostituisce dati mancanti con statistiche annuali. La temperatura resta attuale, con estremi previsti di oggi. Questa descrizione sostituisce la limitazione alla giornata della release `0.7.16` riportata di seguito.
 

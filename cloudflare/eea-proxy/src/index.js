@@ -9,7 +9,7 @@ const METADATA_MAX_PAGES=5;
 const EEA_UTD_DATASET=1;
 const EEA_UTD_URL_TTL=21600;
 const EEA_UTD_FILE_TTL=21600;
-const EEA_UTD_MAX_FILES=100;
+const EEA_UTD_MAX_FILES=2000;
 const EEA_UTD_MAX_FILE_BYTES=40*1024*1024;
 
 const POLLUTANTS={
@@ -479,25 +479,45 @@ function parseParquetUrls(text){
     /https?:\/\/[^\s,"']+?\.parquet(?:\?[^\s,"']*)?/gi
   )||[];
 
-  return[...new Set(matches)].slice(0,EEA_UTD_MAX_FILES)
+  const urls=[...new Set(matches)];
+  if(urls.length>EEA_UTD_MAX_FILES)throw new Error('Catalogo EEA troppo grande: nessun file è stato troncato.');
+  return urls
 }
 
-async function utdUrls(ctx,{country,city,pollutant}){
-  const key=internalCacheRequest('utd-urls',{
+function stationCodes(value){
+  return [...String(value||'').toUpperCase().matchAll(/(?:^|[^A-Z0-9])(IT[A-Z0-9]{4,})(?=$|[^A-Z0-9])/g)].map(match=>match[1])
+}
+
+function spatialFileUrls(urls,metadata){
+  if(!metadata.length)return [];
+  const codes=new Set(metadata.flatMap(row=>[
+    row.AirQualityStationEoICode,row.AirQualityStation,row.SampleId
+  ].flatMap(stationCodes)));
+  if(!codes.size)return urls;
+  return urls.filter(url=>{
+    let pathname=new URL(url).pathname;
+    try{pathname=decodeURIComponent(pathname)}catch{}
+    const fileCodes=stationCodes(pathname);
+    // I file con nomi non riconoscibili vanno letti: non presumere che
+    // appartengano a un'altra area e non perderne le osservazioni.
+    return !fileCodes.length||fileCodes.some(code=>codes.has(code))
+  })
+}
+
+async function utdUrls(ctx,{country,city='',pollutant,bbox=null,year=new Date().getUTCFullYear()}){
+  const key=internalCacheRequest('utd-country-urls-v2',{
     country,
-    city,
     pollutant:pollutant.key,
     dataset:EEA_UTD_DATASET
   });
 
   const cached=await cacheJsonGet(key);
-  if(cached?.urls){
-    return{...cached,cache:'HIT'}
-  }
+  let result=cached?.urls?{...cached,cache:'HIT'}:null;
 
+  if(!result){
   const payload={
     countries:[country],
-    cities:[city],
+    cities:[],
     pollutants:[pollutant.key],
     dataset:EEA_UTD_DATASET,
     source:'qualita-aria'
@@ -523,24 +543,36 @@ async function utdUrls(ctx,{country,city,pollutant}){
     throw error
   }
 
-  const result={
+  result={
     urls:parseParquetUrls(text),
     generatedAt:new Date().toISOString(),
     upstreamMs:Date.now()-started,
     country,
-    city,
     pollutant:pollutant.key,
     dataset:'E2a/UTD',
     datasetId:EEA_UTD_DATASET
   };
 
   cacheJsonPut(key,result,ctx,EEA_UTD_URL_TTL);
-  return{...result,cache:'MISS'}
+  result.cache='MISS'
+  }
+  const countryFileCount=result.urls.length;
+  if(!bbox)return{...result,city,countryFileCount,spatialSelection:false};
+  const metadataResult=await metadataResponse(ctx,{}, {country,pollutant,bbox,year});
+  const metadataPayload=await metadataResult.json();
+  if(!metadataResult.ok)throw new Error(metadataPayload.error||'Metadati geografici EEA non disponibili');
+  if(metadataPayload.meta?.truncated)throw new Error('Area troppo ampia: metadati geografici incompleti. Aumenta lo zoom.');
+  const rows=metadataPayload.results||[];
+  return{
+    ...result,city,countryFileCount,spatialSelection:true,
+    spatialStations:rows.length,urls:spatialFileUrls(result.urls,rows)
+  }
 }
 
-async function utdFilesResponse(ctx,cors,{country,city,pollutant}){
+async function utdFilesResponse(ctx,cors,params){
+  const {country,city,pollutant}=params;
   try{
-    const result=await utdUrls(ctx,{country,city,pollutant});
+    const result=await utdUrls(ctx,params);
 
     return json({
       meta:{
@@ -550,6 +582,9 @@ async function utdFilesResponse(ctx,cors,{country,city,pollutant}){
         dataset:'E2a/UTD',
         datasetId:EEA_UTD_DATASET,
         count:result.urls.length,
+        countryFileCount:result.countryFileCount,
+        spatialSelection:result.spatialSelection,
+        spatialStations:result.spatialStations??null,
         cache:result.cache,
         upstreamMs:result.upstreamMs??0,
         generatedAt:result.generatedAt
@@ -577,12 +612,16 @@ async function utdFilesResponse(ctx,cors,{country,city,pollutant}){
   }
 }
 
-async function utdFileResponse(ctx,cors,{country,city,pollutant,index}){
-  const binaryKey=internalCacheRequest('utd-file',{
+async function utdFileResponse(ctx,cors,params){
+  const {country,city,pollutant,index}=params;
+  try{
+  const result=await utdUrls(ctx,params);
+  const target=result.urls[index];
+  if(!target)return json({error:'File EEA UTD non trovato',index,count:result.urls.length},404,cors);
+  const binaryKey=internalCacheRequest('utd-file-v2',{
     country,
-    city,
     pollutant:pollutant.key,
-    index
+    url:target
   });
 
   const cached=await cacheBinaryGet(binaryKey);
@@ -602,18 +641,6 @@ async function utdFileResponse(ctx,cors,{country,city,pollutant,index}){
       }
     })
   }
-
-  try{
-    const result=await utdUrls(ctx,{country,city,pollutant});
-    const target=result.urls[index];
-
-    if(!target){
-      return json({
-        error:'File EEA UTD non trovato',
-        index,
-        count:result.urls.length
-      },404,cors)
-    }
 
     const started=Date.now();
     const upstream=await fetch(target,{
@@ -706,7 +733,8 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-eea-proxy',
-        version:'0.1.0',
+        version:'0.2.0',
+        utdSpatialSelection:true,
         annualValidated:true,
         metadata:true,
         utd:true,
@@ -761,16 +789,20 @@ export default{
       const country=validIso(url.searchParams.get('country')||'IT');
       const city=validCity(url.searchParams.get('city'));
       const pollutant=pollutantParam(url.searchParams.get('pollutant'));
+      const bbox=url.searchParams.has('bbox')?bboxNumbers(url.searchParams.get('bbox')):null;
+      const year=yearParam(url.searchParams.get('year')||new Date().getUTCFullYear());
 
       if(!country)return badRequest('Codice Paese non valido',cors);
-      if(!city)return badRequest('Città EEA non valida',cors);
+      if(!city&&!bbox)return badRequest('Specifica una città o una bounding box EEA valida',cors);
+      if(url.searchParams.has('bbox')&&!bbox)return badRequest('Bounding box non valida',cors);
+      if(!year)return badRequest('Anno non valido',cors);
       if(!pollutant)return badRequest('Inquinante EEA non supportato',cors);
 
       if(url.pathname==='/v1/utd/files'){
         return utdFilesResponse(ctx,cors,{
           country,
           city,
-          pollutant
+          pollutant,bbox,year
         })
       }
 
@@ -786,7 +818,7 @@ export default{
         country,
         city,
         pollutant,
-        index
+        index,bbox,year
       })
     }
 

@@ -5,7 +5,7 @@
   const HYPARQUET_COMPRESSORS_URL='https://cdn.jsdelivr.net/npm/hyparquet-compressors@1.1.1/+esm';
   const UTD_MIN_YEAR=2025;
   const UTD_MIN_COVERAGE=75;
-  const UTD_MAX_FILES=60;
+  const UTD_MAX_FILES=2000;
 
   state.eeaUtdCache=state.eeaUtdCache||new Map();
   state.eeaUtdMetadataCache=state.eeaUtdMetadataCache||new Map();
@@ -528,13 +528,19 @@ WHERE CountryCode='IT'
       transport.files({
         country:'IT',
         city,
-        pollutant
+        pollutant,year,bbox:cityScope.bbox
       }),
       fetchMetadata(year,pollutant),
       loadHyparquet()
     ]);
 
-    const files=(fileResponse.data?.files||[]).slice(0,UTD_MAX_FILES);
+    if(fileResponse.data?.meta?.spatialSelection!==true){
+      throw new Error('Aggiorna il proxy EEA alla versione 0.2.0 per abilitare la ricerca geografica delle misure.')
+    }
+    const files=fileResponse.data?.files||[];
+    if(files.length>UTD_MAX_FILES||Number(fileResponse.data?.meta?.count)>files.length){
+      throw new Error('Catalogo EEA incompleto o troppo grande: impossibile mostrare misure attendibili.')
+    }
     if(!files.length){
       const diagnostic={
         source:'EEA Air Quality Download Service',
@@ -544,8 +550,12 @@ WHERE CountryCode='IT'
         year,pollutant,
         city,
         parquetFiles:0,
+        countryFileCount:fileResponse.data?.meta?.countryFileCount??0,
+        spatialSelection:true,
         metadataRows:metadata.rows.length,
-        note:'Nessun file UTD restituito dal servizio EEA.'
+        note:fileResponse.data?.meta?.countryFileCount>0
+          ?'Catalogo nazionale disponibile, ma nessun file associato alle stazioni nell’area.'
+          :'Nessun file UTD restituito dal servizio EEA.'
       };
       diagnostics(diagnostic);
       const entry={allRows:[],diagnostic};
@@ -557,6 +567,8 @@ WHERE CountryCode='IT'
     let parquetRows=0;
     let acceptedRows=0;
     const fileErrors=[];
+    const acceptedSamples=new Map();
+    let filesProcessed=0;
 
     await mapLimit(files,3,async file=>{
       try{
@@ -564,7 +576,7 @@ WHERE CountryCode='IT'
           country:'IT',
           city,
           pollutant,
-          index:file.index
+          index:file.index,year,bbox:cityScope.bbox
         });
 
         const rows=await parquetTools.parquet.parquetReadObjects({
@@ -574,6 +586,9 @@ WHERE CountryCode='IT'
         parquetRows+=rows.length;
 
         for(const row of rows){
+          const sample=String(rowValue(row,'Samplingpoint','SamplingPoint','samplingpoint','sampling_point','SampleId','sample_id')??'').trim();
+          if(!acceptedSamples.has(sample))acceptedSamples.set(sample,Boolean(metadataForSample(metadata,sample).row));
+          if(!acceptedSamples.get(sample))continue;
           if(addObservation(groups,row,year,today))acceptedRows++
         }
       }catch(err){
@@ -582,10 +597,12 @@ WHERE CountryCode='IT'
           name:file.name,
           error:String(err.message||err)
         })
+      }finally{
+        if(source()==='eea')$('loadingText').textContent=`Lettura misure EEA · file ${++filesProcessed} di ${files.length}`
       }
     });
 
-    if(fileErrors.length===files.length)throw new Error('Impossibile leggere i file EEA UTD. Riprova più tardi.');
+    if(fileErrors.length)throw new Error(`Lettura EEA incompleta: ${fileErrors.length} file non disponibili. Riprova più tardi.`);
     const candidates=today?selectLatestCandidates(groups):selectBestCandidates(groups,year);
     const unmatched=[];
     let lowCoverageSkipped=0;
@@ -656,6 +673,8 @@ WHERE CountryCode='IT'
       year,pollutant,
       datasetId:1,
       parquetFilesReturned:fileResponse.data?.meta?.count??files.length,
+      countryFileCount:fileResponse.data?.meta?.countryFileCount??null,
+      spatialSelection:true,
       parquetFilesProcessed:files.length,
       parquetListEdgeCache:fileResponse.cache||fileResponse.data?.meta?.cache||'UNKNOWN',
       transport:transport.name,
@@ -670,11 +689,12 @@ WHERE CountryCode='IT'
       metadataTruncated:metadata.truncated,
       stationsInCityCache:allRows.length,
       lowCoverageSkipped,
-      minimumCoverage:UTD_MIN_COVERAGE,
+      minimumCoverage:today?null:UTD_MIN_COVERAGE,
       unmatchedSamplingPoints:unmatched.slice(0,20),
       stationCodeFallbackMatches,
       fileErrors:fileErrors.slice(0,10),
-      note:'Media annuale preliminare calcolata da osservazioni E2a/UTD valide. Preferenza automatica per la serie con maggiore copertura; soglia minima 75%.'
+      note:today?'Ultime misure E2a/UTD disponibili per le stazioni nell’area, senza filtro testuale della città.':
+        'Media annuale preliminare calcolata da osservazioni E2a/UTD valide. Preferenza automatica per la serie con maggiore copertura; soglia minima 75%.'
     };
 
     const entry={allRows,diagnostic,savedAt:Date.now()};
