@@ -1,3 +1,7 @@
+# A.R.I.A. 0.7.20
+
+Corretto il nome della stazione EEA `MILANO PASCAL CITTÀ STUDI` nei dati annuali e nelle ultime misure. La normalizzazione gestisce anche risposte del proxy già in cache. App 0.7.20 build 100, senza nuovo deploy dei Worker.
+
 # A.R.I.A. 0.7.19
 
 Corretto il recupero delle misure EEA: il filtro testuale della città poteva restituire zero file anche con stazioni presenti. Il proxy ora cerca il catalogo nazionale e seleziona i file usando le stazioni dell’area geografica; non tronca il catalogo ai primi file. App 0.7.19 build 99. È necessario distribuire il Worker EEA 0.2.0; il frontend segnala esplicitamente un proxy precedente.

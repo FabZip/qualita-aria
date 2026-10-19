@@ -1,3 +1,9 @@
+# 0.7.20
+
+- Corretto il nome EEA `MILANO PASCAL CITT� STUDI` in `MILANO PASCAL CITTÀ STUDI`, anche nelle varianti di codifica alterata e nelle risposte già in cache.
+- Normalizzazione applicata alle ultime misure UTD, alle statistiche annuali dal proxy e al fallback diretto, mantenendo gli identificativi delle stazioni.
+- App `0.7.20` build 100; cache aggiornata, nessuna modifica ai Worker.
+
 # 0.7.19
 
 - Rimossa la dipendenza dal nome città nella richiesta EEA UTD: il servizio restituisce un catalogo nazionale filtrato per Paese ISO e nome dell’inquinante.

@@ -635,7 +635,7 @@ WHERE CountryCode='IT'
 
       const row={
         id:stationId,
-        name:String(meta.AQStationName||meta.AirQualityStation||stationId),
+        name:eeaStationName(meta.AQStationName||meta.AirQualityStation||stationId),
         country:String(meta.CountryCode||'IT').trim(),
         lat,lon,
         value:+candidate.value.toFixed(2),

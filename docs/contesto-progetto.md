@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.19` |
-| Build | `99` |
+| Applicazione | `0.7.20` |
+| Build | `100` |
 | Proxy EEA | `0.2.0` |
 | Worker ambientale | `0.9.12` |
 | Proxy OpenAQ | `0.4.2` |
@@ -217,6 +217,8 @@ AirQualityDataFlows.latest.AirQualityStatistics
 ```
 
 ### EEA E2a/UTD
+
+Patch `0.7.20` build 100: `eeaStationName` corregge la denominazione nota `MILANO PASCAL CITTÀ STUDI` quando contiene il carattere sostitutivo U+FFFD o le varianti mojibake dell’accento. Si applica ai nomi annuali da proxy, al fallback Discodata e alle righe UTD; mantiene codici stazione e prefissi originali. È una normalizzazione mirata di presentazione, non una sostituzione generica dei caratteri sconosciuti. Il Worker EEA resta `0.2.0`, senza necessità di nuovo deploy per questa patch.
 
 Correzione `0.7.19` build 99 / Worker EEA `0.2.0`: verifiche manuali del servizio hanno mostrato che `IT` e `PM2.5` restituiscono file, mentre `cities: ["Milano"]` li azzera. Non è un problema delle coordinate GPS. La richiesta upstream ora omette il filtro città (`cities: []`). Il frontend passa bbox e anno a elenco e download; il proxy usa i metadati dell’area per filtrare i codici stazione nei nomi dei file. I file dal nome non riconoscibile vengono mantenuti e le osservazioni filtrate tramite i sampling point dei metadati. Nessun troncamento ai primi 60/100 file; oltre 2000 viene segnalato un errore. La cache è versionata separatamente e il frontend rifiuta il vecchio contratto senza `meta.spatialSelection`. Occorre distribuire il Worker EEA `0.2.0`; la verifica con servizi reali in questo ambiente resta limitata dall’accesso a workers.dev e dalle credenziali Cloudflare non configurate.
 

@@ -252,6 +252,13 @@ function currentYears(){
     :(isTemperature()?TEMPERATURE_YEARS:SOURCE_INFO[source()].years)
 }
 function normalizeText(v){return String(v??'').toLowerCase().replace(/\s+/g,' ').trim()}
+function eeaStationName(value){
+  const name=String(value??'').normalize('NFC');
+  // Corregge il nome noto anche quando il carattere è già stato perso
+  // dalla fonte o è presente in una vecchia risposta del proxy in cache.
+  return name.replace(/(MILANO\s+PASCAL\s+CITT)(?:\uFFFD|\u00C3\u20AC|\u00C3\u0080)(\s+STUDI)/giu,
+    (_,prefix,suffix)=>`${prefix}${prefix.endsWith('t')?'à':'À'}${suffix}`)
+}
 function fmt(v){return Number(v).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})}
 function avg(rows){return rows.length?rows.reduce((s,r)=>s+r.value,0)/rows.length:0}
 function colorFor(v){if(v<10)return'#35d07f';if(v<20)return'#e6cf43';if(v<30)return'#ff914d';return'#ff5864'}
@@ -721,7 +728,7 @@ async function fetchEeaRows(year,pollutant){
         });
 
         const allRows=Array.isArray(proxied.data?.results)
-          ?proxied.data.results
+          ?proxied.data.results.map(row=>({...row,name:eeaStationName(row.name)}))
           :[];
 
         const meta=proxied.data?.meta||{};
@@ -817,7 +824,7 @@ async function fetchEeaRows(year,pollutant){
 
     const allRows=[...best.entries()].map(([id,{raw:r}])=>({
       id,
-      name:String(r.AQStationName||r.AirQualityStation||id),
+      name:eeaStationName(r.AQStationName||r.AirQualityStation||id),
       country:String(r.CountryCode||''),
       lat:parseNumber(r.Latitude),
       lon:parseNumber(r.Longitude),
@@ -3673,7 +3680,7 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.7.19',{cache:'no-store'}).then(r=>r.json()),
+    fetch('version.json?v=0.7.20',{cache:'no-store'}).then(r=>r.json()),
     fetch('data/version.json?v=0.7.6',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
@@ -3690,7 +3697,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.7.19')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.20')
       .then(reg=>reg.update())
       .catch(console.error)
   }

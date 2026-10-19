@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const source=fs.readFileSync(new URL('../js/app.js',import.meta.url),'utf8');
+const context=vm.createContext({});
+vm.runInContext(source.match(/function eeaStationName\(value\)\{[\s\S]*?\n\}/)[0],context);
+const normalize=context.eeaStationName;
+assert.equal(normalize('**MILANO PASCAL CITT\uFFFD STUDI'),'**MILANO PASCAL CITTÀ STUDI');
+assert.equal(normalize('MILANO PASCAL CITTÃ€ STUDI'),'MILANO PASCAL CITTÀ STUDI');
+assert.equal(normalize('MILANO PASCAL CITTÀ STUDI'),'MILANO PASCAL CITTÀ STUDI');
+assert.equal(normalize('Milano Pascal Citt\uFFFD Studi'),'Milano Pascal Città Studi');
+assert.equal(normalize('ROMA CINECITTÀ'),'ROMA CINECITTÀ');
+assert.equal(normalize('ALTRO NOME \uFFFD'),'ALTRO NOME \uFFFD');
+console.log('eea-station-name: ok');
