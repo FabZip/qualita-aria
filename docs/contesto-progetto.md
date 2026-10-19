@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.14` |
-| Build | `94` |
+| Applicazione | `0.7.15` |
+| Build | `95` |
 | Worker ambientale | `0.9.12` |
 | Proxy OpenAQ | `0.4.2` |
 | Dataset arboreo consolidato | `22` |
@@ -230,6 +230,8 @@ Flusso preliminare dell’anno non consolidato:
 Gli identificativi dei sampling point possono non coincidere direttamente con i metadati. Non modificare prefissi o suffissi senza test di regressione. La mancanza di risultati per una città può dipendere dalla fonte EEA e non dal frontend.
 
 ### OpenAQ
+
+La patch frontend `0.7.15` build 95 corregge il primo caricamento: render concorrenti attendono una sola inizializzazione geografica e la mappa viene ridimensionata prima della lettura del bounding box. Test di regressione in `tests/openaq-location.test.mjs`. Proxy invariato `0.4.2`; patch non ancora pubblicata.
 
 Release preparata `0.7.14` build 94, con proxy `0.4.2` da distribuire: ingresso tramite geolocalizzazione (zoom 11), città nascosta, periodo predefinito `Oggi` e selettore con sei inquinanti. La ricerca allarga la vista di un livello alla volta, fermandosi alla prima area con misure o allo zoom 5; eventuali errori del servizio interrompono la ricerca. Senza autorizzazione alla posizione resta disponibile la navigazione manuale. I gas sono normalizzati a µg/m³ con riferimento a 25 °C e 1 atm.
 

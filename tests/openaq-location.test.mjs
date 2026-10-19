@@ -55,4 +55,20 @@ assert.equal(center.lng,12.5);
 active='eea';context.configureSourceUI();
 active='openaq';context.configureSourceUI();
 assert.equal(node('monthSelect').value,'today');
+
+// Un secondo render durante la richiesta di posizione deve attendere anch’esso.
+let resolveLocation;
+context.navigator.geolocation.getCurrentPosition=success=>{resolveLocation=success};
+const raceContext=vm.createContext({...context,state:{map,mode:'map',openaqCache:new Map()}});
+vm.runInContext(fs.readFileSync(new URL('../js/openaq-world.js',import.meta.url),'utf8'),raceContext);
+raceContext.configureSourceUI();
+queriedZooms.length=0;
+const first=raceContext.rowsFor('latest');
+const second=raceContext.rowsFor('latest');
+assert.equal(queriedZooms.length,0,'Non interrogare la vecchia area durante la geolocalizzazione');
+resolveLocation({coords:{longitude:12.5,latitude:41.9}});
+await first;
+const initialRows=await second;
+assert.equal(initialRows.length,1,'Il render più recente mostra i dati senza cambiare select');
+assert.deepEqual(queriedZooms,[11,10,9]);
 console.log('openaq-location: ok');

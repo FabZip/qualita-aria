@@ -1,3 +1,7 @@
+# A.R.I.A. 0.7.15
+
+Corretto il primo caricamento OpenAQ quando più aggiornamenti si sovrappongono durante la geolocalizzazione. Le richieste attendono la posizione e le dimensioni della mappa vengono aggiornate prima di selezionare l’area. App 0.7.15 build 95; proxy OpenAQ 0.4.2.
+
 # A.R.I.A. 0.7.14
 
 OpenAQ parte dalla posizione del dispositivo e dal periodo `Oggi`. La mappa si allarga progressivamente quando mancano misure, fino allo zoom 5. Il selettore propone PM2.5, PM10, NO₂, O₃, SO₂ e CO; la disponibilità dipende dalle stazioni. Se la posizione non è disponibile, è possibile spostare la mappa manualmente. App 0.7.14 build 94 e proxy OpenAQ 0.4.2, da distribuire prima del frontend.

@@ -1,3 +1,10 @@
+# 0.7.15
+
+- Corretta una concorrenza al primo ingresso in OpenAQ: tutti i render iniziali attendono la stessa geolocalizzazione, evitando richieste sulla vecchia area e ricerche annullate.
+- Aggiornate le dimensioni della mappa prima della richiesta dei dati, anche quando si proviene dalla vista previsionale nascosta.
+- Aggiunto test di regressione con due caricamenti concorrenti durante la geolocalizzazione.
+- App `0.7.15` build 95; proxy OpenAQ invariato alla versione `0.4.2`.
+
 # 0.7.14
 
 - OpenAQ usa la geolocalizzazione con inquadratura iniziale a livello cittadino e periodo predefinito `Oggi`; rimosso il selettore città.

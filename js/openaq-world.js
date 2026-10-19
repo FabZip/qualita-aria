@@ -49,6 +49,7 @@
   state.openaqLastViewportKey='';
   state.openaqMoveTimer=null;
   let entering=true;
+  let entryPromise=null;
   let locationPromise=null;
   let searchSequence=0;
 
@@ -345,6 +346,7 @@
   configureSourceUI=function(){
     if(!isOpenAQ()||isTemperature()){
       entering=true;
+      entryPromise=null;
       searchSequence++;
       setModeLock(false);
       setOpenAqPollutantAvailability(false);
@@ -478,7 +480,17 @@
   rowsFor=async function(year){
     if(isOpenAQ()){
       const sequence=++searchSequence;
-      if(entering){entering=false;await locateUser()}
+      if(entering){
+        // Tutti i render iniziali attendono la stessa posizione: un refresh
+        // della mappa non deve interrogare la vecchia area durante il consenso.
+        if(!entryPromise)entryPromise=locateUser();
+        await entryPromise;
+        if(!isOpenAQ()||sequence!==searchSequence)return [];
+        entering=false
+      }
+      // La mappa può provenire da una sezione nascosta (es. previsioni).
+      // Aggiorna le dimensioni prima di leggere il bounding box.
+      withMapRefreshSuppressed(()=>state.map.resize?.());
       while(isOpenAQ()&&sequence===searchSequence){
         const rows=await fetchOpenAQViewportRows();
         if(!isOpenAQ()||sequence!==searchSequence)return [];
