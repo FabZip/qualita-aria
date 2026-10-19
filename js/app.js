@@ -253,11 +253,7 @@ function currentYears(){
 }
 function normalizeText(v){return String(v??'').toLowerCase().replace(/\s+/g,' ').trim()}
 function eeaStationName(value){
-  const name=String(value??'').normalize('NFC');
-  // Corregge il nome noto anche quando il carattere è già stato perso
-  // dalla fonte o è presente in una vecchia risposta del proxy in cache.
-  return name.replace(/(MILANO\s+PASCAL\s+CITT)(?:\uFFFD|\u00C3\u20AC|\u00C3\u0080)(\s+STUDI)/giu,
-    (_,prefix,suffix)=>`${prefix}${prefix.endsWith('t')?'à':'À'}${suffix}`)
+  return displayText(value)
 }
 function fmt(v){return Number(v).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})}
 function avg(rows){return rows.length?rows.reduce((s,r)=>s+r.value,0)/rows.length:0}
@@ -299,6 +295,7 @@ async function loadEeaCities(){
     console.warn('Elenco capoluoghi non disponibile, uso Roma come fallback.',err)
   }
 
+  cities=cities.map(city=>({...city,name:displayText(city.name)}));
   state.eeaCities=new Map(cities.map(city=>[String(city.id),city]));
 
   const select=$('eeaCitySelect');
@@ -987,7 +984,7 @@ function arpaRecordIdentity(record){
     const n=normalizeArpaKey(k);
     return !/cod|istat/.test(n)&&(n==='nome'||n.includes('comune')||n.includes('denominazione'))
   });
-  const name=String(nameEntry?.[1]??'').trim();
+  const name=displayText(nameEntry?.[1]).trim();
   return{code,name}
 }
 
@@ -1837,7 +1834,7 @@ function toGeoJSON(rows){
     features:rows.map(r=>({
       type:'Feature',
       properties:{
-        id:r.id,name:r.name,value:r.value,label:fmt(r.value),
+        id:r.id,name:displayText(r.name),value:r.value,label:fmt(r.value),
         coverage:r.coverage??'',country:r.country??'',kind:r.kind||'station',
         min:r.min??'',max:r.max??'',provider:r.provider||'',
         dataStatus:r.dataStatus||'',verification:r.verification||'',aggregation:r.aggregation||''
@@ -1852,7 +1849,7 @@ function toDifferenceGeoJSON(rows){
     features:rows.map(r=>({
       type:'Feature',
       properties:{
-        id:r.id,name:r.name,delta:r.value,absDelta:Math.abs(r.value),
+        id:r.id,name:displayText(r.name),delta:r.value,absDelta:Math.abs(r.value),
         label:`${r.value>0?'+':''}${fmt(r.value)}`,
         kind:r.kind||'station'
       },
@@ -3714,7 +3711,7 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.7.21',{cache:'no-store'}).then(r=>r.json()),
+    fetch('version.json?v=0.7.22',{cache:'no-store'}).then(r=>r.json()),
     fetch('data/version.json?v=0.7.6',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
@@ -3731,7 +3728,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.7.21')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.22')
       .then(reg=>reg.update())
       .catch(console.error)
   }

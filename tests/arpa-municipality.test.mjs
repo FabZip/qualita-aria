@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const source=fs.readFileSync(new URL('../js/app.js',import.meta.url),'utf8');
-const context=vm.createContext({});
+const context=vm.createContext({TextDecoder});
+vm.runInContext(fs.readFileSync(new URL('../js/display-text.js',import.meta.url),'utf8'),context);
 for(const name of ['normalizeText','normalizeArpaKey','arpaRecordIdentity','arpaMunicipalityName','findArpaRecord']){
   const declaration=name==='normalizeText'
     ?source.match(/function normalizeText\(v\)\{[^\n]+/)[0]

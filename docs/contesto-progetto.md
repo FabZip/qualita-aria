@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.21` |
-| Build | `101` |
+| Applicazione | `0.7.22` |
+| Build | `102` |
 | Proxy EEA | `0.2.0` |
 | Worker ambientale | `0.9.12` |
 | Proxy OpenAQ | `0.4.2` |
@@ -217,6 +217,8 @@ AirQualityDataFlows.latest.AirQualityStatistics
 ```
 
 ### EEA E2a/UTD
+
+Normalizzazione di presentazione dalla release `0.7.22`: `js/display-text.js`, caricato prima degli altri script, espone `displayText`. Ripristina solo sequenze convertibili in UTF-8 valido con decodifica rigorosa, fino a tre passaggi per doppia codifica. U+FFFD non viene sostituito genericamente: rimane la correzione del nome noto Milano Pascal Città Studi. La funzione è condivisa da EEA, OpenAQ, ARPA, catalogo città, elenco/ricerca, proprietà cartografiche e marker temperatura; non modifica URL, codici stazione, sampling point o valori numerici. I nomi vengono normalizzati anche dopo la cache. Scansione di 51 file runtime/dati: nessun UTF-8 invalido o altra sequenza sospetta rilevata. Test browser OpenAQ con nome corrotto simulato e ricerca `Città`; nessun nuovo deploy Worker richiesto.
 
 Inquadratura dalla release `0.7.21`: il raggio cittadino è 10 km (in precedenza 40), con limite di zoom 11.5 durante il fit. Le previsioni usano zoom 11 quando si seleziona la città. Il filtro è spaziale attorno al centro, non un confine comunale.
 

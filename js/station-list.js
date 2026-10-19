@@ -425,7 +425,9 @@
 
   function setRows(rows,mode,isDiff=false){
     ensureControls();
-    listState.rows = Array.isArray(rows)?rows:[];
+    listState.rows = Array.isArray(rows)?rows.map(row=>({...row,
+      name:displayText(row.name),area:displayText(row.area),provider:displayText(row.provider)
+    })):[];
     listState.mode = mode;
     listState.isDiff = Boolean(isDiff);
     resetSearch();

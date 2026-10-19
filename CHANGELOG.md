@@ -1,3 +1,11 @@
+# 0.7.22
+
+- Estesa a OpenAQ la correzione di `MILANO PASCAL CITTÀ STUDI`, prima limitata a EEA.
+- Aggiunta `js/display-text.js` per normalizzare i testi visualizzati e ripristinare sequenze UTF-8 interpretate come Latin-1/Windows-1252, compresi accenti e apostrofi; i caratteri definitivamente persi vengono corretti soltanto per nomi noti.
+- Normalizzazione condivisa nei nomi OpenAQ/EEA, Comuni ARPA, catalogo città, elenco stazioni, ricerca, dati cartografici e marker temperatura. Identificativi e URL restano invariati.
+- Verificati 51 file applicativi/dati senza UTF-8 invalido o altre sequenze sospette; test di regressione OpenAQ, accenti, Unicode internazionale e doppia codifica.
+- App `0.7.22` build 102, cache PWA aggiornata; nessun nuovo deploy dei Worker.
+
 # 0.7.21
 
 - Inquadratura EEA più ravvicinata alla selezione di una città: raggio da 40 a 10 km; zoom previsionale cittadino portato a 11.

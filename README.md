@@ -1,3 +1,7 @@
+# A.R.I.A. 0.7.22
+
+Corretto anche in OpenAQ il nome `MILANO PASCAL CITTÀ STUDI`. Una normalizzazione condivisa gestisce nomi e testi visualizzati da EEA, OpenAQ, ARPA e temperature, compresi elenco, ricerca e cartografia. Accenti già corretti, identificativi e URL restano invariati. App 0.7.22 build 102; nessun nuovo deploy dei Worker.
+
 # A.R.I.A. 0.7.21
 
 La selezione di una città EEA usa un raggio di 10 km anziché 40; anche le previsioni usano uno zoom cittadino maggiore. Corretto il parser dei CSV ARPA storici, che includeva erroneamente un separatore vuoto, e reso più robusto il riconoscimento del Comune durante i caricamenti paralleli. App 0.7.21 build 101, senza nuovo deploy dei Worker.

@@ -139,7 +139,8 @@
         !Number.isFinite(max)
       )return;
 
-      const normalized={...row,min,mean,max};
+      const normalized={...row,min,mean,max,name:displayText(row.name),
+        sourceTemperature:displayText(row.sourceTemperature),network:displayText(row.network)};
       const popup=new maplibregl.Popup({offset:18})
         .setHTML(popupHtml(normalized,context));
 

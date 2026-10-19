@@ -28,7 +28,7 @@ const map={
   }}
 };
 const context=vm.createContext({
-  Date,console,setTimeout,clearTimeout,
+  Date,console,setTimeout,clearTimeout,TextDecoder,
   document:{querySelectorAll:()=>[],createElement:()=>({})},
   navigator:{geolocation:{getCurrentPosition:success=>success({coords:{longitude:12.5,latitude:41.9}})}},
   state:{map,mode:'map'},SOURCE_INFO:{},$:node,
@@ -38,9 +38,10 @@ const context=vm.createContext({
   QualitaAriaOpenAQProxy:{async viewportLatest(params){
     queriedZooms.push(zoom);
     assert.ok(params.datetimeMin);
-    return{data:{meta:{pollutant:{units:'µg/m³'}},results:zoom<=9?[{locationId:1,latitude:41.8,longitude:12.4,value:12}]:[]}}
+    return{data:{meta:{pollutant:{units:'µg/m³'}},results:zoom<=9?[{locationId:1,name:'**MILANO PASCAL CITT\uFFFD STUDI',latitude:41.8,longitude:12.4,value:12}]:[]}}
   }}
 });
+vm.runInContext(fs.readFileSync(new URL('../js/display-text.js',import.meta.url),'utf8'),context);
 vm.runInContext(fs.readFileSync(new URL('../js/openaq-world.js',import.meta.url),'utf8'),context);
 context.configureSourceUI();
 assert.equal(node('monthSelect').value,'today');
@@ -49,6 +50,7 @@ assert.equal(node('pollutantField').classList.contains('hidden'),false);
 assert.deepEqual(node('pollutantSelect').options.map(item=>item.value),['PM2.5','PM10','NO2','O3','SO2','CO']);
 const rows=await context.rowsFor('latest');
 assert.equal(rows.length,1);
+assert.equal(rows[0].name,'**MILANO PASCAL CITTÀ STUDI');
 assert.deepEqual(queriedZooms,[11,10,9]);
 assert.equal(zoom,9);
 assert.equal(center.lng,12.5);
