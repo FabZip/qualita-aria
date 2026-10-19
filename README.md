@@ -1,3 +1,7 @@
+# A.R.I.A. 0.7.21
+
+La selezione di una città EEA usa un raggio di 10 km anziché 40; anche le previsioni usano uno zoom cittadino maggiore. Corretto il parser dei CSV ARPA storici, che includeva erroneamente un separatore vuoto, e reso più robusto il riconoscimento del Comune durante i caricamenti paralleli. App 0.7.21 build 101, senza nuovo deploy dei Worker.
+
 # A.R.I.A. 0.7.20
 
 Corretto il nome della stazione EEA `MILANO PASCAL CITTÀ STUDI` nei dati annuali e nelle ultime misure. La normalizzazione gestisce anche risposte del proxy già in cache. App 0.7.20 build 100, senza nuovo deploy dei Worker.

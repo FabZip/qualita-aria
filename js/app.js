@@ -27,7 +27,7 @@ const MAP_STYLE='https://tiles.openfreemap.org/styles/positron';
 const TREE_REPORT_SATELLITE_STYLE={version:8,sources:{satellite:{type:'raster',tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],tileSize:256,attribution:'Imagery © Esri, Maxar, Earthstar Geographics e altri contributori'}},layers:[{id:'satellite',type:'raster',source:'satellite'}]};
 const ROME={center:[12.4964,41.9028],zoom:10.2,bbox:[12.15,41.65,12.85,42.15]};
 const EUROPE={center:[10.0,50.0],zoom:3.15,bbox:[-25.0,27.0,45.0,72.0]};
-const EEA_CITY_RADIUS_KM=40;
+const EEA_CITY_RADIUS_KM=10;
 const EEA_DEFAULT_CITY='roma';
 const MAP_REFRESH_DELAY_MS=2000;
 const TEMPERATURE_LAST_COMPLETE_YEAR=new Date().getUTCFullYear()-1;
@@ -201,7 +201,7 @@ function eeaCityScope(city){
       +(lat+latDelta).toFixed(4)
     ],
     center:[lon,lat],
-    zoom:9.2,
+    zoom:11.5,
     country:'IT',
     kind:'city',
     selectedCityInsideViewport:true
@@ -967,19 +967,46 @@ function arpaPositionalMetric(record,headers,pollutant){
 
 function arpaRecordIdentity(record){
   const entries=Object.entries(record||{});
-  const istatEntry=entries.find(([k])=>normalizeArpaKey(k).includes('istat'));
-  const raw=String(istatEntry?.[1]??'').replace(/\D/g,'');
+  const codeEntries=entries.filter(([k])=>{
+    const key=normalizeArpaKey(k);
+    return (key.includes('istat')||/cod(?:ice)?[ _]*comun/.test(key))&&!/provincia|regione/.test(key)
+  });
+  const istatEntry=codeEntries.find(([k])=>normalizeArpaKey(k).includes('comun'))||codeEntries[0];
+  const rawValue=String(istatEntry?.[1]??'').trim();
+  // Accetta codici numerici serializzati come 58091.0 o in notazione
+  // scientifica senza concatenare le cifre decimali al codice ISTAT.
+  const raw=/^\d+$/.test(rawValue)?rawValue:
+    /^\d+(?:\.0+|(?:\.\d+)?e\+?\d+)$/i.test(rawValue)&&Number.isSafeInteger(Number(rawValue))?String(Number(rawValue)):'';
   // ARPA 2025 prefixes the six-digit municipality code with Lazio's
   // two-digit regional code (12): Roma is 12058091 instead of 058091.
   const municipalCode=raw.length===8&&raw.startsWith('12')?raw.slice(2):raw;
-  const code=municipalCode.padStart(6,'0');
+  const padded=municipalCode.padStart(6,'0');
+  const code=/^0(?:56|57|58|59|60)\d{3}$/.test(padded)?padded:'';
 
   const nameEntry=entries.find(([k])=>{
     const n=normalizeArpaKey(k);
-    return n==='nome'||n.includes('comune')||n.includes('denominazione')
+    return !/cod|istat/.test(n)&&(n==='nome'||n.includes('comune')||n.includes('denominazione'))
   });
   const name=String(nameEntry?.[1]??'').trim();
   return{code,name}
+}
+
+function arpaMunicipalityName(value){
+  const name=normalizeText(String(value??'').normalize('NFC')).replace(/[’‘]/g,"'");
+  return name==='roma capitale'?'roma':name
+}
+
+function findArpaRecord(records,code,name){
+  const byCode=records.find(record=>arpaRecordIdentity(record).code===code);
+  if(byCode)return byCode;
+  const expected=arpaMunicipalityName(name|| (code==='058091'?'Roma':''));
+  if(!expected)return undefined;
+  const byName=records.filter(record=>{
+    const identity=arpaRecordIdentity(record);
+    return !identity.code&&arpaMunicipalityName(identity.name)===expected
+  });
+  // Il nome è un ripiego soltanto se il codice manca e la riga è univoca.
+  return byName.length===1?byName[0]:undefined
 }
 
 function isRomeRecord(record){
@@ -988,7 +1015,7 @@ function isRomeRecord(record){
   return identity.code==='058091'||name==='roma'||name==='roma capitale'
 }
 
-function populateArpaMunicipalities(records){
+function populateArpaMunicipalities(records,selected=null){
   const select=$('arpaCitySelect');
   if(!select)return;
   const municipalities=records
@@ -996,6 +1023,10 @@ function populateArpaMunicipalities(records){
     .filter(item=>/^0(?:56|57|58|59|60)\d{3}$/.test(item.code)&&item.name)
     .filter((item,index,all)=>all.findIndex(other=>other.code===item.code)===index)
     .sort((a,b)=>a.name.localeCompare(b.name,'it'));
+  if(selected?.name&&!municipalities.some(item=>item.code===selected.code)){
+    municipalities.push(selected);
+    municipalities.sort((a,b)=>a.name.localeCompare(b.name,'it'))
+  }
   if(!municipalities.length)return;
   const signature=municipalities.map(item=>item.code).join(',');
   if(select.dataset.optionSignature===signature)return;
@@ -1066,10 +1097,10 @@ function fetchWithTimeout(url,options={},timeoutMs=16000){
 
 function csvDelimiter(text){
   const sample=text.split(/\r?\n/).slice(0,15).join('\n');
-  const candidates=[',','','\t'];
+  const candidates=[',',';','\t'];
   return candidates
     .map(d=>({d,count:sample.split(d).length-1}))
-    .sort((a,b)=>b.count-a.count)[0]?.d||''
+    .sort((a,b)=>b.count-a.count)[0]?.d||';'
 }
 
 function parseDelimitedRows(text,delimiter){
@@ -1470,7 +1501,9 @@ function fitArpaScope(map,rows){
 
 async function fetchArpaRows(year,pollutant,silent=false){
   const report=silent?()=>{}:diagnostics;
-  const cacheKey=`${arpaMunicipality()}:${year}:${pollutant}`;
+  const selectedCode=arpaMunicipality();
+  const selectedName=$('arpaCitySelect')?.selectedOptions?.[0]?.textContent||'';
+  const cacheKey=`${selectedCode}:${year}:${pollutant}`;
   if(state.arpaCache.has(cacheKey)){
     const cached=state.arpaCache.get(cacheKey);
     report({...cached.diagnostic,cache:'memory'});
@@ -1492,9 +1525,10 @@ async function fetchArpaRows(year,pollutant,silent=false){
   }
 
   const records=loaded.records||[];
-  const selectedCode=arpaMunicipality();
-  if(!silent)populateArpaMunicipalities(records);
-  const record=records.find(item=>arpaRecordIdentity(item).code===selectedCode);
+  const record=findArpaRecord(records,selectedCode,selectedName);
+  if(!silent&&record&&source()==='arpa'&&arpaMunicipality()===selectedCode){
+    populateArpaMunicipalities(records,{code:selectedCode,name:arpaRecordIdentity(record).name||selectedName})
+  }
   const identity=arpaRecordIdentity(record);
   const municipalityName=identity.name||$('arpaCitySelect')?.selectedOptions?.[0]?.textContent||selectedCode;
 
@@ -3680,7 +3714,7 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.7.20',{cache:'no-store'}).then(r=>r.json()),
+    fetch('version.json?v=0.7.21',{cache:'no-store'}).then(r=>r.json()),
     fetch('data/version.json?v=0.7.6',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
@@ -3697,7 +3731,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.7.20')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.21')
       .then(reg=>reg.update())
       .catch(console.error)
   }

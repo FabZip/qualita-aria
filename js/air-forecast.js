@@ -407,7 +407,7 @@
 
   function focusCity(city){
     if(!state.map||!city)return;
-    withMapRefreshSuppressed(()=>state.map.jumpTo({center:[Number(city.lon),Number(city.lat)],zoom:9.5}))
+    withMapRefreshSuppressed(()=>state.map.jumpTo({center:[Number(city.lon),Number(city.lat)],zoom:11}))
   }
 
   async function renderForecast(){

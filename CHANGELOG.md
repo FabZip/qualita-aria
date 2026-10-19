@@ -1,3 +1,10 @@
+# 0.7.21
+
+- Inquadratura EEA più ravvicinata alla selezione di una città: raggio da 40 a 10 km; zoom previsionale cittadino portato a 11.
+- Corretto il parser CSV ARPA: rimosso il separatore vuoto e ripristinato il punto e virgola, mantenendo virgola e tabulazione.
+- Migliorata la normalizzazione dei codici ISTAT comunali; le righe senza codice possono essere associate tramite nome esatto e univoco. Il Comune richiesto viene conservato durante i download paralleli.
+- App `0.7.21` build 101; cache e test aggiornati. Nessun nuovo deploy dei Worker.
+
 # 0.7.20
 
 - Corretto il nome EEA `MILANO PASCAL CITT� STUDI` in `MILANO PASCAL CITTÀ STUDI`, anche nelle varianti di codifica alterata e nelle risposte già in cache.

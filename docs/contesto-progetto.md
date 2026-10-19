@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.20` |
-| Build | `100` |
+| Applicazione | `0.7.21` |
+| Build | `101` |
 | Proxy EEA | `0.2.0` |
 | Worker ambientale | `0.9.12` |
 | Proxy OpenAQ | `0.4.2` |
@@ -218,6 +218,8 @@ AirQualityDataFlows.latest.AirQualityStatistics
 
 ### EEA E2a/UTD
 
+Inquadratura dalla release `0.7.21`: il raggio cittadino è 10 km (in precedenza 40), con limite di zoom 11.5 durante il fit. Le previsioni usano zoom 11 quando si seleziona la città. Il filtro è spaziale attorno al centro, non un confine comunale.
+
 Patch `0.7.20` build 100: `eeaStationName` corregge la denominazione nota `MILANO PASCAL CITTÀ STUDI` quando contiene il carattere sostitutivo U+FFFD o le varianti mojibake dell’accento. Si applica ai nomi annuali da proxy, al fallback Discodata e alle righe UTD; mantiene codici stazione e prefissi originali. È una normalizzazione mirata di presentazione, non una sostituzione generica dei caratteri sconosciuti. Il Worker EEA resta `0.2.0`, senza necessità di nuovo deploy per questa patch.
 
 Correzione `0.7.19` build 99 / Worker EEA `0.2.0`: verifiche manuali del servizio hanno mostrato che `IT` e `PM2.5` restituiscono file, mentre `cities: ["Milano"]` li azzera. Non è un problema delle coordinate GPS. La richiesta upstream ora omette il filtro città (`cities: []`). Il frontend passa bbox e anno a elenco e download; il proxy usa i metadati dell’area per filtrare i codici stazione nei nomi dei file. I file dal nome non riconoscibile vengono mantenuti e le osservazioni filtrate tramite i sampling point dei metadati. Nessun troncamento ai primi 60/100 file; oltre 2000 viene segnalato un errore. La cache è versionata separatamente e il frontend rifiuta il vecchio contratto senza `meta.spatialSelection`. Occorre distribuire il Worker EEA `0.2.0`; la verifica con servizi reali in questo ambiente resta limitata dall’accesso a workers.dev e dalle credenziali Cloudflare non configurate.
@@ -253,6 +255,8 @@ Release preparata `0.7.14` build 94, con proxy `0.4.2` da distribuire: ingresso 
 Fornisce dati di stazioni fisiche. La select dei Comuni deve riposizionare la mappa e aggiornare le stazioni. La sua paginazione non deve rimanere visibile passando ad Alberi. Il selettore del periodo offre `Oggi`, 7, 15 e 30 giorni: `Oggi` invia al proxy la mezzanotte locale come `datetime_min` e accetta soltanto misure successive a quella soglia.
 
 ### ARPA Lazio
+
+Patch `0.7.21`: il parser CSV riconosce virgola, punto e virgola e tabulazione; il precedente separatore vuoto impediva la separazione corretta delle colonne nei file storici. `arpaRecordIdentity` distingue codici comunali da regione/provincia e normalizza valori decimali/scientifici e prefisso 12. `findArpaRecord` usa il nome esatto e univoco solo se manca un codice valido. La richiesta cattura Comune e nome prima del download; la select conserva il Comune riconosciuto anche quando manca il codice nel file. Test CSV e concorrenza in `tests/arpa-municipality.test.mjs`. La verifica dei file remoti ufficiali resta limitata dalla rete dell’ambiente; test con dati simulati.
 
 La fonte si chiama `ARPA Lazio`, consente di scegliere il Comune e usa Roma come valore iniziale. I codici comunali ARPA a otto cifre vengono normalizzati al codice ISTAT a sei cifre, ad esempio `12058091 → 058091`. Il file 2025 conterrebbe 376 Comuni: **Da verificare** nel dataset corrente.
 
