@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.16` |
-| Build | `96` |
+| Applicazione | `0.7.17` |
+| Build | `97` |
 | Worker ambientale | `0.9.12` |
 | Proxy OpenAQ | `0.4.2` |
 | Dataset arboreo consolidato | `22` |
@@ -216,6 +216,8 @@ AirQualityDataFlows.latest.AirQualityStatistics
 ```
 
 ### EEA E2a/UTD
+
+Correzione preparata `0.7.17` build 97: `Oggi` è un valore di `yearSelect`, nello stesso selettore delle annualità, etichettato `Periodo`. `monthSelect` non viene usato per la vista odierna e resta nascosto. Il selettore Periodo rimane visibile durante la vista Oggi. La scelta di un anno ripristina il flusso annuale; Confronto, Differenza ed Europa ammettono soltanto annualità. Il routing UTD usa il parametro anno `today`, mentre l’overlay meteo riceve separatamente il periodo e l’anno corrente. Test in `tests/eea-period.test.mjs`; verifica browser con passaggio Oggi/2025/Oggi. Patch locale non ancora pubblicata.
 
 La release preparata `0.7.16` build 96 aggiunge `js/eea-current.js`: `Geolocalizza` è la scelta iniziale del catalogo EEA e `Oggi` legge l’ultima osservazione oraria o subgiornaliera compresa tra mezzanotte locale e l’ora corrente. Il percorso annuale resta separato e continua a usare la soglia del 75%. Le serie giornaliere non sono trattate come valori istantanei. L’orario è mostrato nell’elenco stazioni; in assenza di misure odierne non si ripiegano sui dati di ieri.
 

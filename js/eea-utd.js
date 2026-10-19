@@ -698,7 +698,7 @@ WHERE CountryCode='IT'
   }
 
   fetchEeaRows=async function(year,pollutant){
-    if($('monthSelect')?.value==='today'){
+    if(year==='today'){
       if(eeaScope()!=='italy')throw new Error('Per i dati di oggi seleziona Italia e una città.');
       return fetchUtdRows(new Date().getFullYear(),pollutant,true)
     }

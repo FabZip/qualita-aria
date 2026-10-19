@@ -2827,9 +2827,9 @@ function requestTemperatureOverlay(map,year,side='single'){
         map,
         side,
         pollutantSource:source(),
-      period:source()==='eea'?$('monthSelect')?.value:'0',
+        period:source()==='eea'&&year==='today'?'today':'0',
         pollutant:$('pollutantSelect')?.value||null,
-        year,
+        year:source()==='eea'&&year==='today'?new Date().getFullYear():year,
         bbox,
         mode:state.mode
       }
@@ -3673,7 +3673,7 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.7.16',{cache:'no-store'}).then(r=>r.json()),
+    fetch('version.json?v=0.7.17',{cache:'no-store'}).then(r=>r.json()),
     fetch('data/version.json?v=0.7.6',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
@@ -3690,7 +3690,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.7.16')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.17')
       .then(reg=>reg.update())
       .catch(console.error)
   }

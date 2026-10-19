@@ -3,25 +3,47 @@
   const baseConfigure=configureSourceUI;
   const baseRender=render;
   const baseNotice=sourceNotice;
-  let period='today';
+  const baseFillYears=fillYears;
+  let periodInitialized=false;
   let locationPromise=null;
   let renderSequence=0;
 
-  function isCurrent(){return source()==='eea'&&$('monthSelect').value==='today'&&state.mode==='map'}
+  function isCurrent(){return source()==='eea'&&$('yearSelect').value==='today'&&state.mode==='map'}
+
+  function configurePeriods(){
+    if(source()!=='eea'||isTemperature())return;
+    const select=$('yearSelect');
+    const available=eeaScope()==='italy'&&state.mode==='map';
+    const today=select.querySelector('[value="today"]');
+    if(available){
+      if(!today){
+        const old=select.value;
+        const option=document.createElement('option');
+        option.value='today';option.textContent='Oggi';select.prepend(option);
+        select.value=periodInitialized&&old?old:'today'
+      }
+      periodInitialized=true
+    }else if(today){
+      const selected=select.value==='today';today.remove();
+      if(selected)select.value=SOURCE_INFO.eea.years[0]
+    }
+  }
+
+  fillYears=function(){
+    const wasToday=source()==='eea'&&$('yearSelect').value==='today';
+    baseFillYears();configurePeriods();
+    if(wasToday&&eeaScope()==='italy'&&state.mode==='map')$('yearSelect').value='today'
+  };
 
   configureSourceUI=function(){
     const result=baseConfigure();
     if(source()!=='eea'||isTemperature())return result;
-    const select=$('monthSelect');
-    const available=eeaScope()==='italy'&&state.mode==='map';
-    select.innerHTML='<option value="today">Oggi</option><option value="0">Intero anno</option>';
-    select.querySelector('[value="today"]').disabled=!available;
-    select.value=available?period:'0';
-    select.disabled=false;
-    $('monthField').classList.remove('hidden');
-    if(available&&period==='today')$('singleYearField').classList.add('hidden');
-    select.title='Oggi mostra l’ultima misura preliminare ricevuta nella giornata.';
-    $('sourceDescription').innerHTML=available&&period==='today'
+    configurePeriods();
+    $('monthField').classList.add('hidden');
+    $('yearFieldLabel').textContent='Periodo';
+    if(state.mode==='map')$('singleYearField').classList.remove('hidden');
+    $('yearSelect').title='Scegli Oggi per l’ultima misura disponibile o un anno per le statistiche annuali.';
+    $('sourceDescription').innerHTML=isCurrent()
       ?'<strong>EEA:</strong> ultime misure disponibili oggi dalle stazioni. I dati sono preliminari e possono arrivare in ritardo.'
       :SOURCE_INFO.eea.description;
     return result
@@ -54,6 +76,7 @@
 
   render=async function(){
     const sequence=++renderSequence;
+    if(source()==='eea')configureSourceUI();
     if(source()==='eea'&&eeaScope()==='italy'&&eeaCity()==='geolocate'){
       try{
         $('loadingOverlay').classList.remove('hidden');
@@ -73,16 +96,11 @@
     }
     await baseRender();
     if(sequence!==renderSequence||!isCurrent())return;
-    $('singleYearField').classList.add('hidden');
+    $('singleYearField').classList.remove('hidden');
     $('periodValue').textContent='Oggi';
     $('mapBadge').textContent=`${POLLUTANTS[$('pollutantSelect').value].label} · ultima misura di oggi`;
     $('avgLabel').textContent='Media ultimi valori';
     $('mapHint').textContent='Ogni stazione mostra l’ultima misura ricevuta oggi. La disponibilità dipende dai tempi di trasmissione.'
   };
 
-  $('monthSelect').addEventListener('change',()=>{
-    if(source()!=='eea')return;
-    period=$('monthSelect').value;
-    configureSourceUI();render()
-  });
 })();

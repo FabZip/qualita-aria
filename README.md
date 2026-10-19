@@ -1,3 +1,7 @@
+# A.R.I.A. 0.7.17
+
+Il selettore EEA `Periodo` contiene `Oggi` e tutte le annualità disponibili. Rimane visibile anche nella vista odierna; selezionando un anno si torna alle statistiche annuali. Il campo Mese rimane nascosto. App 0.7.17 build 97, senza modifiche ai Worker.
+
 # A.R.I.A. 0.7.16
 
 EEA propone `Geolocalizza` come selezione iniziale e il periodo `Oggi`, con l’ultima misura preliminare della giornata per stazione e il relativo orario. La disponibilità dipende dai tempi di trasmissione EEA. L’overlay meteo odierno mostra minima prevista / temperatura attuale / massima prevista da Open-Meteo; il popup indica l’orario e la natura modellistica dei valori. App 0.7.16 build 96, senza modifiche ai Worker.

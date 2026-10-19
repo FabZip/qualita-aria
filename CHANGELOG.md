@@ -1,3 +1,11 @@
+# 0.7.17
+
+- Corretto il selettore EEA: `Oggi` è aggiunto al controllo che contiene gli anni, etichettato `Periodo`, sempre visibile in modalità Mappa.
+- Eliminata la sostituzione del campo Mese con `Oggi`/`Intero anno`. Le annualità storiche restano disponibili nello stesso controllo; Confronto e Differenza usano soltanto anni.
+- Aggiornato l’instradamento UTD e temperatura per distinguere il periodo `today` dall’anno selezionato.
+- Aggiunto test di regressione del selettore e verificato nel browser il passaggio Oggi → 2025 → Oggi con servizi simulati.
+- App `0.7.17` build 97; cache aggiornata, nessuna modifica ai Worker.
+
 # 0.7.16
 
 - Aggiunta `Geolocalizza` come selezione iniziale delle città EEA, mantenendo il catalogo delle città e gestendo il consenso alla posizione.
