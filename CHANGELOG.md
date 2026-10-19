@@ -1,3 +1,11 @@
+# 0.7.18
+
+- Il periodo EEA `Oggi` mostra ora l’ultima misura disponibile per stazione anche quando risale a giornate precedenti, mantenendo esclusi valori futuri e medie giornaliere.
+- Badge mappa uniformato a `<inquinante> - ultima misura` per PM2.5, PM10 e NO₂.
+- Il riquadro Periodo riporta la data più recente tra le misure visualizzate; le date e gli orari di ciascuna stazione restano nell’elenco. Senza misure disponibili viene mostrato un trattino.
+- L’overlay temperatura continua a mostrare minima e massima previste di oggi e temperatura attuale.
+- App `0.7.18` build 98, cache aggiornata; nessuna modifica ai Worker.
+
 # 0.7.17
 
 - Corretto il selettore EEA: `Oggi` è aggiunto al controllo che contiene gli anni, etichettato `Periodo`, sempre visibile in modalità Mappa.

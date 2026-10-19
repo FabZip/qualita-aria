@@ -1,3 +1,7 @@
+# A.R.I.A. 0.7.18
+
+In EEA, `Oggi` mostra l’ultima misura disponibile per stazione anche se precedente alla giornata corrente. Il badge indica l’inquinante seguito da `- ultima misura` e il riquadro Periodo mostra la data più recente tra le stazioni visualizzate. Nell’elenco resta disponibile l’orario di ogni misura; la temperatura continua a riferirsi a oggi. App 0.7.18 build 98, senza modifiche ai Worker.
+
 # A.R.I.A. 0.7.17
 
 Il selettore EEA `Periodo` contiene `Oggi` e tutte le annualità disponibili. Rimane visibile anche nella vista odierna; selezionando un anno si torna alle statistiche annuali. Il campo Mese rimane nascosto. App 0.7.17 build 97, senza modifiche ai Worker.

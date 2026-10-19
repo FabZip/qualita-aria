@@ -467,14 +467,13 @@ WHERE CountryCode='IT'
     return null
   }
 
-  function selectTodayCandidates(groups,now=new Date()){
-    const midnight=new Date(now);midnight.setHours(0,0,0,0);
+  function selectLatestCandidates(groups,now=new Date()){
     const best=new Map();
     for(const group of groups.values()){
       if(group.kind==='day')continue;
       for(const [key,value] of group.values){
         const time=Date.parse(key.length===13?`${key}:00:00Z`:key);
-        if(!Number.isFinite(time)||time<midnight.getTime()||time>now.getTime())continue;
+        if(!Number.isFinite(time)||time>now.getTime())continue;
         const previous=best.get(group.sample);
         if(!previous||time>previous.time)best.set(group.sample,{
           sample:group.sample,kind:group.kind,value,time,latestAt:new Date(time).toISOString(),
@@ -587,7 +586,7 @@ WHERE CountryCode='IT'
     });
 
     if(fileErrors.length===files.length)throw new Error('Impossibile leggere i file EEA UTD. Riprova più tardi.');
-    const candidates=today?selectTodayCandidates(groups):selectBestCandidates(groups,year);
+    const candidates=today?selectLatestCandidates(groups):selectBestCandidates(groups,year);
     const unmatched=[];
     let lowCoverageSkipped=0;
     let stationCodeFallbackMatches=0;
@@ -758,7 +757,7 @@ WHERE CountryCode='IT'
 
   globalThis.QualitaAriaEEAUTD={
     fetchUtdRows,
-    selectTodayCandidates,
+    selectLatestCandidates,
     loadHyparquet
   }
 })();

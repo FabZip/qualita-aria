@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.17` |
-| Build | `97` |
+| Applicazione | `0.7.18` |
+| Build | `98` |
 | Worker ambientale | `0.9.12` |
 | Proxy OpenAQ | `0.4.2` |
 | Dataset arboreo consolidato | `22` |
@@ -216,6 +216,8 @@ AirQualityDataFlows.latest.AirQualityStatistics
 ```
 
 ### EEA E2a/UTD
+
+Aggiornamento `0.7.18` build 98: il valore `today` nel selettore Periodo identifica la vista delle ultime misure, senza limite alla giornata corrente. `selectLatestCandidates` sceglie il timestamp orario/subgiornaliero più recente non futuro per sampling point; la fusione conserva il più recente per stazione. Il riquadro Periodo riporta la data massima delle stazioni effettivamente visualizzate; i singoli timestamp restano nell’elenco. Il badge usa `<inquinante> - ultima misura`. Il percorso usa i file disponibili nel catalogo UTD, non garantisce che una stazione trasmetta in tempo reale e non sostituisce dati mancanti con statistiche annuali. La temperatura resta attuale, con estremi previsti di oggi. Questa descrizione sostituisce la limitazione alla giornata della release `0.7.16` riportata di seguito.
 
 Correzione preparata `0.7.17` build 97: `Oggi` è un valore di `yearSelect`, nello stesso selettore delle annualità, etichettato `Periodo`. `monthSelect` non viene usato per la vista odierna e resta nascosto. Il selettore Periodo rimane visibile durante la vista Oggi. La scelta di un anno ripristina il flusso annuale; Confronto, Differenza ed Europa ammettono soltanto annualità. Il routing UTD usa il parametro anno `today`, mentre l’overlay meteo riceve separatamente il periodo e l’anno corrente. Test in `tests/eea-period.test.mjs`; verifica browser con passaggio Oggi/2025/Oggi. Patch locale non ancora pubblicata.
 

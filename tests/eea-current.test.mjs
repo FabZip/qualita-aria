@@ -14,12 +14,16 @@ const groups=new Map([
   ['day',{sample:'station-b',kind:'day',values:new Map([[time(0),45]])}],
   ['old',{sample:'station-c',kind:'hour',values:new Map([[time(-1),99]])}]
 ]);
-const rows=context.QualitaAriaEEAUTD.selectTodayCandidates(groups,now);
-assert.equal(rows.length,1);
+const rows=context.QualitaAriaEEAUTD.selectLatestCandidates(groups,now);
+assert.equal(rows.length,2);
 assert.equal(rows[0].sample,'station-a');
 assert.equal(rows[0].value,12);
 assert.equal(rows[0].latestAt,time(2));
 groups.get('hour').values=new Map([[time(1),0]]);
-assert.equal(context.QualitaAriaEEAUTD.selectTodayCandidates(groups,now)[0].value,0);
-assert.equal(context.QualitaAriaEEAUTD.selectTodayCandidates(new Map(),now).length,0);
+assert.equal(context.QualitaAriaEEAUTD.selectLatestCandidates(groups,now)[0].value,0);
+assert.equal(rows[1].latestAt,time(-1));
+assert.equal(rows[1].value,99);
+groups.get('old').values=new Map([[time(-240),42],[time(-48),9]]);
+assert.equal(context.QualitaAriaEEAUTD.selectLatestCandidates(groups,now)[1].value,9);
+assert.equal(context.QualitaAriaEEAUTD.selectLatestCandidates(new Map(),now).length,0);
 console.log('eea-current: ok');

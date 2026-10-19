@@ -7,6 +7,7 @@
   let periodInitialized=false;
   let locationPromise=null;
   let renderSequence=0;
+  let latestMeasurement=null;
 
   function isCurrent(){return source()==='eea'&&$('yearSelect').value==='today'&&state.mode==='map'}
 
@@ -44,7 +45,7 @@
     if(state.mode==='map')$('singleYearField').classList.remove('hidden');
     $('yearSelect').title='Scegli Oggi per l’ultima misura disponibile o un anno per le statistiche annuali.';
     $('sourceDescription').innerHTML=isCurrent()
-      ?'<strong>EEA:</strong> ultime misure disponibili oggi dalle stazioni. I dati sono preliminari e possono arrivare in ritardo.'
+      ?'<strong>EEA:</strong> ultima misura disponibile per ogni stazione, con la relativa data. I dati sono preliminari e possono arrivare in ritardo.'
       :SOURCE_INFO.eea.description;
     return result
   };
@@ -70,7 +71,11 @@
   }
 
   sourceNotice=function(rows){
-    if(isCurrent())return rows.length?'EEA · ultime misure di oggi · dati preliminari':'EEA · nessuna misura di oggi disponibile';
+    if(isCurrent()){
+      const timestamps=rows.map(row=>Date.parse(row.latestAt)).filter(Number.isFinite);
+      latestMeasurement=timestamps.length?new Date(Math.max(...timestamps)):null;
+      return rows.length?'EEA · ultime misure disponibili · dati preliminari':'EEA · nessuna misura disponibile'
+    }
     return baseNotice(rows)
   };
 
@@ -94,13 +99,17 @@
         showToast(error.message);return
       }
     }
+    latestMeasurement=null;
     await baseRender();
     if(sequence!==renderSequence||!isCurrent())return;
     $('singleYearField').classList.remove('hidden');
-    $('periodValue').textContent='Oggi';
-    $('mapBadge').textContent=`${POLLUTANTS[$('pollutantSelect').value].label} · ultima misura di oggi`;
+    $('periodValue').textContent=latestMeasurement
+      ?latestMeasurement.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}):'—';
+    $('periodValue').title=latestMeasurement
+      ?`Misura più recente tra le stazioni visualizzate: ${latestMeasurement.toLocaleString('it-IT')}`:'Nessuna misura disponibile';
+    $('mapBadge').textContent=`${POLLUTANTS[$('pollutantSelect').value].label} - ultima misura`;
     $('avgLabel').textContent='Media ultimi valori';
-    $('mapHint').textContent='Ogni stazione mostra l’ultima misura ricevuta oggi. La disponibilità dipende dai tempi di trasmissione.'
+    $('mapHint').textContent='Ogni stazione mostra la propria ultima misura disponibile. Il periodo indica la data più recente tra le stazioni visualizzate; gli orari delle singole misure sono riportati nell’elenco.'
   };
 
 })();
