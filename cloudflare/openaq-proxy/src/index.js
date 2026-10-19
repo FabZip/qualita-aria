@@ -121,6 +121,11 @@ function validDate(value){
   return Number.isNaN(d.getTime())?null:d.toISOString()
 }
 
+function viewportCutoffIso(maxAgeDays,datetimeMin='',now=Date.now()){
+  if(datetimeMin)return new Date(datetimeMin).toISOString();
+  return new Date(now-maxAgeDays*86400_000).toISOString()
+}
+
 function cacheTtl(route,year=null){
   if(route==='latest')return 900;
   if(route==='world_latest')return 1800;
@@ -347,7 +352,7 @@ function locationTargetSensorIds(location,pollutant){
   )
 }
 
-async function latestForLocation(env,ctx,location,pollutant,cutoffIso,maxAgeDays){
+async function latestForLocation(env,ctx,location,pollutant,cutoffIso){
   const locationId=Number(location.id);
   const targetSensors=locationTargetSensorIds(location,pollutant);
   if(!targetSensors.size)return null;
@@ -355,7 +360,7 @@ async function latestForLocation(env,ctx,location,pollutant,cutoffIso,maxAgeDays
   const cacheRequest=internalCacheRequest('location-latest',{
     location:locationId,
     pollutant:pollutant.id,
-    days:maxAgeDays
+    cutoff:cutoffIso
   });
 
   let payload=await internalJsonCacheGet(cacheRequest);
@@ -388,7 +393,7 @@ async function latestForLocation(env,ctx,location,pollutant,cutoffIso,maxAgeDays
   return{measurement:matches[0],cache}
 }
 
-async function viewportLatest(request,env,ctx,origin,cors,pollutant,bbox,maxAgeDays){
+async function viewportLatest(request,env,ctx,origin,cors,pollutant,bbox,maxAgeDays,datetimeMin=''){
   if(!['pm25','pm10'].includes(pollutant.key)){
     return badRequest('La mappa OpenAQ supporta per ora PM2.5 e PM10 in µg/m³',cors)
   }
@@ -412,8 +417,8 @@ async function viewportLatest(request,env,ctx,origin,cors,pollutant,bbox,maxAgeD
     return response
   }
 
-  const cutoffMs=Date.now()-maxAgeDays*86400_000;
-  const cutoffIso=new Date(cutoffMs).toISOString();
+  const cutoffIso=viewportCutoffIso(maxAgeDays,datetimeMin);
+  const cutoffMs=Date.parse(cutoffIso);
   const stats={discoveryQueries:0,splitApplied:false};
 
   let discovered;
@@ -465,7 +470,7 @@ async function viewportLatest(request,env,ctx,origin,cors,pollutant,bbox,maxAgeD
     const batch=recentCandidates.slice(start,start+8);
     const results=await Promise.all(batch.map(async location=>{
       try{
-        return await latestForLocation(env,ctx,location,pollutant,cutoffIso,maxAgeDays)
+        return await latestForLocation(env,ctx,location,pollutant,cutoffIso)
       }catch(err){
         if(err.status===429)throw err;
         return null
@@ -520,7 +525,9 @@ async function viewportLatest(request,env,ctx,origin,cors,pollutant,bbox,maxAgeD
         units:pollutant.units
       },
       bbox,
-      maxAgeDays,
+      period:datetimeMin?'today':'recent',
+      maxAgeDays:datetimeMin?null:maxAgeDays,
+      datetimeMin:datetimeMin||null,
       generatedAt:new Date().toISOString(),
       locationsDiscovered:allLocations.length,
       recentCandidates:recentCandidates.length,
@@ -863,11 +870,12 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-openaq-proxy',
-        version:'0.4.0',
+        version:'0.4.1',
         openaqConfigured:Boolean(env.OPENAQ_API_KEY),
         upstream:'OpenAQ API v3',
         worldLatest:true,
         viewportLatest:true,
+        viewportToday:true,
         viewportMaxRecentLocations:VIEWPORT_MAX_RECENT_LOCATIONS,
         eeaUtd:true,
         eeaUtdDataset:'E2a/UTD'
@@ -922,7 +930,10 @@ export default{
       });
       if(maxAgeDays===null)return badRequest('max_age_days deve essere compreso tra 1 e 30',cors);
 
-      return viewportLatest(request,env,ctx,origin,cors,pollutant,bbox,maxAgeDays)
+      const datetimeMin=validDate(url.searchParams.get('datetime_min'));
+      if(datetimeMin===null)return badRequest('datetime_min non valido',cors);
+
+      return viewportLatest(request,env,ctx,origin,cors,pollutant,bbox,maxAgeDays,datetimeMin)
     }
 
     if(url.pathname==='/v1/world/latest'){

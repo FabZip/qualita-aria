@@ -7,6 +7,7 @@ Questo Worker protegge `OPENAQ_API_KEY`: la chiave resta come Secret Cloudflare 
 Il Worker non è un proxy generico. Espone solo le operazioni OpenAQ necessarie al progetto:
 
 - `GET /health`
+- `GET /v1/viewport/latest?pollutant=pm25&bbox=12,41,13,42&datetime_min=2026-10-13T22:00:00.000Z`
 - `GET /v1/world/latest?pollutant=pm25&max_age_hours=72`
 - `GET /v1/locations?pollutant=pm25&page=1`
 - `GET /v1/latest?pollutant=pm25&page=1`
@@ -17,6 +18,8 @@ Il Worker non è un proxy generico. Espone solo le operazioni OpenAQ necessarie 
 Gli endpoint `locations` forzano `monitor=true`, `mobile=false` e `limit=1000`, quindi la base per l'app mondiale è costituita dai monitor di riferimento/stazionari.
 
 Inquinanti accettati dal proxy: `pm25`, `pm10`, `no2`, `o3`, `so2`, `co`.
+
+La vista OpenAQ può passare `datetime_min` a `/v1/viewport/latest`. L’opzione `Oggi` usa la mezzanotte locale convertita in ISO; il Worker convalida la data e restituisce soltanto l’ultima misura successiva a quella soglia per ogni stazione.
 
 Nota scientifica: OpenAQ usa unità diverse a seconda del parametro. PM2.5 e PM10 sono esposti normalmente in µg/m³; NO₂/O₃/SO₂/CO possono essere in ppm. La PWA non deve confrontare direttamente valori con unità diverse.
 

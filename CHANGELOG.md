@@ -1,3 +1,11 @@
+# 0.7.13
+
+- Aggiunta l’opzione `Oggi` al selettore del periodo OpenAQ, accanto agli intervalli di 7, 15 e 30 giorni.
+- Il filtro usa la mezzanotte locale come soglia: non include misure di ieri anche quando hanno meno di 24 ore.
+- Esteso il proxy OpenAQ con il parametro validato `datetime_min`; metadati e cache distinguono il filtro odierno dagli intervalli mobili.
+- Aggiunti test automatici per mezzanotte locale, fallback a 30 giorni, soglia del Worker, health check e rifiuto delle date non valide.
+- App aggiornata alla versione `0.7.13` build 93 e proxy OpenAQ alla versione `0.4.1`; dataset e Worker ambientale restano invariati.
+
 # 0.7.12
 
 - Ridisegnata la vista previsionale con un’impostazione originale A.R.I.A.: riepilogo del giorno selezionato, metriche principali e navigazione orizzontale tra i cinque giorni.

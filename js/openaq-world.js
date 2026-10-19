@@ -8,6 +8,38 @@
     'PM10':{proxy:'pm10',label:'PM10'}
   };
 
+  function startOfTodayIso(now=new Date()){
+    const start=new Date(now);
+    start.setHours(0,0,0,0);
+    return start.toISOString()
+  }
+
+  function periodFromValue(value,now=new Date()){
+    if(value==='today'){
+      const datetimeMin=startOfTodayIso(now);
+      return{
+        key:`today:${datetimeMin}`,
+        label:'Oggi',
+        notice:'misure disponibili da oggi alle 00:00',
+        maxAgeDays:null,
+        datetimeMin
+      }
+    }
+
+    const number=Number(value);
+    const days=[7,15,30].includes(number)?number:DEFAULT_MAX_AGE_DAYS;
+    return{
+      key:`days:${days}`,
+      label:`Ultimi ${days} giorni`,
+      notice:`ultimo dato disponibile entro ${days} giorni`,
+      maxAgeDays:days,
+      datetimeMin:''
+    }
+  }
+
+  globalThis.OpenAQPeriod={startOfTodayIso,periodFromValue};
+  if(typeof document==='undefined')return;
+
   state.openaqCache=state.openaqCache||new Map();
   state.openaqSuppressMove=false;
   state.openaqLastViewportKey='';
@@ -35,9 +67,8 @@
     return OPENAQ_POLLUTANTS[$('pollutantSelect').value]||null
   }
 
-  function maxAgeDays(){
-    const value=Number($('monthSelect')?.value);
-    return [7,15,30].includes(value)?value:DEFAULT_MAX_AGE_DAYS
+  function selectedPeriod(){
+    return periodFromValue($('monthSelect')?.value)
   }
 
   function setMonthFieldLabel(text){
@@ -64,17 +95,18 @@
     if(!field||!select)return;
 
     field.classList.remove('hidden');
-    setMonthFieldLabel('Recenza');
+    setMonthFieldLabel('Periodo');
 
-    const previous=Number(select.value);
+    const previous=select.value;
     select.innerHTML=[
+      '<option value="today">Oggi</option>',
       '<option value="7">Ultimi 7 giorni</option>',
       '<option value="15">Ultimi 15 giorni</option>',
       '<option value="30">Ultimi 30 giorni</option>'
     ].join('');
-    select.value=[7,15,30].includes(previous)?String(previous):String(DEFAULT_MAX_AGE_DAYS);
+    select.value=['today','7','15','30'].includes(previous)?previous:String(DEFAULT_MAX_AGE_DAYS);
     select.disabled=false;
-    select.title='Intervallo massimo entro cui cercare l’ultimo dato disponibile della stazione.'
+    select.title='Periodo entro cui cercare l’ultima misura disponibile della stazione.'
   }
 
   function hideUnavailableMonthlyControl(){
@@ -261,7 +293,7 @@
         .split(',')
         .map(value=>Number(value).toFixed(2))
         .join(',');
-      return `${openAqPollutant()?.proxy||'none'}:${maxAgeDays()}:${bbox}`
+      return `${openAqPollutant()?.proxy||'none'}:${selectedPeriod().key}:${bbox}`
     }catch{
       return''
     }
@@ -367,8 +399,8 @@
     }
 
     const bbox=currentViewportBbox();
-    const days=maxAgeDays();
-    const cacheKey=`${pollutant.proxy}:${days}:${bbox}`;
+    const period=selectedPeriod();
+    const cacheKey=`${pollutant.proxy}:${period.key}:${bbox}`;
 
     if(state.openaqCache.has(cacheKey)){
       const cached=state.openaqCache.get(cacheKey);
@@ -379,7 +411,8 @@
     const response=await QualitaAriaOpenAQProxy.viewportLatest({
       pollutant:pollutant.proxy,
       bbox,
-      maxAgeDays:days
+      maxAgeDays:period.maxAgeDays,
+      datetimeMin:period.datetimeMin
     });
 
     const rows=parseOpenAQRows(response.data);
@@ -392,7 +425,9 @@
       pollutant:pollutant.label,
       unit:meta?.pollutant?.units||'µg/m³',
       mode:'latest reference monitors in viewport',
-      maxAgeDays:meta.maxAgeDays||days,
+      period:meta.period||period.key,
+      maxAgeDays:meta.maxAgeDays??period.maxAgeDays,
+      datetimeMin:meta.datetimeMin||period.datetimeMin,
       locationsDiscovered:meta.locationsDiscovered??null,
       recentCandidates:meta.recentCandidates??null,
       staleLocationsSkipped:meta.staleLocationsSkipped??null,
@@ -431,12 +466,12 @@
 
   sourceNotice=function(rows){
     if(!isOpenAQ())return baseSourceNotice(rows);
-    return `OpenAQ · ultimo dato disponibile entro ${maxAgeDays()} giorni`
+    return `OpenAQ · ${selectedPeriod().notice}`
   };
 
   render=async function(){
     /*
-     * In OpenAQ la camera appartiene all'utente: cambiare inquinante, recenza
+     * In OpenAQ la camera appartiene all'utente: cambiare inquinante, periodo
      * o ricaricare i dati non deve rifare fit/jump sulla mappa.
      */
     const preserveCamera=isOpenAQ()&&state.mode==='map'
@@ -448,21 +483,26 @@
 
     // baseRender mostra il campo anno in modalità Mappa: OpenAQ non ha un
     // periodo selezionabile, quindi lo nascondiamo nuovamente. Resta soltanto
-    // il controllo Recenza (7/15/30 giorni).
+    // il controllo Periodo (Oggi/7/15/30 giorni).
     $('singleYearField')?.classList.add('hidden');
 
     restoreOpenAqCamera(state.map,preserveCamera);
     keepGeographicLabelsVisible(state.map,'air');
 
     const pollutant=openAqPollutant();
+    const period=selectedPeriod();
     if(pollutant){
-      $('mapBadge').textContent=`${pollutant.label} · ultimo dato ≤ ${maxAgeDays()}gg`
+      $('mapBadge').textContent=period.datetimeMin
+        ?`${pollutant.label} · misure di oggi`
+        :`${pollutant.label} · ultimo dato ≤ ${period.maxAgeDays}gg`
     }
 
     $('avgLabel').textContent='Media ultimi dati';
-    $('periodValue').textContent=`≤ ${maxAgeDays()}gg`;
+    $('periodValue').textContent=period.datetimeMin?'Oggi':`≤ ${period.maxAgeDays}gg`;
     $('sourceValue').textContent='OpenAQ · area visibile';
-    $('mapHint').textContent=`${SOURCE_INFO.openaq.hint} Sono accettati dati fino a ${maxAgeDays()} giorni fa.`;
+    $('mapHint').textContent=period.datetimeMin
+      ?`${SOURCE_INFO.openaq.hint} Sono mostrate soltanto misure registrate dalla mezzanotte di oggi.`
+      :`${SOURCE_INFO.openaq.hint} Sono accettati dati fino a ${period.maxAgeDays} giorni fa.`;
     state.openaqLastViewportKey=viewportKey()
   };
 

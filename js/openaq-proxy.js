@@ -150,12 +150,14 @@
     viewportLatest({
       pollutant='pm25',
       bbox='',
-      maxAgeDays=30
+      maxAgeDays=30,
+      datetimeMin=''
     }={}){
       return request('/v1/viewport/latest',{
         pollutant,
         bbox,
-        max_age_days:maxAgeDays
+        max_age_days:maxAgeDays,
+        datetime_min:datetimeMin
       })
     },
 

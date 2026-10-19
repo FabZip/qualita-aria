@@ -16,13 +16,14 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.12` |
-| Build | `92` |
+| Applicazione | `0.7.13` |
+| Build | `93` |
 | Worker ambientale | `0.9.12` |
+| Proxy OpenAQ | `0.4.1` |
 | Dataset arboreo consolidato | `22` |
 | Ultima migrazione D1 prevista | `0011_tree_source_cursor_offsets.sql` |
 
-Il commit e il push della release `0.7.11` sono stati verificati su `main` al commit `8d4750a`. Il 13 ottobre 2026 sono stati verificati in produzione il Worker `0.9.12`, le migrazioni D1 `0010`/`0011` e un refresh manuale completo senza errori. La release frontend `0.7.12` build 92, con il nuovo dashboard delle previsioni, è in preparazione e non è ancora pubblicata.
+Il commit e il push della release `0.7.12` sono stati verificati su `main` al commit `1696a71`. Il 13 ottobre 2026 sono stati verificati in produzione il Worker `0.9.12`, le migrazioni D1 `0010`/`0011` e un refresh manuale completo senza errori. La release frontend `0.7.13` build 93 e il proxy OpenAQ `0.4.1`, con il filtro delle misure odierne, sono in preparazione e non sono ancora pubblicati.
 
 ## 2. Funzionalità principali
 
@@ -230,7 +231,7 @@ Gli identificativi dei sampling point possono non coincidere direttamente con i 
 
 ### OpenAQ
 
-Fornisce dati di stazioni fisiche. La select dei Comuni deve riposizionare la mappa e aggiornare le stazioni. La sua paginazione non deve rimanere visibile passando ad Alberi.
+Fornisce dati di stazioni fisiche. La select dei Comuni deve riposizionare la mappa e aggiornare le stazioni. La sua paginazione non deve rimanere visibile passando ad Alberi. Il selettore del periodo offre `Oggi`, 7, 15 e 30 giorni: `Oggi` invia al proxy la mezzanotte locale come `datetime_min` e accetta soltanto misure successive a quella soglia.
 
 ### ARPA Lazio
 
@@ -560,11 +561,11 @@ sha256sum qualita-aria-vX.Y.Z-patch.zip
 - pulsante “Installa app” nascosto quando la PWA è già aperta come app;
 - suite di test versionata per parser, cursori, fusione degli eventi e riepiloghi arborei.
 
-La catena backend Alberi è stata verificata in produzione il 13 ottobre 2026 con Worker `0.9.12` e refresh privo di errori. Resta da pubblicare e verificare nella PWA il frontend `0.7.12` build 92; prosegue inoltre la verifica progressiva delle funzionalità che dipendono dai dati dinamici.
+La catena backend Alberi è stata verificata in produzione il 13 ottobre 2026 con Worker `0.9.12` e refresh privo di errori. Restano da pubblicare e verificare il frontend `0.7.13` build 93 e il proxy OpenAQ `0.4.1`; prosegue inoltre la verifica progressiva delle funzionalità che dipendono dai dati dinamici.
 
 ## 11. Problemi noti, limitazioni e rischi
 
-- La pubblicazione effettiva del frontend `0.7.12` build 92 è ancora da eseguire e verificare nella PWA pubblica.
+- La pubblicazione effettiva del frontend `0.7.13` build 93 e del proxy OpenAQ `0.4.1` è ancora da eseguire e verificare nella PWA pubblica.
 - Il primo refresh del Worker `0.9.12` è riuscito senza errori, ma il backfill non è ancora completo (`scanComplete: false`).
 - Account Cloudflare errato può produrre errori `7403` o `7404`.
 - Gli allegati PDF di Guidonia possono contenere informazioni non presenti nell’HTML.
@@ -583,7 +584,7 @@ La catena backend Alberi è stata verificata in produzione il 13 ottobre 2026 co
 
 ### Priorità alta
 
-- pubblicare e verificare il frontend `0.7.12` build 92 nella PWA pubblica;
+- pubblicare e verificare il proxy OpenAQ `0.4.1` e il frontend `0.7.13` build 93 nella PWA pubblica;
 - completare il backfill fino a `scanComplete: true`;
 - verificare gli eventi futuri trovati per Roma e Guidonia;
 - controllare i falsi positivi Halley;
