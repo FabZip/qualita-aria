@@ -4,6 +4,41 @@
   const markersBySide=new Map();
   const requestIdBySide=new Map();
   const SOURCE_LABELS={arpa:'ARPA Lazio',eea:'EEA'};
+  const todayCache=new Map();
+
+  function todayUrl(bbox){
+    const url=new URL('https://api.open-meteo.com/v1/forecast');
+    url.search=new URLSearchParams({
+      latitude:String((bbox[1]+bbox[3])/2),longitude:String((bbox[0]+bbox[2])/2),
+      current:'temperature_2m',daily:'temperature_2m_min,temperature_2m_max',
+      timezone:'auto',forecast_days:'1',temperature_unit:'celsius'
+    }).toString();
+    return url.toString()
+  }
+
+  function parseTodayForecast(payload){
+    const values=[payload?.daily?.temperature_2m_min?.[0],payload?.current?.temperature_2m,payload?.daily?.temperature_2m_max?.[0]];
+    if(values.some(value=>value===null||value===undefined||!Number.isFinite(Number(value))))return null;
+    if(!Number.isFinite(Number(payload?.latitude))||!Number.isFinite(Number(payload?.longitude)))return null;
+    return{
+      name:'Temperatura · Oggi',latitude:Number(payload.latitude),longitude:Number(payload.longitude),
+      min:Number(values[0]),mean:Number(values[1]),max:Number(values[2]),
+      currentTime:String(payload.current.time||''),sourceTemperature:'Open-Meteo',today:true
+    }
+  }
+
+  async function todayWeather(bbox){
+    const url=todayUrl(bbox);
+    const cached=todayCache.get(url);
+    if(cached&&Date.now()-cached.savedAt<300000)return cached.row;
+    const response=await fetch(url,{headers:{Accept:'application/json'}});
+    if(!response.ok)throw new Error(`Temperatura attuale: HTTP ${response.status}`);
+    const row=parseTodayForecast(await response.json());
+    if(!row)throw new Error('Temperatura attuale non disponibile');
+    todayCache.set(url,{row,savedAt:Date.now()});
+    while(todayCache.size>20)todayCache.delete(todayCache.keys().next().value);
+    return row
+  }
 
   function fmt(value){
     return Number(value).toLocaleString('it-IT',{
@@ -19,6 +54,7 @@
   }
 
   function clearAll(){
+    for(const [side,id] of requestIdBySide)requestIdBySide.set(side,id+1);
     [...markersBySide.keys()].forEach(clearSide);
     setLegend(false)
   }
@@ -41,9 +77,10 @@
   function markerElement(row){
     const el=document.createElement('button');
     el.type='button';
-    el.className='qa-temperature-marker qa-temperature-marker--observed';
+    el.className=`qa-temperature-marker ${row.today?'qa-temperature-marker--forecast':'qa-temperature-marker--observed'}`;
     el.setAttribute(
       'aria-label',
+      row.today?`Minima prevista ${fmt(row.min)}, temperatura attuale ${fmt(row.mean)}, massima prevista ${fmt(row.max)} gradi`:
       `${row.name}: ${fmt(row.min)}, ${fmt(row.mean)}, ${fmt(row.max)} gradi`
     );
 
@@ -60,6 +97,7 @@
   }
 
   function popupHtml(row,context){
+    if(row.today)return `<strong>Temperatura · Oggi</strong><br>Minima prevista: ${fmt(row.min)} °C<br>Attuale: ${fmt(row.mean)} °C<br>Massima prevista: ${fmt(row.max)} °C<br>Aggiornata alle ${String(row.currentTime).slice(11,16)} (ora locale)<br>Stima meteo · <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>`;
     const provider=String(
       row.sourceTemperature||row.network||'Rete meteorologica osservazionale'
     );
@@ -148,6 +186,13 @@
     setLegend(true,{year});
 
     try{
+      if(detail.period==='today'){
+        setLegend(true,{status:'Temperatura · MIN prevista / ATTUALE / MAX prevista · Open-Meteo'});
+        const row=await todayWeather(bbox);
+        if(requestIdBySide.get(side)!==requestId)return;
+        markersBySide.set(side,addMarkers(map,[row],{pollutantSource,side}));
+        return
+      }
       const response=
         await globalThis.QualitaAriaTemperatureProxy?.observed?.({
           pollutantSource,year,bbox
@@ -186,7 +231,7 @@
       markersBySide.set(side,[]);
       setLegend(true,{
         year,
-        status:`Stazioni meteo non disponibili per ${year}`
+        status:detail.period==='today'?'Temperatura attuale non disponibile':`Stazioni meteo non disponibili per ${year}`
       })
     }
   }
@@ -201,6 +246,7 @@
   );
 
   globalThis.QualitaAriaTemperatureOverlay={
+    todayUrl,parseTodayForecast,
     clear:clearAll,
     render:renderOverlay
   }

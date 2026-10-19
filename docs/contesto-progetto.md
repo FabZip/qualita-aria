@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.15` |
-| Build | `95` |
+| Applicazione | `0.7.16` |
+| Build | `96` |
 | Worker ambientale | `0.9.12` |
 | Proxy OpenAQ | `0.4.2` |
 | Dataset arboreo consolidato | `22` |
@@ -216,6 +216,12 @@ AirQualityDataFlows.latest.AirQualityStatistics
 ```
 
 ### EEA E2a/UTD
+
+La release preparata `0.7.16` build 96 aggiunge `js/eea-current.js`: `Geolocalizza` è la scelta iniziale del catalogo EEA e `Oggi` legge l’ultima osservazione oraria o subgiornaliera compresa tra mezzanotte locale e l’ora corrente. Il percorso annuale resta separato e continua a usare la soglia del 75%. Le serie giornaliere non sono trattate come valori istantanei. L’orario è mostrato nell’elenco stazioni; in assenza di misure odierne non si ripiegano sui dati di ieri.
+
+La ricerca UTD attuale è limitata all’Italia: per la posizione si usa il capoluogo più vicino come filtro di catalogo e un raggio di circa 40 km dalla posizione reale. Possono mancare stazioni fuori dal catalogo cittadino restituito dal servizio. `Oggi` è disponibile in modalità Mappa/Italia; Confronto e Differenza mantengono le statistiche annuali. I file UTD del Worker possono restare in cache per sei ore, quindi i dati non sono garantiti in tempo reale. Non è necessario un nuovo deploy dei Worker.
+
+Per EEA/Oggi, `temperature-overlay.js` interroga `api.open-meteo.com/v1/forecast` con `current=temperature_2m` e minima/massima giornaliere, conservando i risultati per cinque minuti. Il valore centrale è la temperatura attuale modellistica, non la media giornaliera né una misura EEA; popup e legenda lo esplicitano. La patch è ancora locale, non pubblicata.
 
 Flusso preliminare dell’anno non consolidato:
 

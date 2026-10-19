@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const context=vm.createContext({Date,URL,URLSearchParams,console,window:{addEventListener(){}}});
+vm.runInContext(fs.readFileSync(new URL('../js/temperature-overlay.js',import.meta.url),'utf8'),context);
+const api=context.QualitaAriaTemperatureOverlay;
+const url=new URL(api.todayUrl([12,41,13,42]));
+assert.equal(url.hostname,'api.open-meteo.com');
+assert.equal(url.searchParams.get('latitude'),'41.5');
+assert.equal(url.searchParams.get('current'),'temperature_2m');
+assert.equal(url.searchParams.get('forecast_days'),'1');
+const payload={latitude:41.5,longitude:12.5,current:{temperature_2m:18,time:'2026-10-19T12:15'},daily:{temperature_2m_min:[10],temperature_2m_max:[24]}};
+const row=api.parseTodayForecast(payload);
+assert.equal(row.min,10);assert.equal(row.mean,18);assert.equal(row.max,24);
+assert.equal(row.today,true);
+assert.equal(api.parseTodayForecast({...payload,current:{temperature_2m:null}}),null);
+assert.equal(api.parseTodayForecast({...payload,current:{temperature_2m:0}}).mean,0);
+console.log('temperature-today: ok');

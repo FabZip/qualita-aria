@@ -1,3 +1,11 @@
+# 0.7.16
+
+- Aggiunta `Geolocalizza` come selezione iniziale delle città EEA, mantenendo il catalogo delle città e gestendo il consenso alla posizione.
+- Aggiunto il periodo `Oggi`: ultima misura UTD disponibile nella giornata locale per ogni stazione, con data e ora. Non si applica la soglia di copertura annuale del 75%; dati mancanti, futuri e medie giornaliere sono esclusi.
+- Per EEA/Oggi la temperatura mostra minima prevista, temperatura attuale e massima prevista tramite Open-Meteo, con indicazione della natura modellistica. Restano disponibili le statistiche annuali.
+- Aggiunti test per selezione delle misure odierne, valori mancanti e temperatura corrente; verificato nel browser il flusso con geolocalizzazione e servizi simulati.
+- App `0.7.16` build 96, cache PWA aggiornata. Nessuna modifica ai Worker.
+
 # 0.7.15
 
 - Corretta una concorrenza al primo ingresso in OpenAQ: tutti i render iniziali attendono la stessa geolocalizzazione, evitando richieste sulla vecchia area e ricerche annullate.

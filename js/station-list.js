@@ -311,6 +311,8 @@
         ? ' · ✓ dato validato'
         : '';
 
+    const timestamp=row.latestAt&&Number.isFinite(Date.parse(row.latestAt))
+      ?` · ${escapeHtml(new Date(row.latestAt).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))}`:'';
     const detail = row.kind === 'station'
       ? `${row.country?`${escapeHtml(row.country)} · `:''}${escapeHtml(row.id || '')}${row.coverage !== null && row.coverage !== undefined?` · copertura ${fmtValue(row.coverage)}%`:''}${dataStatus}`
       : `Comune di Roma${row.zone?` · zona ${escapeHtml(row.zone)}`:''}`;
@@ -325,7 +327,7 @@
 
     return `<div class="station-row${clickable}"${stationRowAttributes(row,index)}>
       <i style="background:${dotColor}"></i>
-      <div><strong>${escapeHtml(row.name)}</strong><small>${detail}</small>${range}</div>
+      <div><strong>${escapeHtml(row.name)}</strong><small>${detail}${timestamp}</small>${range}</div>
       <b>${value}</b>
     </div>`
   }

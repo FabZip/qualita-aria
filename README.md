@@ -1,3 +1,7 @@
+# A.R.I.A. 0.7.16
+
+EEA propone `Geolocalizza` come selezione iniziale e il periodo `Oggi`, con l’ultima misura preliminare della giornata per stazione e il relativo orario. La disponibilità dipende dai tempi di trasmissione EEA. L’overlay meteo odierno mostra minima prevista / temperatura attuale / massima prevista da Open-Meteo; il popup indica l’orario e la natura modellistica dei valori. App 0.7.16 build 96, senza modifiche ai Worker.
+
 # A.R.I.A. 0.7.15
 
 Corretto il primo caricamento OpenAQ quando più aggiornamenti si sovrappongono durante la geolocalizzazione. Le richieste attendono la posizione e le dimensioni della mappa vengono aggiornate prima di selezionare l’area. App 0.7.15 build 95; proxy OpenAQ 0.4.2.

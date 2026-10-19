@@ -156,6 +156,11 @@ function arpaMunicipality(){return $('arpaCitySelect')?.value||'058091'}
 function eeaSelectedScope(){
   if(eeaScope()==='europe')return EEA_SCOPES.europe;
 
+  if(eeaCity()==='geolocate'){
+    if(!state.eeaGeoCity)throw new Error('Consenti la geolocalizzazione oppure seleziona una città.');
+    return eeaCityScope(state.eeaGeoCity)
+  }
+
   const city=state.eeaCities.get(eeaCity())
     ||state.eeaCities.get(EEA_DEFAULT_CITY)
     ||{id:'roma',name:'Roma',lat:ROME.center[1],lon:ROME.center[0]};
@@ -502,11 +507,12 @@ function configureSourceUI(){
 function configureTreeCityOptions(active){
   const select=$('eeaCitySelect');
   if(!select)return;
-  const desired=active
+  let desired=active
     ?Object.values(TREE_CITY_CONFIG).map(city=>({
         id:city.id,name:city.name,lon:city.center[0],lat:city.center[1]
       }))
     :[...state.eeaCities.values()];
+  if(!active&&source()==='eea')desired=[{id:'geolocate',name:'Geolocalizza'},...desired];
   const signature=`${active?'trees':'air'}:${desired.map(city=>city.id).join(',')}`;
   if(select.dataset.optionSignature===signature)return;
   const old=select.value;
@@ -516,7 +522,9 @@ function configureTreeCityOptions(active){
     option.textContent=String(city.name);
     return option
   }));
-  select.value=desired.some(city=>String(city.id)===old)?old:EEA_DEFAULT_CITY;
+  select.value=!active&&source()==='eea'&&select.dataset.eeaDefault!=='true'
+    ?'geolocate':desired.some(city=>String(city.id)===old)?old:EEA_DEFAULT_CITY;
+  if(!active&&source()==='eea')select.dataset.eeaDefault='true';
   select.dataset.optionSignature=signature
 }
 
@@ -2632,6 +2640,7 @@ function fitCurrentScope(map,rows){
 
 function focusSelectedEeaScope(){
   if(source()!=='eea')return;
+  if(eeaCity()==='geolocate'&&!state.eeaGeoCity)return;
 
   withMapRefreshSuppressed(()=>{
     if(state.mode==='compare'){
@@ -2818,6 +2827,7 @@ function requestTemperatureOverlay(map,year,side='single'){
         map,
         side,
         pollutantSource:source(),
+      period:source()==='eea'?$('monthSelect')?.value:'0',
         pollutant:$('pollutantSelect')?.value||null,
         year,
         bbox,
@@ -3663,7 +3673,7 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.7.15',{cache:'no-store'}).then(r=>r.json()),
+    fetch('version.json?v=0.7.16',{cache:'no-store'}).then(r=>r.json()),
     fetch('data/version.json?v=0.7.6',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
@@ -3680,7 +3690,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.7.15')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.16')
       .then(reg=>reg.update())
       .catch(console.error)
   }

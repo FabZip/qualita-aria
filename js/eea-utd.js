@@ -222,7 +222,7 @@ WHERE CountryCode='IT'
 
   async function fetchMetadata(year,pollutant){
     const cityScope=utdCityScope();
-    const key=`${eeaCity()}:${year}:${pollutant}:metadata`;
+    const key=`${eeaCity()}:${cityScope.bbox.join(',')}:${year}:${pollutant}:metadata`;
 
     if(state.eeaUtdMetadataCache.has(key)){
       return state.eeaUtdMetadataCache.get(key)
@@ -299,13 +299,15 @@ WHERE CountryCode='IT'
     return result
   }
 
-  function addObservation(groups,row,year){
+  function addObservation(groups,row,year,today=false){
     if(!isValidObservation(row))return false;
 
     const ms=parseTime(rowValue(row,'Start','start','DatetimeBegin','datetimeBegin')??rowValue(row,'End','end','DatetimeEnd','datetimeEnd'));
-    if(ms===null||new Date(ms).getUTCFullYear()!==Number(year))return false;
+    if(ms===null||(!today&&new Date(ms).getUTCFullYear()!==Number(year)))return false;
 
-    const rawValue=Number(rowValue(row,'Value','value','Concentration','concentration'));
+    const raw=rowValue(row,'Value','value','Concentration','concentration');
+    if(raw===null||raw===undefined||String(raw).trim()==='')return false;
+    const rawValue=Number(raw);
     if(!Number.isFinite(rawValue)||rawValue<0)return false;
 
     const unit=rowValue(row,'Unit','unit');
@@ -465,11 +467,31 @@ WHERE CountryCode='IT'
     return null
   }
 
-  async function fetchUtdRows(year,pollutant){
+  function selectTodayCandidates(groups,now=new Date()){
+    const midnight=new Date(now);midnight.setHours(0,0,0,0);
+    const best=new Map();
+    for(const group of groups.values()){
+      if(group.kind==='day')continue;
+      for(const [key,value] of group.values){
+        const time=Date.parse(key.length===13?`${key}:00:00Z`:key);
+        if(!Number.isFinite(time)||time<midnight.getTime()||time>now.getTime())continue;
+        const previous=best.get(group.sample);
+        if(!previous||time>previous.time)best.set(group.sample,{
+          sample:group.sample,kind:group.kind,value,time,latestAt:new Date(time).toISOString(),
+          coverage:null,count:1,verification:null
+        })
+      }
+    }
+    return [...best.values()]
+  }
+
+  async function fetchUtdRows(year,pollutant,today=false){
     const started=performance.now();
     const scope=currentEeaScope();
     const cityScope=utdCityScope();
-    const cacheKey=utdCityCacheKey(year,pollutant);
+    const cacheKey=`${utdCityCacheKey(year,pollutant)}:${cityScope.bbox.join(',')}:${today?new Date().toLocaleDateString('en-CA'):'annual'}`;
+    const cached=state.eeaUtdCache.get(cacheKey);
+    if(today&&cached&&Date.now()-(cached.savedAt||0)>900000)state.eeaUtdCache.delete(cacheKey);
 
     function fromEntry(entry,cache){
       const rows=utdRowsForViewport(entry.allRows,scope);
@@ -553,7 +575,7 @@ WHERE CountryCode='IT'
         parquetRows+=rows.length;
 
         for(const row of rows){
-          if(addObservation(groups,row,year))acceptedRows++
+          if(addObservation(groups,row,year,today))acceptedRows++
         }
       }catch(err){
         fileErrors.push({
@@ -564,7 +586,8 @@ WHERE CountryCode='IT'
       }
     });
 
-    const candidates=selectBestCandidates(groups,year);
+    if(fileErrors.length===files.length)throw new Error('Impossibile leggere i file EEA UTD. Riprova più tardi.');
+    const candidates=today?selectTodayCandidates(groups):selectBestCandidates(groups,year);
     const unmatched=[];
     let lowCoverageSkipped=0;
     let stationCodeFallbackMatches=0;
@@ -613,9 +636,10 @@ WHERE CountryCode='IT'
         samplePoint:candidate.sample,
         observations:candidate.count
       };
+      if(today)row.latestAt=candidate.latestAt;
 
       const current=bestStation.get(stationId);
-      if(!current||(row.coverage??0)>(current.coverage??0)){
+      if(!current||(today?Date.parse(row.latestAt)>Date.parse(current.latestAt):(row.coverage??0)>(current.coverage??0))){
         bestStation.set(stationId,row)
       }
     }
@@ -654,7 +678,7 @@ WHERE CountryCode='IT'
       note:'Media annuale preliminare calcolata da osservazioni E2a/UTD valide. Preferenza automatica per la serie con maggiore copertura; soglia minima 75%.'
     };
 
-    const entry={allRows,diagnostic};
+    const entry={allRows,diagnostic,savedAt:Date.now()};
     state.eeaUtdCache.set(cacheKey,entry);
     while(state.eeaUtdCache.size>20){
       const first=state.eeaUtdCache.keys().next().value;
@@ -674,6 +698,10 @@ WHERE CountryCode='IT'
   }
 
   fetchEeaRows=async function(year,pollutant){
+    if($('monthSelect')?.value==='today'){
+      if(eeaScope()!=='italy')throw new Error('Per i dati di oggi seleziona Italia e una città.');
+      return fetchUtdRows(new Date().getFullYear(),pollutant,true)
+    }
     const validated=await baseFetchEeaRows(year,pollutant);
 
     if(validated.length){
@@ -730,6 +758,7 @@ WHERE CountryCode='IT'
 
   globalThis.QualitaAriaEEAUTD={
     fetchUtdRows,
+    selectTodayCandidates,
     loadHyparquet
   }
 })();
