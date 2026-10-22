@@ -1,3 +1,7 @@
+# A.R.I.A. 0.7.24
+
+Nella mappa delle segnalazioni arboree il pulsante `Mappa stradale` / `Satellite` permette di leggere i nomi delle vie senza perdere la posizione scelta con il mirino. Dopo l'invio riuscito, sia le segnalazioni di posizione sia quelle sull'evento chiudono il modulo e mostrano una notifica con il numero della segnalazione. In caso di errore il modulo rimane aperto e conserva i dati; il doppio invio è bloccato durante l'attesa. App `0.7.24` build 104; cache PWA aggiornata, nessun nuovo deploy dei Worker.
+
 # A.R.I.A. 0.7.23
 
 Gli avvisi arborei programmati vengono conservati anche senza quantità dichiarata; migliorato il riconoscimento delle date e ricontrollate le prime pagine durante il recupero degli archivi. Una revisione della località cerca subito la nuova posizione e aggiorna elenco e puntatori senza cambiare selezione. Le coordinate già approvate restano se cambia soltanto il titolo; nessun punto viene inventato quando la posizione non è risolvibile. App `0.7.23` build 103, Worker ambientale `0.9.13` da distribuire; nessuna nuova migrazione D1 e nessun cambio dei secret.

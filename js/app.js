@@ -18,7 +18,7 @@ const state={
   viewportRefreshDepth:0,
   lastMapViewportKey:'',
   romeBoundary:null,
-  treeEvents:new Map(),treeProxyPromise:null,treeReportMap:null,treeReportEvent:null,treeEventReportEvent:null,treeReportInitialCoordinates:null,
+  treeEvents:new Map(),treeProxyPromise:null,treeReportMap:null,treeReportMapStyle:'satellite',treeReportEvent:null,treeEventReportEvent:null,treeReportInitialCoordinates:null,
   diagnostics:{}
 };
 
@@ -3444,6 +3444,16 @@ function positionTreeReportMarker(event,index){
   state.treeReportMap?.flyTo({center:coordinates,zoom:17,duration:500})
 }
 
+function toggleTreeReportMapStyle(){
+  if(!state.treeReportMap)return;
+  const next=state.treeReportMapStyle==='satellite'?'map':'satellite';
+  state.treeReportMap.setStyle(next==='map'?MAP_STYLE:TREE_REPORT_SATELLITE_STYLE);
+  state.treeReportMapStyle=next;
+  const button=$('treeReportMapToggle');
+  button.textContent=next==='map'?'Satellite':'Mappa stradale';
+  button.setAttribute('aria-label',next==='map'?'Passa alla vista satellitare':'Passa alla mappa stradale');
+}
+
 function openTreeLocationReport(eventId,requestedIndex=0){
   const event=state.treeEvents.get(String(eventId));
   if(!event){showToast('Evento non disponibile nella vista corrente.');return}
@@ -3473,6 +3483,9 @@ async function submitTreeLocationReport(submitEvent){
   submitEvent.preventDefault();
   const event=state.treeReportEvent,index=Number($('treeReportLocation').value);
   if(!event||!state.treeReportMap)return;
+  const button=submitEvent.target.querySelector('[type=submit]');
+  if(button.disabled)return;
+  button.disabled=true;
   const status=$('treeReportStatus');status.textContent='Invio in corso…';
   const point=state.treeReportMap.getCenter();
   try{
@@ -3486,9 +3499,10 @@ async function submitTreeLocationReport(submitEvent){
       suggestedCoordinates:[point.lng,point.lat]
     })});
     const result=await response.json();if(!response.ok)throw new Error(result.error||`HTTP ${response.status}`);
-    status.textContent=`Segnalazione n. ${result.reportId} inviata. Sarà verificata da un amministratore.`;
-    submitEvent.target.querySelector('[type=submit]').disabled=true
-  }catch(error){status.textContent=String(error.message||error)}
+    status.textContent='';
+    $('treeReportDialog').close();
+    showToast(`Segnalazione n. ${result.reportId} inviata. Sarà verificata da un amministratore.`)
+  }catch(error){status.textContent=String(error.message||error);button.disabled=false}
 }
 
 function openTreeEventReport(eventId){
@@ -3505,6 +3519,9 @@ async function submitTreeEventReport(submitEvent){
   submitEvent.preventDefault();
   const event=state.treeEventReportEvent;
   if(!event)return;
+  const button=submitEvent.target.querySelector('[type=submit]');
+  if(button.disabled)return;
+  button.disabled=true;
   const status=$('treeEventReportStatus');status.textContent='Invio in corso…';
   try{
     const base=await treeApiBase();if(!base)throw new Error('Proxy Alberi non configurato');
@@ -3513,9 +3530,10 @@ async function submitTreeEventReport(submitEvent){
       reporterName:$('treeEventReporterName').value,reporterEmail:$('treeEventReporterEmail').value
     })});
     const result=await response.json();if(!response.ok)throw new Error(result.error||`HTTP ${response.status}`);
-    status.textContent=`Segnalazione n. ${result.reportId} inviata. Sarà verificata da un amministratore.`;
-    submitEvent.target.querySelector('[type=submit]').disabled=true
-  }catch(error){status.textContent=String(error.message||error)}
+    status.textContent='';
+    $('treeEventReportDialog').close();
+    showToast(`Segnalazione n. ${result.reportId} inviata. Sarà verificata da un amministratore.`)
+  }catch(error){status.textContent=String(error.message||error);button.disabled=false}
 }
 
 async function searchTreeReportAddress(){
@@ -3694,6 +3712,7 @@ function bind(){
   $('treeEventReportForm')?.addEventListener('submit',submitTreeEventReport);
   $('treeAddressSearchBtn')?.addEventListener('click',searchTreeReportAddress);
   $('treeReportReset')?.addEventListener('click',resetTreeReportMap);
+  $('treeReportMapToggle')?.addEventListener('click',toggleTreeReportMapStyle);
   $('treeAddressSearch')?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();searchTreeReportAddress()}});
   $('treeAdminLogin')?.addEventListener('submit',event=>{
     event.preventDefault();
@@ -3712,7 +3731,7 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.7.23',{cache:'no-store'}).then(r=>r.json()),
+    fetch('version.json?v=0.7.24',{cache:'no-store'}).then(r=>r.json()),
     fetch('data/version.json?v=0.7.6',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
@@ -3729,7 +3748,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.7.23')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.24')
       .then(reg=>reg.update())
       .catch(console.error)
   }

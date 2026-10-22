@@ -1,3 +1,10 @@
+# 0.7.24
+
+- Aggiunto il pulsante Mappa stradale / Satellite nella mappa delle segnalazioni arboree, mantenendo centro, zoom e mirino al cambio di stile.
+- Le segnalazioni di posizione e dell'evento chiudono la modale soltanto dopo l'invio riuscito e mostrano una notifica con il numero di segnalazione.
+- Pulsante di invio disabilitato durante la richiesta per evitare duplicati; in caso di errore viene riabilitato e il modulo resta aperto con i dati inseriti.
+- App `0.7.24` build 104, cache PWA e riferimenti CSS/JS aggiornati. Nessuna modifica ai Worker o al database.
+
 # 0.7.23
 
 - Conservati gli avvisi arborei programmati senza quantità dichiarata, esclusi dai totali degli interventi eseguiti. Riconosciute date ISO, intervalli e giorni multipli, con anno di pubblicazione come fallback nei campi data.

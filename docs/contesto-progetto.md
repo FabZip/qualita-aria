@@ -16,15 +16,21 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.23` |
-| Build | `103` |
+| Applicazione | `0.7.24` |
+| Build | `104` |
 | Proxy EEA | `0.2.0` |
 | Worker ambientale | `0.9.13` |
 | Proxy OpenAQ | `0.4.2` |
 | Dataset arboreo consolidato | `22` |
 | Ultima migrazione D1 prevista | `0011_tree_source_cursor_offsets.sql` |
 
-La release precedente `0.7.22` è su `main` al commit `32ad49e`. La release `0.7.23` prepara il Worker `0.9.13`: va distribuito dal computer autenticato con `npx wrangler@latest deploy --config ./wrangler.toml` nella cartella `cloudflare/temperature-proxy`. Nessuna nuova migrazione D1 né rotazione dei secret. L'ultimo Worker verificato in produzione resta `0.9.12`; l'ambiente cloud non dispone di autenticazione Cloudflare e non può verificare l'endpoint remoto (accesso HTTP negato).
+La release precedente `0.7.23` è su `main` al commit `bef8ccf` e contiene il Worker `0.9.13`. La release `0.7.24` aggiorna soltanto il frontend: non richiede nuovi deploy Cloudflare, migrazioni D1 o modifiche ai secret. Lo stato del Worker remoto non è stato verificato da questo ambiente cloud, privo di autenticazione Cloudflare e accesso HTTP all'endpoint.
+
+### Segnalazioni Alberi 0.7.24
+
+Il modulo `treeReportDialog` mantiene la vista satellitare iniziale e aggiunge il pulsante `treeReportMapToggle` per passare a `MAP_STYLE` (mappa stradale con nomi delle vie) e tornare al satellite. Il cambio di stile non riposiziona la mappa, non altera le coordinate proposte e non rimuove il mirino HTML. La scelta resta attiva riaprendo la stessa mappa durante la sessione.
+
+`submitTreeLocationReport` e `submitTreeEventReport` disabilitano il pulsante prima della richiesta; una risposta riuscita chiude il relativo dialogo e usa la notifica accessibile già presente (`showToast`) per confermare numero ed esito. Gli errori non chiudono il modulo e riabilitano l'invio senza cancellare i dati. Tutti i 14 file di test superati, compresi cambio stile, coordinate, chiusura, doppio invio ed errori HTTP/rete. Prova Chromium a 1000 e 390 px con risposte simulate: cambio stile senza spostare il punto, modali chiuse e notifica visibile. Worker `0.9.13`, secret, dataset e migrazioni invariati: questa release richiede soltanto l'aggiornamento del frontend.
 
 ### Correzioni Alberi 0.7.23 / Worker 0.9.13
 
