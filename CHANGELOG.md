@@ -1,3 +1,13 @@
+# 0.7.27
+
+- Inclusi gli avvisi arborei misti, separando blocchi di abbattimento e piantumazione quando identificabili; blocchi ambigui conservati come da verificare, senza quantità inventate.
+- Il parser usa il corpo dell'articolo anziché menu e metadati; corretti titolo, data di pubblicazione esplicita, scadenze con giorno della settimana, entità accentate e località elencate. Quantità parziali non diventano totali completi.
+- Pannello amministrativo completo dopo segnalazioni sia di evento sia di posizione: titolo, Comune, anno, data lavori, Municipio/zona, località multiple, tipo, stato, quantità complessiva, URL fonte, pubblicazione e descrizione.
+- Aggiunto `Segnala dati evento` anche per gli interventi con marker; mantenuta l'approvazione dedicata della singola posizione. Errori di salvataggio visibili nel pannello e conferma prima di escludere l'intero evento.
+- Protetti tutti i dati corretti manualmente dai successivi upsert. Località/Comune modificati invalidano le posizioni e avviano la geocodifica; nuove annualità rese disponibili nelle select, revisioni/spostamenti/esclusioni non annullati dal fallback consolidato.
+- Le date di pubblicazione non sono presentate come date dei lavori quando questi non hanno una data dichiarata.
+- App `0.7.27` build 107, Worker `0.9.14`, cache PWA aggiornata. Nessuna nuova migrazione o rotazione dei secret; deploy Worker e successivo recupero degli avvisi richiesti.
+
 # 0.7.26
 
 - Aggiunta memoria separata delle select per EEA, OpenAQ, ARPA Lazio, previsioni e alberi: area/città/Comune, inquinante, periodo e anni di confronto vengono ripristinati tornando alla fonte.

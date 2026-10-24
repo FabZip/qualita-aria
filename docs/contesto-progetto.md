@@ -16,15 +16,27 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.26` |
-| Build | `106` |
+| Applicazione | `0.7.27` |
+| Build | `107` |
 | Proxy EEA | `0.2.0` |
-| Worker ambientale | `0.9.13` |
+| Worker ambientale | `0.9.14` |
 | Proxy OpenAQ | `0.4.2` |
 | Dataset arboreo consolidato | `22` |
 | Ultima migrazione D1 prevista | `0011_tree_source_cursor_offsets.sql` |
 
-La release precedente `0.7.25` è su `main` al commit `73fadf3`. La release `0.7.26` aggiorna soltanto il frontend: non richiede nuovi deploy Cloudflare, migrazioni D1 o modifiche ai secret. Lo stato del Worker remoto non è stato verificato da questo ambiente cloud, privo di autenticazione Cloudflare e accesso HTTP all'endpoint.
+La release precedente `0.7.26` è su `main` al commit `2c223b1`. La release `0.7.27` richiede il deploy del Worker ambientale `0.9.14`, senza nuove migrazioni D1 né modifiche ai secret. Il 24 ottobre 2026 l'accesso di rete è stato autorizzato: `/health` remoto verificato alla versione `0.9.13`, quindi il codice nuovo non è ancora in produzione. Le richieste pubbliche funzionano; l'autenticazione Cloudflare per il deploy non è configurata in questo ambiente.
+
+### Avvisi misti e revisione completa 0.7.27 / Worker 0.9.14
+
+Caso reale verificato: [avviso XIV Municipio, IDS1658896](https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1658896), pubblicato il 20 ottobre, con abbattimenti entro il 30 ottobre e 19 piantumazioni in via Bitossi. L'endpoint Roma conteneva 256 eventi e nessuno con data futura; questa pagina era assente perché la classificazione globale dei due tipi restituiva `unknown` e la scartava. L'ultimo sync del 24 ottobre alle 03:00 UTC risultava completato senza errori: uno scarto del parser non veniva contato come errore di rete. Gli archivi ufficiali Guidonia restituivano HTTP 503, quindi non sono stati verificati integralmente.
+
+Il parser nuovo legge l'articolo e separa blocchi omogenei, conservando località multiple, quantità esplicite e date proprie. La fixture `tests/fixtures/tree-mixed-xiv.html` riproduce il contenuto rilevante della pagina reale. Il gruppo abbattimenti ha tre località e quantità complessiva sconosciuta (una voce non è numerata); quello piantumazioni ha 19 e nessuna data lavori esplicita. I blocchi ambigui restano visibili come da verificare. Le chiavi dei gruppi aggiuntivi usano il tipo anziché un semplice ordine, con preservazione delle revisioni manuali. Pubblicazione e scadenza sono distinte e non si inventa una data comune a tutti i tipi.
+
+Ogni evento localizzato offre anche `Segnala dati evento`. Ogni segnalazione, anche di posizione, apre all'amministratore tutti i campi dell'intervento: titolo, Comune, anno, data lavori, Municipio/zona, località (una per riga, fino a 100), tipo, stato, quantità complessiva, URL, pubblicazione e descrizione. Le coordinate della singola posizione hanno un'approvazione dedicata. La password resta richiesta per ogni decisione; errori e incompatibilità del Worker sono mostrati nel pannello. Il rifiuto della segnalazione non cambia l'evento; l'esclusione dell'evento richiede una conferma.
+
+Le revisioni sono `manual_confirmed` e preservano anche fonte, pubblicazione e descrizione durante l'upsert. Se cambiano Comune o località, posizioni/override precedenti vengono invalidati e la geocodifica mirata riparte (massimo otto luoghi per passaggio). Cambi di anno/Comune ed esclusioni non fanno ricomparire il record consolidato nella vecchia selezione, usando `manualRevisions`; `availableYears` rende selezionabili gli anni degli eventi dinamici. Gli ID e la cronologia tecnica non sono modificabili.
+
+Verifiche: 17 file di test, SQLite con tutte le migrazioni, pagina ufficiale interrogata in sola lettura, browser con Worker e D1 simulati (revisione completa di una segnalazione di posizione e comparsa di tre marker), e dry-run Wrangler. Nessuna scrittura sul database remoto né refresh remoto eseguiti durante lo sviluppo. Per attivare: deploy con `--config ./wrangler.toml`, quindi refresh con il token esistente o attesa dei cron, eventualmente più passaggi.
 
 ### Memoria filtri per fonte 0.7.26
 

@@ -71,4 +71,8 @@ assert.ok(node('yearSelect').options.some(option=>option.value===node('yearSelec
 set('eeaScopeSelect','europe');context.state.mode='difference';context.fillYears();set('yearSelect','2020');set('eeaCitySelect','milano');
 switchTo('forecast');switchTo('eea');
 assert.equal(node('eeaScopeSelect').value,'europe');assert.equal(context.state.mode,'difference');assert.equal(node('yearSelect').value,'2020');
+const dynamicPeriods=vm.createContext({state:{treeAvailableYears:new Map([['guidonia-montecelio',['2026','2018']]])},eeaCity:()=> 'guidonia-montecelio',TREE_GUIDONIA_PERIODS:[{value:'2026'},{value:'2025'}],TREE_MAP_PERIODS:[]});
+const periodsStart=source.indexOf('function currentTreePeriods(');
+vm.runInContext(source.slice(periodsStart,source.indexOf('\nfunction ',periodsStart+1)),dynamicPeriods);
+assert.deepEqual(Array.from(dynamicPeriods.currentTreePeriods(),period=>period.value),['2026','2025','2018']);
 console.log('source-settings: ok');

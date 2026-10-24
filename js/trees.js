@@ -94,11 +94,11 @@
       const url=new URL(`${baseUrl}/v1/trees/events`);
       url.searchParams.set('city',cityId);
       url.searchParams.set('year',String(year));
-      url.searchParams.set('v','0.9.13');
+      url.searchParams.set('v','0.9.14');
       const response=await fetch(url,{mode:'cors',cache:'no-store',headers:{Accept:'application/json'}});
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       const payload=await response.json();
-      return{events:Array.isArray(payload.events)?payload.events:[],lastSync:payload.lastSync||null,available:true}
+      return{events:Array.isArray(payload.events)?payload.events:[],availableYears:payload.availableYears||[],manualRevisions:payload.manualRevisions||[],lastSync:payload.lastSync||null,available:true}
     }catch(error){
       return{events:[],lastSync:null,available:false,error:String(error?.message||error)}
     }
@@ -277,14 +277,21 @@
     try{return new URL(event.sourceUrl).searchParams.get('contentId')||String(event.id)}catch{return String(event.id)}
   }
 
+  function dateLabel(event){
+    if(event.dateType==='publication')return`Data lavori non indicata · avviso del ${event.sourcePublishedAt||event.date}`;
+    if(event.dateType==='year')return`Data lavori non indicata · anno ${event.year}`;
+    return event.date||event.year||''
+  }
+
   function documentedPopupHtml(event,locationIndex=0){
     const type=event.eventType==='planting'?'Piantumazione':event.eventType==='decrement'?'Abbattimento':'Evento arboreo';
     const multilocation=Array.isArray(event.markerCoordinates)&&event.markerCoordinates.length>1;
     const quantity=Number.isFinite(event.quantity)?`${fmt(event.quantity)} alberi`:'quantità non specificata';
     const precision=event.locationPrecision==='district'?'Posizione indicativa nell’area di competenza':'Posizione ricavata dall’indirizzo documentato';
     const location=event.locations?.[locationIndex]||event.locationName;
-    const reportButton=event.sourceKey?`<button type="button" data-tree-report="${escapeHtml(event.id)}" data-tree-source-key="${escapeHtml(sourceKeyOf(event))}" data-tree-location-index="${locationIndex}">Segnala posizione</button>`:'';
-    return`<div class="tree-popup"><strong>${escapeHtml(location)}</strong><br>${escapeHtml(event.date||event.year)}<br>Tipo: ${type}<br>${multilocation?'Quantità complessiva':'Quantità'}: ${quantity}${multilocation?`<br>Punti visualizzati: ${event.markerCoordinates.length}<br>Ripartizione per luogo non specificata.`:''}<br>${precision}<br><span class="tree-popup-actions"><a href="${escapeHtml(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a>${reportButton}</span></div>`
+    const reportButton=event.sourceKey?`<button type="button" data-tree-report="${escapeHtml(event.id)}" data-tree-source-key="${escapeHtml(sourceKeyOf(event))}" data-tree-location-index="${locationIndex}">Segnala posizione</button><button type="button" data-tree-event-report="${escapeHtml(event.id)}">Segnala dati evento</button>`:'';
+    const description=event.description?`<details><summary>Dettagli evento</summary><p>${escapeHtml(event.description)}</p></details>`:'';
+    return`<div class="tree-popup"><strong>${escapeHtml(location)}</strong><br>${escapeHtml(dateLabel(event))}<br>Tipo: ${type}<br>${multilocation?'Quantità complessiva':'Quantità'}: ${quantity}${multilocation?`<br>Punti visualizzati: ${event.markerCoordinates.length}<br>Ripartizione per luogo non specificata.`:''}<br>${precision}${description}<br><span class="tree-popup-actions"><a href="${escapeHtml(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a>${reportButton}</span></div>`
   }
 
   function showDocumentedEvents(map,events=[]){
@@ -443,9 +450,20 @@
       });
     const dynamic=await dynamicEvents(cityId,selection);
     const remoteByKey=new Map(dynamic.events.map(event=>[String(event.sourceKey||event.id).replace(/^dynamic-/,''),event]));
+    const revisions=new Map((dynamic.manualRevisions||[]).map(item=>[item.sourceKey,item]));
+    const pageCounts=new Map();
+    for(const event of localDocumented){const key=sourceKeyOf(event);pageCounts.set(key,(pageCounts.get(key)||0)+1)}
+    const keyFor=event=>{
+      const exact=String(event.sourceKey||event.id).replace(/^dynamic-/,'');
+      const canonical=sourceKeyOf(event);
+      return remoteByKey.has(exact)||revisions.has(exact)||pageCounts.get(canonical)!==1?exact:canonical
+    };
     const consumedRemoteKeys=new Set();
-    const enrichedLocal=localDocumented.map(event=>{
-      const key=String(event.sourceKey||event.id).replace(/^dynamic-/,'');
+    const enrichedLocal=localDocumented.filter(event=>{
+      const revision=revisions.get(keyFor(event));
+      return !revision||(revision.validation!=='manual_rejected'&&revision.city===cityId&&String(revision.year)===String(selection))
+    }).map(event=>{
+      const key=keyFor(event);
       const remote=remoteByKey.get(key);
       if(!remote)return event;
       consumedRemoteKeys.add(key);
@@ -456,7 +474,7 @@
           markerCoordinates:remote.markerCoordinates,markerLocationIndexes:remote.markerLocationIndexes
         }:{}),
         notes:event.notes,
-        source:{publisher:city.source?.publisher||city.name,url:event.sourceUrl}
+        source:{publisher:city.source?.publisher||city.name,url:remote.sourceUrl||event.sourceUrl}
       }
     });
     const remoteDocumented=dynamic.events
@@ -493,9 +511,9 @@
     const record=events[0]||documentedSummary||aggregateRecord||null;
     return{
       city,events,aggregate:aggregateRecord,documentedEvents,documentedSummary,record,
-      diagnostic:{schemaVersion:data.schemaVersion,city:city.name,selection,available:city.available,officialAnnual:events.length,documentedEvents:documentedEvents.length,dynamicEvents:remoteDocumented.length,dynamicAvailable:dynamic.available,lastSync:dynamic.lastSync,aggregatePeriod:aggregate?.period||null,dataKind:record?.dataKind||null}
+      diagnostic:{schemaVersion:data.schemaVersion,city:city.name,selection,available:city.available,officialAnnual:events.length,documentedEvents:documentedEvents.length,dynamicEvents:remoteDocumented.length,dynamicAvailable:dynamic.available,availableYears:dynamic.availableYears||[],lastSync:dynamic.lastSync,aggregatePeriod:aggregate?.period||null,dataKind:record?.dataKind||null}
     }
   }
 
-  window.TreeStats={rows,show,showScope,showDifferenceScope,showDocumentedEvents,focusEvent,iconSvg,clear,fmt,balanceOf};
+  window.TreeStats={rows,show,showScope,showDifferenceScope,showDocumentedEvents,focusEvent,iconSvg,clear,fmt,balanceOf,dateLabel};
 })();

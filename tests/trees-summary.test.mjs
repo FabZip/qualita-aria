@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const treeCatalog=JSON.parse(fs.readFileSync(path.join(root,'data/trees.json'),'utf8'));
 
-async function treeStats(dynamicEvents=[]){
+async function treeStats(dynamicEvents=[],manualRevisions=[]){
   const context=vm.createContext({
     URL,
     Date,
@@ -20,7 +20,7 @@ async function treeStats(dynamicEvents=[]){
         const file=url.split('?')[0];
         return new Response(fs.readFileSync(path.join(root,file)))
       }
-      return Response.json({events:dynamicEvents,lastSync:null})
+      return Response.json({events:dynamicEvents,manualRevisions,lastSync:null})
     }
   });
 
@@ -114,5 +114,13 @@ const unresolvedRevision=await(await treeStats([{...revised,coordinates:undefine
 const unresolved=unresolvedRevision.documentedEvents.find(event=>event.id===localEvent.id);
 assert.equal(unresolved.coordinates,undefined);
 assert.equal(unresolved.path,null);
+const api=await treeStats();
+assert.match(api.dateLabel({dateType:'publication',sourcePublishedAt:'2026-10-20'}),/Data lavori non indicata · avviso del 2026-10-20/);
+assert.equal(api.dateLabel({dateType:'execution',date:'2026-10-30'}),'2026-10-30');
+const movedRevision={sourceKey:'guidonia-2025-la-sorgente-200',city:'roma',year:2026,validation:'manual_confirmed'};
+const moved=await(await treeStats([], [movedRevision])).rows('guidonia-montecelio','2025');
+assert.ok(!moved.documentedEvents.some(event=>event.id==='guidonia-2025-la-sorgente-200'));
+const deleted=await(await treeStats([],[{sourceKey:localEvent.id,city:'roma',year:2026,validation:'manual_rejected'}])).rows('roma','2026');
+assert.ok(!deleted.documentedEvents.some(event=>event.id===localEvent.id));
 
 console.log('trees-summary: ok');

@@ -1,3 +1,20 @@
+# Proxy ambientale 0.9.14
+
+Gli avvisi misti vengono suddivisi per tipo di intervento e contesto del testo. Il contenuto di `<article>` evita interferenze di menu e metadati. Il comunicato reale `IDS1658896` del XIV Municipio produce abbattimenti entro il 30 ottobre nelle tre località (quantità complessiva non certa) e 19 piantumazioni in via Bitossi senza data lavori dichiarata. I blocchi non separabili restano `unknown`/`automatic_pending`; gli interventi misti non diventano automaticamente consuntivi completati.
+
+`GET /v1/trees/location-reports` espone `adminSchemaVersion: 2` e tutti i dati dell'evento. `update_event` e `delete_event` sono consentiti anche per segnalazioni di posizione, sempre con `TREE_ADMIN_PASSWORD`. Sono modificabili titolo, Comune supportato, anno, data lavori, Municipio/zona, elenco delle località, tipo, stato, quantità complessiva, URL della fonte, data pubblicazione e descrizione. Identificativi, cronologia tecnica e identità del segnalante non vengono riscritti. Le correzioni manuali non vengono sovrascritte dall'indicizzazione successiva.
+
+`GET /v1/trees/events` aggiunge `eventDate`, `sourcePublishedAt`, `dateType`, `description`, `availableYears` e `manualRevisions`: il frontend distingue date lavori/pubblicazione, scopre gli anni degli eventi corretti e non ripristina dal catalogo locale record spostati o esclusi manualmente. Il pannello frontend richiede lo schema 2 per evitare salvataggi contro un Worker vecchio.
+
+Distribuzione (nessuna nuova migrazione né modifica ai secret):
+
+```bash
+cd cloudflare/temperature-proxy
+npx wrangler@latest deploy --config ./wrangler.toml
+```
+
+La versione attesa su `/health` è `0.9.14`. Dopo il deploy, un refresh con `TREE_ADMIN_TOKEN` o i cron recuperano progressivamente gli avvisi prima scartati; possono servire più passaggi. Il deploy non forza da solo una scansione e non modifica le segnalazioni presenti.
+
 # Proxy ambientale 0.9.13
 
 Gli avvisi futuri senza quantità esplicita vengono conservati come `planned`/`automatic_pending`, senza contribuire ai totali eseguiti. Le date supportano anche intervalli e giorni multipli. Ogni refresh ricontrolla fino a quattro link della prima pagina di ciascuna fonte (i primi due e altri a rotazione), continua il backfill e riserva fino a otto dettagli al ricontrollo degli avvisi già acquisiti, mantenendo il limite complessivo di 40 dettagli. L'HTML degli archivi è riutilizzato soltanto all'interno dello stesso refresh.

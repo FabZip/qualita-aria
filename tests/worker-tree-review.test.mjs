@@ -122,5 +122,48 @@ const future=database.prepare("SELECT * FROM tree_events WHERE source_key='IDS99
 assert.equal(future.event_date,'2026-12-20');
 assert.equal(future.status,'planned');
 assert.equal(future.quantity,null);
+
+// Una segnalazione di posizione abilita la correzione di tutti i dati dell'evento.
+const positionReport=Number(database.prepare(`INSERT INTO tree_location_reports(source_key,location_index,location_name,reason,created_at) VALUES (?,0,'Via fuori area','Correggere tutti i dati','2026-10-24')`).run(key).lastInsertRowid);
+const complete={reportId:positionReport,action:'update_event',title:'Intervento corretto',city:'roma',year:2026,eventDate:'2026-10-30',district:'XIV',sourceUrl:'https://example.test/corretta',sourcePublishedAt:'2026-10-20',description:'Due località da verificare',locations:['Via Roma','Piazza Milano'],eventType:'decrement',eventStatus:'planned',quantity:7};
+context.fetch=async()=>Response.json([{lon:'12.53',lat:'41.9'}]);
+const revise=body=>context.reviewTreeLocationReport(new Request('https://worker.test/review',{method:'POST',body:JSON.stringify(body)}),{TREE_DB:db},{});
+const fullResponse=await revise(complete);
+assert.equal(fullResponse.status,200);
+assert.equal((await fullResponse.json()).geocoding.geocoded,2);
+row=database.prepare('SELECT * FROM tree_events WHERE source_key=?').get(key);
+for(const [column,value] of Object.entries({city:'roma',year:2026,event_date:'2026-10-30',district:'XIV',source_url:'https://example.test/corretta',source_published_at:'2026-10-20',raw_excerpt:'Due località da verificare',event_type:'decrement',quantity:7,status:'planned',validation:'manual_confirmed'}))assert.equal(row[column],value,column);
+assert.deepEqual(JSON.parse(row.locations_json),['Via Roma','Piazza Milano']);
+assert.equal(JSON.parse(row.location_points_json).length,2);
+const reports=await(await context.listTreeLocationReports({TREE_DB:db},{},new URL('https://worker.test/reports?status=all'))).json();
+assert.equal(reports.adminSchemaVersion,2);
+const updatedReport=reports.reports.find(report=>report.id===positionReport);
+assert.equal(updatedReport.event_year,2026);
+assert.equal(updatedReport.source_url,'https://example.test/corretta');
+assert.equal(updatedReport.raw_excerpt,'Due località da verificare');
+
+// I ricontrolli della fonte non devono annullare nessuno dei dati corretti.
+await context.upsertTreeEvent(db,{sourceKey:key,city:'guidonia-montecelio',year:2025,eventDate:'2025-03-11',locationName:'Nome automatico',locations:['Nome automatico'],eventType:'planting',quantity:999,status:'completed',validation:'automatic_confirmed',title:'Titolo automatico',sourceUrl:'https://example.test/automatica',sourcePublishedAt:'2025-03-01',rawExcerpt:'Descrizione automatica'},'2026-10-24T12:00:00Z');
+const preserved=database.prepare('SELECT * FROM tree_events WHERE source_key=?').get(key);
+for(const column of ['title','city','year','event_date','district','source_url','source_published_at','raw_excerpt','event_type','quantity','status','locations_json'])assert.equal(preserved[column],row[column],column);
+
+const invalidReport=report();
+for(const patch of [{quantity:-1},{sourceUrl:'javascript:alert(1)'},{eventDate:'2026-02-30'},{year:2025},{locations:Array(101).fill('Via Roma')}]){
+  assert.equal((await revise({...complete,reportId:invalidReport,...patch})).status,400)
+}
+assert.equal(database.prepare('SELECT status FROM tree_location_reports WHERE id=?').get(invalidReport).status,'pending');
+const publicData=await(await context.treeEventsResponse({TREE_DB:db},{},new URL('https://worker.test/events?city=roma&year=2026'))).json();
+const correctedEvent=publicData.events.find(event=>event.sourceKey===key);
+assert.equal(correctedEvent.description,'Due località da verificare');
+assert.equal(correctedEvent.eventDate,'2026-10-30');
+assert.equal(correctedEvent.sourcePublishedAt,'2026-10-20');
+assert.equal(correctedEvent.dateType,'execution');
+// Anni corretti dall'amministratore restano scopribili anche quando non erano nel catalogo statico.
+const movedId=report();
+assert.equal((await revise({...complete,reportId:movedId,year:2018,eventDate:'2018-05-12'})).status,200);
+const afterMove=await(await context.treeEventsResponse({TREE_DB:db},{},new URL('https://worker.test/events?city=roma&year=2026'))).json();
+assert.ok(afterMove.availableYears.includes('2018'));
+assert.ok(!afterMove.events.some(event=>event.sourceKey===key));
+assert.equal(afterMove.manualRevisions.find(event=>event.sourceKey===key).year,2018);
 database.close();
 console.log('worker-tree-review: ok');

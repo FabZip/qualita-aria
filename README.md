@@ -1,3 +1,20 @@
+# A.R.I.A. 0.7.27
+
+Gli avvisi arborei misti non vengono più scartati: quando il testo lo consente, abbattimenti e piantumazioni diventano interventi distinti della stessa fonte. Quantità e date ambigue restano da verificare; una scadenza degli abbattimenti non viene attribuita automaticamente alle piantumazioni.
+
+Dopo qualsiasi segnalazione, anche di posizione, l'amministratore può correggere titolo, Comune, anno, data lavori, Municipio/zona, tutte le località (una per riga), tipo, stato, quantità complessiva, fonte, data di pubblicazione e descrizione. Per gli eventi già localizzati è disponibile anche `Segnala dati evento`. Le correzioni sono preservate dai refresh e le località modificate vengono geocodificate nuovamente; restano immutabili gli identificativi e la cronologia tecnica.
+
+App `0.7.27` build 107, Worker ambientale `0.9.14` **da distribuire**. Nessuna nuova migrazione D1 o modifica dei secret:
+
+```bash
+cd /mnt/linux-data/www/qualita-aria
+git pull --ff-only origin main
+cd cloudflare/temperature-proxy
+npx wrangler@latest deploy --config ./wrangler.toml
+```
+
+Dopo il deploy avviare il refresh arboreo con il token esistente (procedura nel [README del Worker](cloudflare/temperature-proxy/README.md#forzare-manualmente-laggiornamento-arboreo)), oppure attendere il cron. Il recupero è progressivo e può richiedere più passaggi. Il nuovo pannello amministrativo segnala se il Worker non è aggiornato, evitando salvataggi incompleti.
+
 # A.R.I.A. 0.7.26
 
 Ogni fonte conserva i propri filtri durante la navigazione: tornando a EEA, OpenAQ, ARPA Lazio, previsioni o alberi ritrovi città/area, inquinante e periodo selezionati, con gli anni di confronto e la modalità compatibile. Le opzioni dipendenti vengono ricostruite prima del ripristino; valori non più disponibili lasciano un'opzione valida. La memoria è limitata alla pagina aperta e non viene salvata nel browser dopo un ricaricamento. App `0.7.26` build 106; nessun nuovo deploy dei Worker.
