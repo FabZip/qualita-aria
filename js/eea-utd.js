@@ -325,6 +325,8 @@ WHERE CountryCode='IT'
         sample,
         kind,
         values:new Map(),
+        starts:new Map(),
+        ends:new Map(),
         verification:new Map(),
         unit:String(unit??'')
       })
@@ -333,6 +335,11 @@ WHERE CountryCode='IT'
     const group=groups.get(key);
     const timeKey=timestampKey(ms,kind);
     group.values.set(timeKey,rawValue*factor);
+    if(today){
+      group.starts.set(timeKey,ms);
+      const end=parseTime(rowValue(row,'End','end','DatetimeEnd','datetimeEnd'));
+      if(end!==null)group.ends.set(timeKey,end)
+    }
 
     const verification=vocabularyCode(rowValue(row,'Verification','verification'));
     if(verification!==null){
@@ -470,13 +477,15 @@ WHERE CountryCode='IT'
   function selectLatestCandidates(groups,now=new Date()){
     const best=new Map();
     for(const group of groups.values()){
-      if(group.kind==='day')continue;
       for(const [key,value] of group.values){
-        const time=Date.parse(key.length===13?`${key}:00:00Z`:key);
-        if(!Number.isFinite(time)||time>now.getTime())continue;
+        const time=group.starts?.get(key)??Date.parse(key.length===13?`${key}:00:00Z`:key);
+        // Una media giornaliera è utilizzabile solo quando il suo periodo è concluso.
+        const end=group.ends?.get(key)??(group.kind==='day'?time+86400000:time);
+        if(!Number.isFinite(time)||!Number.isFinite(end)||end<time||time>now.getTime()||end>now.getTime())continue;
         const previous=best.get(group.sample);
-        if(!previous||time>previous.time)best.set(group.sample,{
+        if(!previous||time>previous.time||(time===previous.time&&previous.kind==='day'&&group.kind!=='day'))best.set(group.sample,{
           sample:group.sample,kind:group.kind,value,time,latestAt:new Date(time).toISOString(),
+          periodEnd:new Date(end).toISOString(),
           coverage:null,count:1,verification:null
         })
       }
@@ -652,7 +661,7 @@ WHERE CountryCode='IT'
         samplePoint:candidate.sample,
         observations:candidate.count
       };
-      if(today)row.latestAt=candidate.latestAt;
+      if(today){row.latestAt=candidate.latestAt;row.latestPeriodEnd=candidate.periodEnd}
 
       const current=bestStation.get(stationId);
       if(!current||(today?Date.parse(row.latestAt)>Date.parse(current.latestAt):(row.coverage??0)>(current.coverage??0))){
@@ -683,6 +692,9 @@ WHERE CountryCode='IT'
       parquetFilesLimited:(fileResponse.data?.meta?.count??0)>files.length,
       parquetRows,
       acceptedObservationRows:acceptedRows,
+      observationsByAggregation:[...groups.values()].reduce((counts,group)=>{
+        counts[group.kind]=(counts[group.kind]||0)+group.values.size;return counts
+      },{}),
       samplingPoints:candidates.length,
       metadataRows:metadata.rows.length,
       metadataPages:metadata.pages,
@@ -693,7 +705,7 @@ WHERE CountryCode='IT'
       unmatchedSamplingPoints:unmatched.slice(0,20),
       stationCodeFallbackMatches,
       fileErrors:fileErrors.slice(0,10),
-      note:today?'Ultime misure E2a/UTD disponibili per le stazioni nell’area, senza filtro testuale della città.':
+      note:today?'Ultimi dati E2a/UTD disponibili, comprese medie giornaliere concluse; data e aggregazione restano associate al valore.':
         'Media annuale preliminare calcolata da osservazioni E2a/UTD valide. Preferenza automatica per la serie con maggiore copertura; soglia minima 75%.'
     };
 

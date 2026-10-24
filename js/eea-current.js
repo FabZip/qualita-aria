@@ -8,6 +8,7 @@
   let locationPromise=null;
   let renderSequence=0;
   let latestMeasurement=null;
+  let latestIsDaily=false;
 
   function isCurrent(){return source()==='eea'&&$('yearSelect').value==='today'&&state.mode==='map'}
 
@@ -45,7 +46,7 @@
     if(state.mode==='map')$('singleYearField').classList.remove('hidden');
     $('yearSelect').title='Scegli Oggi per l’ultima misura disponibile o un anno per le statistiche annuali.';
     $('sourceDescription').innerHTML=isCurrent()
-      ?'<strong>EEA:</strong> ultima misura disponibile per ogni stazione, con la relativa data. I dati sono preliminari e possono arrivare in ritardo.'
+      ?'<strong>EEA:</strong> ultimo dato disponibile per ogni stazione, con la relativa data. Può essere un dato orario o una media giornaliera. I dati sono preliminari e possono arrivare in ritardo.'
       :SOURCE_INFO.eea.description;
     return result
   };
@@ -72,8 +73,10 @@
 
   sourceNotice=function(rows){
     if(isCurrent()){
-      const timestamps=rows.map(row=>Date.parse(row.latestAt)).filter(Number.isFinite);
-      latestMeasurement=timestamps.length?new Date(Math.max(...timestamps)):null;
+      const latest=rows.filter(row=>Number.isFinite(Date.parse(row.latestAt)))
+        .reduce((best,row)=>!best||Date.parse(row.latestAt)>Date.parse(best.latestAt)?row:best,null);
+      latestMeasurement=latest?new Date(latest.latestAt):null;
+      latestIsDaily=latest?.aggregation==='day';
       return rows.length?'EEA · ultime misure disponibili · dati preliminari':'EEA · nessuna misura disponibile'
     }
     return baseNotice(rows)
@@ -100,16 +103,18 @@
       }
     }
     latestMeasurement=null;
+    latestIsDaily=false;
     await baseRender();
     if(sequence!==renderSequence||!isCurrent())return;
     $('singleYearField').classList.remove('hidden');
     $('periodValue').textContent=latestMeasurement
       ?latestMeasurement.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}):'—';
     $('periodValue').title=latestMeasurement
-      ?`Misura più recente tra le stazioni visualizzate: ${latestMeasurement.toLocaleString('it-IT')}`:'Nessuna misura disponibile';
+      ?latestIsDaily?`Media giornaliera più recente visualizzata: ${latestMeasurement.toLocaleDateString('it-IT')}`
+        :`Misura più recente tra le stazioni visualizzate: ${latestMeasurement.toLocaleString('it-IT')}`:'Nessuna misura disponibile';
     $('mapBadge').textContent=`${POLLUTANTS[$('pollutantSelect').value].label} - ultima misura`;
     $('avgLabel').textContent='Media ultimi valori';
-    $('mapHint').textContent='Ogni stazione mostra la propria ultima misura disponibile. Il periodo indica la data più recente tra le stazioni visualizzate; gli orari delle singole misure sono riportati nell’elenco.'
+    $('mapHint').textContent='Ogni stazione mostra il proprio ultimo dato disponibile, anche precedente a oggi. Il periodo indica la data più recente; nell’elenco sono distinti i dati orari dalle medie giornaliere.'
   };
 
 })();

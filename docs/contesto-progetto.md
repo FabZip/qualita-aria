@@ -16,15 +16,23 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.24` |
-| Build | `104` |
+| Applicazione | `0.7.25` |
+| Build | `105` |
 | Proxy EEA | `0.2.0` |
 | Worker ambientale | `0.9.13` |
 | Proxy OpenAQ | `0.4.2` |
 | Dataset arboreo consolidato | `22` |
 | Ultima migrazione D1 prevista | `0011_tree_source_cursor_offsets.sql` |
 
-La release precedente `0.7.23` è su `main` al commit `bef8ccf` e contiene il Worker `0.9.13`. La release `0.7.24` aggiorna soltanto il frontend: non richiede nuovi deploy Cloudflare, migrazioni D1 o modifiche ai secret. Lo stato del Worker remoto non è stato verificato da questo ambiente cloud, privo di autenticazione Cloudflare e accesso HTTP all'endpoint.
+La release precedente `0.7.24` è su `main` al commit `d179bfd`. La release `0.7.25` aggiorna soltanto il frontend: non richiede nuovi deploy Cloudflare, migrazioni D1 o modifiche ai secret. Lo stato del Worker remoto non è stato verificato da questo ambiente cloud, privo di autenticazione Cloudflare e accesso HTTP all'endpoint.
+
+### EEA Oggi: supporto dati giornalieri 0.7.25
+
+La diagnostica ricevuta mostrava due file Parquet, 582 righe e 556 osservazioni accettate, ma zero candidati: il vecchio selettore escludeva a priori `kind='day'`. Questo caso è riprodotto da una fixture sintetica con gli stessi conteggi; non è stata effettuata una lettura diretta dei file di produzione. La nuova diagnostica `observationsByAggregation` permette di confermare il tipo delle serie scaricate.
+
+`selectLatestCandidates` include le medie giornaliere concluse e conserva inizio e fine dell'intervallo dalle osservazioni, quando presenti. Senza fine esplicita usa prudenzialmente inizio + 24 ore per il giornaliero; esclude intervalli non conclusi o futuri e preferisce il subgiornaliero a parità d'inizio per lo stesso sampling point. La selezione annuale e la soglia di copertura del 75% restano separate e invariate.
+
+I dati giornalieri sono mostrati come `media giornaliera del …`, non come misure istantanee; il riquadro Periodo conserva la data effettiva. Le descrizioni chiariscono che `Oggi` mostra l'ultimo dato disponibile, anche precedente alla giornata corrente. Suite di 15 file di test superata; prova Chromium su primo avvio e reload, mappa principale caricata prima/dopo le mappe di confronto e risposte giornaliere/orarie simulate, senza errori. Nessun nuovo deploy proxy richiesto.
 
 ### Segnalazioni Alberi 0.7.24
 
@@ -242,7 +250,7 @@ Patch `0.7.20` build 100: `eeaStationName` corregge la denominazione nota `MILAN
 
 Correzione `0.7.19` build 99 / Worker EEA `0.2.0`: verifiche manuali del servizio hanno mostrato che `IT` e `PM2.5` restituiscono file, mentre `cities: ["Milano"]` li azzera. Non è un problema delle coordinate GPS. La richiesta upstream ora omette il filtro città (`cities: []`). Il frontend passa bbox e anno a elenco e download; il proxy usa i metadati dell’area per filtrare i codici stazione nei nomi dei file. I file dal nome non riconoscibile vengono mantenuti e le osservazioni filtrate tramite i sampling point dei metadati. Nessun troncamento ai primi 60/100 file; oltre 2000 viene segnalato un errore. La cache è versionata separatamente e il frontend rifiuta il vecchio contratto senza `meta.spatialSelection`. Occorre distribuire il Worker EEA `0.2.0`; la verifica con servizi reali in questo ambiente resta limitata dall’accesso a workers.dev e dalle credenziali Cloudflare non configurate.
 
-Aggiornamento `0.7.18` build 98: il valore `today` nel selettore Periodo identifica la vista delle ultime misure, senza limite alla giornata corrente. `selectLatestCandidates` sceglie il timestamp orario/subgiornaliero più recente non futuro per sampling point; la fusione conserva il più recente per stazione. Il riquadro Periodo riporta la data massima delle stazioni effettivamente visualizzate; i singoli timestamp restano nell’elenco. Il badge usa `<inquinante> - ultima misura`. Il percorso usa i file disponibili nel catalogo UTD, non garantisce che una stazione trasmetta in tempo reale e non sostituisce dati mancanti con statistiche annuali. La temperatura resta attuale, con estremi previsti di oggi. Questa descrizione sostituisce la limitazione alla giornata della release `0.7.16` riportata di seguito.
+Aggiornamenti `0.7.18` / `0.7.25`: il valore `today` nel selettore Periodo identifica la vista degli ultimi dati disponibili, senza limite alla giornata corrente. `selectLatestCandidates` sceglie il dato orario, subgiornaliero o giornaliero concluso più recente non futuro per sampling point; la fusione conserva il più recente per stazione. Il riquadro Periodo riporta la data massima delle stazioni effettivamente visualizzate; l'elenco distingue gli orari dalle medie giornaliere. Il badge usa `<inquinante> - ultima misura`. Il percorso usa i file disponibili nel catalogo UTD, non garantisce che una stazione trasmetta in tempo reale e non sostituisce dati mancanti con statistiche annuali. La temperatura resta attuale, con estremi previsti di oggi. Questa descrizione sostituisce la limitazione alla giornata della release `0.7.16` riportata di seguito.
 
 Correzione preparata `0.7.17` build 97: `Oggi` è un valore di `yearSelect`, nello stesso selettore delle annualità, etichettato `Periodo`. `monthSelect` non viene usato per la vista odierna e resta nascosto. Il selettore Periodo rimane visibile durante la vista Oggi. La scelta di un anno ripristina il flusso annuale; Confronto, Differenza ed Europa ammettono soltanto annualità. Il routing UTD usa il parametro anno `today`, mentre l’overlay meteo riceve separatamente il periodo e l’anno corrente. Test in `tests/eea-period.test.mjs`; verifica browser con passaggio Oggi/2025/Oggi. Patch locale non ancora pubblicata.
 

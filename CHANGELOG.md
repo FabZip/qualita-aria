@@ -1,3 +1,11 @@
+# 0.7.25
+
+- Rimossa l'esclusione sistematica delle serie giornaliere dalla vista EEA `Oggi`, che può mostrare stazioni con la sola ultima media giornaliera disponibile.
+- La selezione verifica la fine dell'intervallo quando disponibile; per le medie giornaliere senza fine esplicita attende 24 ore dall'inizio. Restano esclusi valori futuri e periodi non conclusi. A parità d'inizio viene preferito il dato subgiornaliero dello stesso sampling point.
+- Elenco stazioni e riquadro Periodo distinguono le medie giornaliere dai dati con orario, conservando la data effettiva e senza attribuirle automaticamente a oggi.
+- Aggiunta diagnostica delle osservazioni per aggregazione e test sintetico con due file, 582 righe, 556 osservazioni valide; test di primo avvio/reload nel browser con risposte giornaliere e orarie simulate.
+- App `0.7.25` build 105, cache PWA e moduli aggiornati. Statistiche annuali, Worker e database invariati.
+
 # 0.7.24
 
 - Aggiunto il pulsante Mappa stradale / Satellite nella mappa delle segnalazioni arboree, mantenendo centro, zoom e mirino al cambio di stile.

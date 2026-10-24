@@ -64,4 +64,8 @@ for(const [value,label] of [['PM10','PM10'],['PM2.5','PM2.5'],['NO2','NO₂']]){
 measurements=[];await context.render();
 assert.equal(node('periodValue').textContent,'—');
 assert.equal(node('periodValue').title,'Nessuna misura disponibile');
+measurements=[{latestAt:'2026-10-18T00:00:00Z',aggregation:'day'}];
+await context.render();
+assert.equal(node('periodValue').textContent,'18/10/2026');
+assert.match(node('periodValue').title,/Media giornaliera/);
 console.log('eea-period: ok');

@@ -1,3 +1,7 @@
+# A.R.I.A. 0.7.25
+
+La vista EEA `Oggi` include ora anche l'ultima media giornaliera disponibile quando una stazione non pubblica dati orari. Il valore è accompagnato dalla dicitura `media giornaliera del …`, senza un orario istantaneo inventato. Sono esclusi periodi non ancora conclusi e dati futuri; la data effettiva rimane visibile anche se precedente a oggi. Corretto un filtro che poteva scartare tutte le osservazioni giornaliere già scaricate e lasciare vuote mappa ed elenco. App `0.7.25` build 105; nessun nuovo deploy dei Worker, basta ricaricare il frontend aggiornato.
+
 # A.R.I.A. 0.7.24
 
 Nella mappa delle segnalazioni arboree il pulsante `Mappa stradale` / `Satellite` permette di leggere i nomi delle vie senza perdere la posizione scelta con il mirino. Dopo l'invio riuscito, sia le segnalazioni di posizione sia quelle sull'evento chiudono il modulo e mostrano una notifica con il numero della segnalazione. In caso di errore il modulo rimane aperto e conserva i dati; il doppio invio è bloccato durante l'attesa. App `0.7.24` build 104; cache PWA aggiornata, nessun nuovo deploy dei Worker.

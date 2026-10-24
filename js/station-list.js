@@ -312,7 +312,9 @@
         : '';
 
     const timestamp=row.latestAt&&Number.isFinite(Date.parse(row.latestAt))
-      ?` · ${escapeHtml(new Date(row.latestAt).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))}`:'';
+      ?row.aggregation==='day'
+        ?` · media giornaliera del ${escapeHtml(new Date(row.latestAt).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}))}`
+        :` · ${escapeHtml(new Date(row.latestAt).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))}`:'';
     const detail = row.kind === 'station'
       ? `${row.country?`${escapeHtml(row.country)} · `:''}${escapeHtml(row.id || '')}${row.coverage !== null && row.coverage !== undefined?` · copertura ${fmtValue(row.coverage)}%`:''}${dataStatus}`
       : `Comune di Roma${row.zone?` · zona ${escapeHtml(row.zone)}`:''}`;
