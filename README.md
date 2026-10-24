@@ -1,3 +1,7 @@
+# A.R.I.A. 0.7.26
+
+Ogni fonte conserva i propri filtri durante la navigazione: tornando a EEA, OpenAQ, ARPA Lazio, previsioni o alberi ritrovi città/area, inquinante e periodo selezionati, con gli anni di confronto e la modalità compatibile. Le opzioni dipendenti vengono ricostruite prima del ripristino; valori non più disponibili lasciano un'opzione valida. La memoria è limitata alla pagina aperta e non viene salvata nel browser dopo un ricaricamento. App `0.7.26` build 106; nessun nuovo deploy dei Worker.
+
 # A.R.I.A. 0.7.25
 
 La vista EEA `Oggi` include ora anche l'ultima media giornaliera disponibile quando una stazione non pubblica dati orari. Il valore è accompagnato dalla dicitura `media giornaliera del …`, senza un orario istantaneo inventato. Sono esclusi periodi non ancora conclusi e dati futuri; la data effettiva rimane visibile anche se precedente a oggi. Corretto un filtro che poteva scartare tutte le osservazioni giornaliere già scaricate e lasciare vuote mappa ed elenco. App `0.7.25` build 105; nessun nuovo deploy dei Worker, basta ricaricare il frontend aggiornato.

@@ -16,15 +16,23 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.25` |
-| Build | `105` |
+| Applicazione | `0.7.26` |
+| Build | `106` |
 | Proxy EEA | `0.2.0` |
 | Worker ambientale | `0.9.13` |
 | Proxy OpenAQ | `0.4.2` |
 | Dataset arboreo consolidato | `22` |
 | Ultima migrazione D1 prevista | `0011_tree_source_cursor_offsets.sql` |
 
-La release precedente `0.7.24` è su `main` al commit `d179bfd`. La release `0.7.25` aggiorna soltanto il frontend: non richiede nuovi deploy Cloudflare, migrazioni D1 o modifiche ai secret. Lo stato del Worker remoto non è stato verificato da questo ambiente cloud, privo di autenticazione Cloudflare e accesso HTTP all'endpoint.
+La release precedente `0.7.25` è su `main` al commit `73fadf3`. La release `0.7.26` aggiorna soltanto il frontend: non richiede nuovi deploy Cloudflare, migrazioni D1 o modifiche ai secret. Lo stato del Worker remoto non è stato verificato da questo ambiente cloud, privo di autenticazione Cloudflare e accesso HTTP all'endpoint.
+
+### Memoria filtri per fonte 0.7.26
+
+`state.activeSource` identifica la fonte uscente; `state.sourceSettings` conserva una snapshot separata di modalità e select rilevanti per ogni fonte. `changeSource` salva i controlli prima di ricostruirli, ripristina area e città prima degli anni dipendenti, poi riapplica soltanto valori presenti fra le opzioni abilitate. Una seconda applicazione evita che la configurazione delle select sovrascriva, per esempio, il periodo OpenAQ. Le schede attive riflettono la modalità ripristinata; OpenAQ e previsioni mantengono i propri vincoli.
+
+EEA conserva anche `Geolocalizza` e `Oggi`; OpenAQ conserva inquinante e finestra temporale; alberi mantiene città e periodi disponibili; ARPA conserva Comune e annualità di confronto; previsioni mantiene città e inquinante. La memoria vive soltanto nella pagina: non viene usato localStorage/sessionStorage e non vengono salvate nuove coordinate o credenziali. Primo ingresso in una fonte e valori divenuti indisponibili usano i controlli validi predefiniti.
+
+Verifica: tutti i 16 file di test superati. Test browser con servizi simulati e due cicli fra le cinque fonti: EEA `Geolocalizza`/`Oggi`/PM10, previsioni Milano/CO, OpenAQ SO₂/15 giorni (verificato anche il parametro della richiesta), alberi Guidonia/2025 e ARPA Guidonia/NO₂/2019 con confronto 2018–2020 conservati. Primo avvio e reload EEA continuano a mostrare i dati giornalieri e orari simulati.
 
 ### EEA Oggi: supporto dati giornalieri 0.7.25
 

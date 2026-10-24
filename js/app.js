@@ -2,6 +2,7 @@ const state={
   mode:'map',
   map:null,mapBefore:null,mapAfter:null,
   deferredPrompt:null,swipe:50,syncing:false,
+  activeSource:null,sourceSettings:new Map(),
   toastTimer:null,renderToken:0,
   eeaCache:new Map(),arpaCache:new Map(),
   arpaBoundaryCache:new Map(),
@@ -146,6 +147,65 @@ const SOURCE_INFO={
 };
 
 function source(){return $('sourceSelect').value}
+function sourceSettingFields(name){
+  const periods=['yearSelect','compareYearA','compareYearB'];
+  switch(name){
+    case 'eea':return['eeaScopeSelect','eeaCitySelect','pollutantSelect',...periods];
+    case 'arpa':return['arpaCitySelect','pollutantSelect',...periods];
+    case 'openaq':return['pollutantSelect','monthSelect'];
+    case 'forecast':return['eeaCitySelect','pollutantSelect'];
+    case 'trees':return['eeaCitySelect',...periods];
+    default:return[]
+  }
+}
+
+function rememberSourceSettings(name){
+  if(!name)return;
+  state.sourceSettings.set(name,{
+    mode:state.mode,
+    values:Object.fromEntries(sourceSettingFields(name).map(id=>[id,$(id)?.value]))
+  })
+}
+
+function restoreSourceSelect(id,value){
+  const select=$(id);
+  if(value===undefined||!select)return;
+  if([...select.options].some(option=>option.value===value&&!option.disabled))select.value=value
+}
+
+function changeSource(){
+  const next=source();
+  rememberSourceSettings(state.activeSource);
+  const saved=state.sourceSettings.get(next);
+  state.activeSource=next;
+  resetEeaViewport();
+  state.temperatureViewportKey='';
+  clearTemperatureOverlays();
+  if(saved&&['map','compare','difference'].includes(saved.mode))state.mode=saved.mode;
+  // Area e città determinano le opzioni disponibili nei controlli successivi.
+  if(saved)restoreSourceSelect('eeaScopeSelect',saved.values.eeaScopeSelect);
+  configureSourceUI();
+  if(saved)restoreSourceSelect('eeaCitySelect',saved.values.eeaCitySelect);
+  fillYears();
+  const restore=()=>{
+    if(saved)for(const id of sourceSettingFields(next))restoreSourceSelect(id,saved.values[id])
+  };
+  restore();
+  if(!saved&&isTrees()){
+    $('yearSelect').value=currentTreePeriods()[0].value;
+    restoreSourceSelect('compareYearA','2019');
+    restoreSourceSelect('compareYearB','2020')
+  }
+  configureSourceUI();
+  // Alcune fonti ricreano il Periodo durante la configurazione dell'interfaccia.
+  restore();
+  document.querySelectorAll('.tab').forEach(button=>{
+    button.classList.toggle('active',button.dataset.mode===state.mode)
+  });
+  if(next==='eea')focusSelectedEeaScope();
+  render()
+}
+
 function isTemperature(){return state.mode==='temperature'}
 function isTrees(){return source()==='trees'}
 function isForecast(){return source()==='forecast'}
@@ -3622,21 +3682,8 @@ function bind(){
     render()
   }));
 
-  $('sourceSelect').addEventListener('change',()=>{
-    resetEeaViewport();
-    state.temperatureViewportKey='';
-    clearTemperatureOverlays();
-    fillYears();
-    if(isTrees()){
-      $('yearSelect').value=TREE_MAP_PERIODS[0].value;
-      $('compareYearA').value='2019';
-      $('compareYearB').value='2020'
-    }
-    configureSourceUI();
-    if(source()==='openaq')$('eeaCityField')?.classList.add('hidden');
-    if(source()==='eea')focusSelectedEeaScope();
-    render()
-  });
+  state.activeSource=source();
+  $('sourceSelect').addEventListener('change',changeSource);
 
   $('eeaScopeSelect').addEventListener('change',()=>{
     if(source()!=='eea')return;
@@ -3731,7 +3778,7 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.7.25',{cache:'no-store'}).then(r=>r.json()),
+    fetch('version.json?v=0.7.26',{cache:'no-store'}).then(r=>r.json()),
     fetch('data/version.json?v=0.7.6',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
@@ -3748,7 +3795,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.7.25')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.26')
       .then(reg=>reg.update())
       .catch(console.error)
   }

@@ -1,3 +1,10 @@
+# 0.7.26
+
+- Aggiunta memoria separata delle select per EEA, OpenAQ, ARPA Lazio, previsioni e alberi: area/città/Comune, inquinante, periodo e anni di confronto vengono ripristinati tornando alla fonte.
+- Ripristinata anche la modalità Mappa/Confronto/Differenza, rispettando i limiti di OpenAQ e previsioni; stato delle schede sincronizzato.
+- Il ripristino rispetta le dipendenze città → periodi e fonte → inquinanti, valida le opzioni disponibili e riapplica i valori dopo la ricostruzione delle select. Nessuna persistenza tra ricaricamenti della pagina.
+- App `0.7.26` build 106, cache PWA aggiornata; nessuna modifica ai Worker o al database.
+
 # 0.7.25
 
 - Rimossa l'esclusione sistematica delle serie giornaliere dalla vista EEA `Oggi`, che può mostrare stazioni con la sola ultima media giornaliera disponibile.
