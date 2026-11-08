@@ -252,13 +252,14 @@ async function discodataPages(sql,{maxPages=20}={}){
   const started=Date.now();
 
   for(let page=1;page<=maxPages;page++){
-    const url=`${EEA_SQL_API}?${new URLSearchParams({
-      query:sql,
-      p:String(page),
-      nrOfHits:String(PAGE_SIZE)
-    })}`;
-
-    const response=await fetch(url,{
+    // Match the official Discodata client: SQL in a multipart POST body.
+    // The upstream gateway rejects these queries in GET URLs with HTTP 403.
+    const body=new FormData();
+    body.set('query',sql);
+    body.set('p',String(page));
+    body.set('nrOfHits',String(PAGE_SIZE));
+    const response=await fetch(EEA_SQL_API,{
+      method:'POST',body,
       headers:{Accept:'application/json'}
     });
 
@@ -733,7 +734,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-eea-proxy',
-        version:'0.2.0',
+        version:'0.2.1',
         utdSpatialSelection:true,
         annualValidated:true,
         metadata:true,

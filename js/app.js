@@ -691,13 +691,14 @@ async function fetchDiscodataPages(sql,{pageSize=1000,maxPages=20}={}){
   const rows=[];
 
   for(let page=1;page<=maxPages;page++){
-    const url=`${EEA_SQL_API}?${new URLSearchParams({
-      query:sql,
-      p:String(page),
-      nrOfHits:String(pageSize)
-    })}`;
-
-    const response=await fetch(url,{cache:'no-store'});
+    // FormData lets the browser set the multipart boundary, as in EEA's client.
+    const body=new FormData();
+    body.set('query',sql);
+    body.set('p',String(page));
+    body.set('nrOfHits',String(pageSize));
+    const response=await fetch(EEA_SQL_API,{
+      method:'POST',body,cache:'no-store'
+    });
     if(!response.ok)throw new Error(`HTTP ${response.status} · pagina ${page}`);
 
     const data=await response.json();
@@ -3804,7 +3805,7 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=0.7.27',{cache:'no-store'}).then(r=>r.json()),
+    fetch('version.json?v=0.7.28',{cache:'no-store'}).then(r=>r.json()),
     fetch('data/version.json?v=0.7.6',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
@@ -3821,7 +3822,7 @@ async function boot(){
   initMaps();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=0.7.27')
+    navigator.serviceWorker.register('./service-worker.js?v=0.7.28')
       .then(reg=>reg.update())
       .catch(console.error)
   }

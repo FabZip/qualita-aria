@@ -1,3 +1,10 @@
+# 0.7.28
+
+- Le query Discodata usano POST multipart, come il client ufficiale EEA, sia nel Worker sia nel fallback del browser. Risolto il percorso GET rifiutato dal gateway EEA con 403, che causava anche 502 su metadati ed elenco file UTD.
+- Conservati parametri SQL, paginazione, limiti, cache e filtri geografici. Nessuna credenziale aggiunta o modificata.
+- Aggiunti test sul trasporto POST, boundary multipart, paginazione, risultati vuoti, limiti ed errori; aggiornato il test di selezione geografica UTD.
+- App `0.7.28` build 108 e cache PWA aggiornata; proxy EEA `0.2.1` da distribuire. Worker ambientale `0.9.14`, OpenAQ `0.4.2`, dataset e database invariati.
+
 # 0.7.27
 
 - Inclusi gli avvisi arborei misti, separando blocchi di abbattimento e piantumazione quando identificabili; blocchi ambigui conservati come da verificare, senza quantità inventate.

@@ -1,6 +1,10 @@
 # EEA edge proxy
 
-Versione `0.2.0`, necessaria per il frontend `0.7.19`.
+Versione `0.2.1`, associata al frontend `0.7.28`.
+
+Le query Discodata annuali e dei metadati vengono inviate a `/sql` tramite POST multipart (`query`, `p`, `nrOfHits`), come nel client ufficiale EEA. Il gateway EEA rifiuta le query GET precedenti con HTTP 403; il Worker le riportava come 502 anche su `/v1/utd/files`, che dipende dai metadati. Gli endpoint pubblici di questo Worker restano GET: cambia soltanto il trasporto upstream. Non servono token EEA né rotazioni di secret.
+
+Il deploy è indispensabile: il fallback POST diretto del browser resta soggetto alla policy CORS di EEA. L'8 novembre 2026 la risposta POST testata non esponeva `Access-Control-Allow-Origin`, pur restituendo HTTP 200 al client server-side.
 
 La richiesta upstream UTD usa `countries: ["IT"]`, `cities: []` e l’etichetta dell’inquinante (`PM2.5`, `PM10`, `NO2`). Il nome città resta solo un’etichetta: la selezione geografica usa `bbox` e `year`, inoltrati sia a `/v1/utd/files` sia a `/v1/utd/file`. Il Worker recupera i metadati EEA dell’area e seleziona i file con codici stazione corrispondenti. Se il nome di un file non contiene codici riconoscibili, il file viene conservato e le osservazioni vengono filtrate nel browser. In quel caso il primo caricamento può richiedere più download.
 
@@ -33,7 +37,7 @@ Gli anni recenti E1a hanno TTL 6 ore; gli anni consolidati 30 giorni.
 
 ```bash
 cd cloudflare/eea-proxy
-npx wrangler@latest deploy
+npx wrangler@latest deploy --config ./wrangler.jsonc
 ```
 
 Non sono richiesti secret.

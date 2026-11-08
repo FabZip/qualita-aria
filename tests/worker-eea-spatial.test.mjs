@@ -7,7 +7,7 @@ const upstreamRequests=[];
 const urls=Array.from({length:328},(_,index)=>`https://files.eea.test/IT${String(index).padStart(4,'0')}A_PM25.parquet`);
 urls.push('https://files.eea.test/unclassified.parquet');
 const context=vm.createContext({
-  URL,URLSearchParams,Date,Request,Response,Headers,console,crypto,
+  URL,URLSearchParams,Date,Request,Response,Headers,FormData,console,crypto,
   caches:{default:{
     async match(request){return storage.get(request.url)?.clone()},
     async put(request,response){storage.set(request.url,response.clone())}
@@ -23,6 +23,10 @@ const context=vm.createContext({
       return new Response(`\uFEFFParquetFileUrl\n${urls.join('\n')}`)
     }
     if(url.hostname==='discodata.eea.europa.eu'){
+      assert.equal(options.method,'POST');
+      assert.equal(url.search,'','SQL non deve essere nella URL');
+      assert.ok(options.body instanceof FormData);
+      assert.match(options.body.get('query'),/Measurements/);
       return Response.json({results:[{
         AirQualityStationEoICode:'IT0327A',SampleId:'IT/SPO.IT0327A_6001',
         AirPollutantCode:6001,Latitude:45.46,Longitude:9.18,CountryCode:'IT'
