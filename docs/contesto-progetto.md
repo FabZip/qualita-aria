@@ -24,7 +24,7 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Dataset arboreo consolidato | `22` |
 | Ultima migrazione D1 prevista | `0011_tree_source_cursor_offsets.sql` |
 
-La release precedente `0.7.27` è su `main` al commit `914ba95`. L'8 novembre 2026 `/health` remoto del Worker ambientale conferma `0.9.14`; il proxy EEA remoto è ancora `0.2.0` e deve essere aggiornato a `0.2.1`. Nessuna nuova migrazione D1 né rotazione dei secret. L'autenticazione Cloudflare per il deploy non è configurata in questo ambiente.
+La release `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 `/health` remoto del Worker ambientale conferma `0.9.14`; il proxy EEA `0.2.1` è stato distribuito e verificato tramite `/health`. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali. Attenzione: il deploy è riuscito, ma le richieste EEA dal Worker ricevono ancora 403 e gli endpoint dati restituiscono 502.
 
 ### Discodata POST 0.7.28 / EEA 0.2.1
 
@@ -32,7 +32,9 @@ L'8 novembre è stato riprodotto il 403 reale dal gateway `Microsoft-Azure-Appli
 
 `discodataPages` nel proxy EEA e `fetchDiscodataPages` nel browser ora usano FormData con `query`, `p`, `nrOfHits`, lasciando al client HTTP la boundary multipart. Restano invariati filtri, paginazione, cache ed endpoint GET del Worker. Nessun token EEA è richiesto; `TREE_ADMIN_TOKEN` riguarda solo gli alberi e le credenziali Cloudflare solo l'amministrazione/deploy. La cache PWA è aggiornata. Sono necessari push frontend e deploy del solo proxy EEA `0.2.1` con `npx wrangler@latest deploy --config ./wrangler.jsonc` dalla sua cartella.
 
-Verifiche della correzione: suite completa (18 file, 23 test), Chromium con upstream simulato per multipart/CORS, dry-run Wrangler 4.158.0 riuscito. I due helper modificati, eseguiti con adattatore HTTP curl verso EEA reale, ricevono entrambi 15 righe senza troncamento. Una POST reale con Origin GitHub Pages non espone `Access-Control-Allow-Origin`: il successo HTTP non garantisce il fallback cross-origin nel browser. Il Worker resta necessario e deve essere distribuito; nessun deploy remoto eseguito da questa sessione, priva di autenticazione Cloudflare.
+Verifiche del codice: suite completa (18 file, 23 test), Chromium con upstream simulato per multipart/CORS, dry-run Wrangler 4.158.0 riuscito. I due helper modificati, eseguiti con adattatore HTTP curl verso EEA reale, ricevono entrambi 15 righe senza troncamento. Una POST reale con Origin GitHub Pages non espone `Access-Control-Allow-Origin`: il successo HTTP non garantisce il fallback cross-origin nel browser.
+
+Verifica dopo il deploy effettivo: Wrangler 4.158.0 ha distribuito `qualita-aria-eea`, versione Cloudflare `8ba98c2e-e606-4dbb-ac4f-e7bf3f1c30f7`; `/health` restituisce 200 e `0.2.1`. Le richieste con Origin GitHub Pages a `/v1/metadata` e `/v1/utd/files` per l'area Guidonia/Cavaliere restituiscono ancora 502 con `Discodata HTTP 403 · pagina 1`. Il confronto POST da curl nell'ambiente cloud continua a ricevere 200. Il cambio di metodo non è dunque sufficiente dal Worker: va indagata la differenza di accesso tra i due client/reti, senza presumere già dimostrato un blocco IP specifico. Il problema di produzione resta aperto; non richiede una nuova rotazione dei token.
 
 ### Avvisi misti e revisione completa 0.7.27 / Worker 0.9.14
 
