@@ -27,6 +27,7 @@ const context=vm.createContext({
       assert.equal(url.search,'','SQL non deve essere nella URL');
       assert.ok(options.body instanceof FormData);
       assert.match(options.body.get('query'),/Measurements/);
+      assert.match(options.headers['User-Agent'],/^QualitaAria\//);
       return Response.json({results:[{
         AirQualityStationEoICode:'IT0327A',SampleId:'IT/SPO.IT0327A_6001',
         AirPollutantCode:6001,Latitude:45.46,Longitude:9.18,CountryCode:'IT'

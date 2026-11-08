@@ -1,6 +1,6 @@
 # A.R.I.A. 0.7.28
 
-Corretto il caricamento EEA bloccato con HTTP 403/502: il proxy e il fallback del browser inviano le query Discodata tramite POST multipart, come il client ufficiale EEA. Non servono nuovi token. App `0.7.28` build 108; è necessario distribuire il proxy EEA `0.2.1`:
+Corretto il caricamento EEA bloccato con HTTP 403/502: il proxy usa POST multipart e si identifica con lo User-Agent A.R.I.A. Il solo passaggio a POST non era sufficiente da Cloudflare; la correzione completa è nel proxy EEA `0.2.2`, distribuito l'8 novembre 2026. Il fallback del browser usa POST ma resta soggetto al CORS upstream. App `0.7.28` build 108, senza ulteriori modifiche al frontend. Non servono nuovi token applicativi. Per distribuire il proxy nel proprio ambiente:
 
 ```bash
 git pull --ff-only origin main
@@ -8,7 +8,7 @@ cd cloudflare/eea-proxy
 npx wrangler@latest deploy --config ./wrangler.jsonc
 ```
 
-Controllare che `https://qualita-aria-eea.fabzip.workers.dev/health` restituisca `version: "0.2.1"`, quindi ricaricare l'app. Il deploy richiede l'accesso Cloudflare dell'account corretto; `TREE_ADMIN_TOKEN` non è coinvolto. Nessuna migrazione o modifica al Worker alberi/temperature.
+Controllare che `https://qualita-aria-eea.fabzip.workers.dev/health` restituisca `version: "0.2.2"`, quindi ricaricare l'app. Il deploy richiede l'accesso Cloudflare dell'account corretto; `TREE_ADMIN_TOKEN` non è coinvolto. Nessuna migrazione o modifica al Worker alberi/temperature.
 
 # A.R.I.A. 0.7.27
 

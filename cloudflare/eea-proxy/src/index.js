@@ -260,11 +260,15 @@ async function discodataPages(sql,{maxPages=20}={}){
     body.set('nrOfHits',String(PAGE_SIZE));
     const response=await fetch(EEA_SQL_API,{
       method:'POST',body,
-      headers:{Accept:'application/json'}
+      headers:{Accept:'application/json','User-Agent':'QualitaAria/0.2.2 (+https://fabzip.github.io/qualita-aria/)'}
     });
 
     if(!response.ok){
-      const error=new Error(`Discodata HTTP ${response.status} · pagina ${page}`);
+      const text=(await response.text()).slice(0,2048);
+      const title=(text.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]||'').slice(0,120);
+      const gateway=(text.match(/<center>([^<]*Gateway[^<]*)<\/center>/i)?.[1]||'').slice(0,120);
+      const detail=[title,gateway].filter(Boolean).join(' · ');
+      const error=new Error(`Discodata HTTP ${response.status} · pagina ${page}${detail?` · ${detail}`:''}`);
       error.status=response.status;
       throw error
     }
@@ -561,7 +565,11 @@ async function utdUrls(ctx,{country,city='',pollutant,bbox=null,year=new Date().
   if(!bbox)return{...result,city,countryFileCount,spatialSelection:false};
   const metadataResult=await metadataResponse(ctx,{}, {country,pollutant,bbox,year});
   const metadataPayload=await metadataResult.json();
-  if(!metadataResult.ok)throw new Error(metadataPayload.error||'Metadati geografici EEA non disponibili');
+  if(!metadataResult.ok){
+    const error=new Error(metadataPayload.error||'Metadati geografici EEA non disponibili');
+    error.status=metadataPayload.upstreamStatus||metadataResult.status;
+    throw error
+  }
   if(metadataPayload.meta?.truncated)throw new Error('Area troppo ampia: metadati geografici incompleti. Aumenta lo zoom.');
   const rows=metadataPayload.results||[];
   return{
@@ -734,7 +742,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-eea-proxy',
-        version:'0.2.1',
+        version:'0.2.2',
         utdSpatialSelection:true,
         annualValidated:true,
         metadata:true,

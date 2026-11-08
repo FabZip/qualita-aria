@@ -1,3 +1,9 @@
+# Proxy EEA 0.2.2 — app 0.7.28
+
+- Risolto il 403 Discodata proveniente dal Worker: le POST multipart includono ora uno User-Agent esplicito e veritiero `QualitaAria/0.2.2 (+https://fabzip.github.io/qualita-aria/)`. Il solo passaggio a POST della versione 0.2.1 non era sufficiente da Cloudflare.
+- Diagnostica degli errori limitata al titolo e all'identificazione del gateway, senza esporre l'intera pagina; preservato `upstreamStatus` anche negli errori dell'elenco file UTD.
+- Worker 0.2.2 distribuito e verificato su metadati non in cache, catalogo UTD e lettura dei Parquet reali nel browser al primo caricamento e dopo reload. Nessuna modifica a frontend, dataset, credenziali o database.
+
 # 0.7.28
 
 - Le query Discodata usano POST multipart, come il client ufficiale EEA, sia nel Worker sia nel fallback del browser. Risolto il percorso GET rifiutato dal gateway EEA con 403, che causava anche 502 su metadati ed elenco file UTD.

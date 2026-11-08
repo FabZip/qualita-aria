@@ -1,8 +1,10 @@
 # EEA edge proxy
 
-Versione `0.2.1`, associata al frontend `0.7.28`.
+Versione `0.2.2`, associata al frontend `0.7.28`, distribuita l'8 novembre 2026.
 
 Le query Discodata annuali e dei metadati vengono inviate a `/sql` tramite POST multipart (`query`, `p`, `nrOfHits`), come nel client ufficiale EEA. Il gateway EEA rifiuta le query GET precedenti con HTTP 403; il Worker le riportava come 502 anche su `/v1/utd/files`, che dipende dai metadati. Gli endpoint pubblici di questo Worker restano GET: cambia soltanto il trasporto upstream. Non servono token EEA né rotazioni di secret.
+
+Da Cloudflare è necessario anche identificare esplicitamente il client con lo User-Agent veritiero `QualitaAria/0.2.2 (+https://fabzip.github.io/qualita-aria/)`: il gateway ha continuato a rifiutare le POST senza tale intestazione. La prova con multipart di dimensione nota non ha risolto il blocco e non è stata mantenuta. Con POST FormData e identificazione A.R.I.A. sono stati verificati metadati non in cache, catalogo e Parquet reali. In caso di errore il JSON conserva lo stato upstream e soltanto titolo/identificazione del gateway, non la sua pagina completa.
 
 Il deploy è indispensabile: il fallback POST diretto del browser resta soggetto alla policy CORS di EEA. L'8 novembre 2026 la risposta POST testata non esponeva `Access-Control-Allow-Origin`, pur restituendo HTTP 200 al client server-side.
 

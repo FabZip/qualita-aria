@@ -18,15 +18,21 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | --- | --- |
 | Applicazione | `0.7.28` |
 | Build | `108` |
-| Proxy EEA | `0.2.1` |
+| Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.9.14` |
 | Proxy OpenAQ | `0.4.2` |
 | Dataset arboreo consolidato | `22` |
 | Ultima migrazione D1 prevista | `0011_tree_source_cursor_offsets.sql` |
 
-La release `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 `/health` remoto del Worker ambientale conferma `0.9.14`; il proxy EEA `0.2.1` è stato distribuito e verificato tramite `/health`. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali. Attenzione: il deploy è riuscito, ma le richieste EEA dal Worker ricevono ancora 403 e gli endpoint dati restituiscono 502.
+La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
 
-### Discodata POST 0.7.28 / EEA 0.2.1
+### Correzione verificata in produzione — EEA 0.2.2
+
+Il gateway Discodata rifiutava anche le POST del Worker prive di identificazione esplicita del client. Serializzare il multipart a dimensione nota non ha risolto il blocco. Aggiungendo lo User-Agent veritiero `QualitaAria/0.2.2 (+https://fabzip.github.io/qualita-aria/)` le richieste sono riuscite; la prova successiva, rimosso il buffering e su un bounding box non in cache, conferma che è sufficiente il normale POST FormData con identificazione A.R.I.A. Non sono stati cambiati query, autorizzazioni EEA o credenziali, né impersonati altri client.
+
+Il Worker 0.2.2 è in produzione (versione Cloudflare `5f8b558a-0bb9-4d36-baa8-0a4f8355ef93`). Metadati nell'area Guidonia/Cavaliere: 15 righe ricevute, due stazioni PM2.5 selezionate; catalogo UTD: 334 file nazionali, due nell'area. Il test Chromium usa i moduli frontend reali `eea-proxy.js`/`eea-utd.js`, le librerie Parquet reali e risposte remote effettive del Worker tramite adattatore HTTP curl con Origin localhost; non equivale a un collaudo dell'intera cartografia di GitHub Pages. Primo caricamento e reload: 16 richieste tutte 200, due Parquet con 606 righe e 580 osservazioni accettate; GUIDONIA 10 µg/m³ e TENUTA DEL CAVALIERE 9 µg/m³, ultime medie giornaliere del 7 novembre 2026. Nessun file in errore. Frontend e dataset invariati; suite completa di 24 test superata, con regressioni per User-Agent, diagnostica limitata e propagazione dello stato upstream a UTD. Gli endpoint annuali 2024/2025 rispondono 200 con risultati realmente vuoti per questo filtro (confermato dalla query diretta, senza errori SQL): ciò non è un errore HTTP e non viene sostituito da dati inventati.
+
+### Diagnosi iniziale Discodata POST 0.7.28 / EEA 0.2.1 (superata da 0.2.2)
 
 L'8 novembre è stato riprodotto il 403 reale dal gateway `Microsoft-Azure-Application-Gateway/v2` di Discodata sulle query GET. Il proxy EEA restituisce di conseguenza 502 sia sui metadati sia sui file UTD; il fallback diretto del browser fallisce a sua volta con 403. La stessa query metadati per l'area Guidonia/Cavaliere tramite POST multipart, come il client ufficiale Discodata, risponde 200 con 15 righe, senza autenticazione.
 
@@ -34,7 +40,7 @@ L'8 novembre è stato riprodotto il 403 reale dal gateway `Microsoft-Azure-Appli
 
 Verifiche del codice: suite completa (18 file, 23 test), Chromium con upstream simulato per multipart/CORS, dry-run Wrangler 4.158.0 riuscito. I due helper modificati, eseguiti con adattatore HTTP curl verso EEA reale, ricevono entrambi 15 righe senza troncamento. Una POST reale con Origin GitHub Pages non espone `Access-Control-Allow-Origin`: il successo HTTP non garantisce il fallback cross-origin nel browser.
 
-Verifica dopo il deploy effettivo: Wrangler 4.158.0 ha distribuito `qualita-aria-eea`, versione Cloudflare `8ba98c2e-e606-4dbb-ac4f-e7bf3f1c30f7`; `/health` restituisce 200 e `0.2.1`. Le richieste con Origin GitHub Pages a `/v1/metadata` e `/v1/utd/files` per l'area Guidonia/Cavaliere restituiscono ancora 502 con `Discodata HTTP 403 · pagina 1`. Il confronto POST da curl nell'ambiente cloud continua a ricevere 200. Il cambio di metodo non è dunque sufficiente dal Worker: va indagata la differenza di accesso tra i due client/reti, senza presumere già dimostrato un blocco IP specifico. Il problema di produzione resta aperto; non richiede una nuova rotazione dei token.
+Verifica storica dopo il primo deploy: Wrangler 4.158.0 aveva distribuito `qualita-aria-eea`, versione Cloudflare `8ba98c2e-e606-4dbb-ac4f-e7bf3f1c30f7`; `/health` restituiva 200 e `0.2.1`, ma metadati e file UTD davano ancora 502 con `Discodata HTTP 403 · pagina 1`. Il confronto POST da curl riceveva 200. La diagnosi successiva e la correzione effettiva sono documentate nella sezione EEA 0.2.2 sopra: il problema non era un token e il cambio di metodo da solo era insufficiente.
 
 ### Avvisi misti e revisione completa 0.7.27 / Worker 0.9.14
 
