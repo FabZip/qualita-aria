@@ -3641,7 +3641,7 @@ function renderTreeAdminReports(reports,targetId='treeAdminReports'){
     let locations=[];try{locations=JSON.parse(report.locations_json||'[]')}catch{};
     if(!locations.length)locations=[report.location_name];
     const position=isLocation?`<details><summary>Correggi la singola posizione segnalata</summary><div class="tree-form-grid"><label>Longitudine<input data-admin-lon type="number" step="any" value="${Number(report.suggested_longitude)}"></label><label>Latitudine<input data-admin-lat type="number" step="any" value="${Number(report.suggested_latitude)}"></label></div><label>Nome località<input data-admin-location value="${safe(report.location_name)}"></label><label>Geometria GeoJSON <small>(facoltativa)</small><textarea data-admin-geometry placeholder='{"type":"LineString","coordinates":[...]}'></textarea></label><button type="button" data-admin-action="approve">Approva solo questa posizione</button></details>`:'';
-    return`<article class="tree-admin-report tree-admin-event-report" data-report-id="${report.id}" data-report-type="${isLocation?'location':'event'}" data-admin-direct="${report.direct?'true':'false'}" data-source-key="${safe(report.source_key)}" data-updated-at="${safe(report.updated_at)}">${report.direct?`<details><summary>${safe(report.event_title||report.location_name)} · ${report.event_type==='planting'?'Piantumazione':report.event_type==='decrement'?'Abbattimento':'Da verificare'} · ${safe(report.event_quantity??'quantità sconosciuta')}</summary>`:''}
+    return`<article class="tree-admin-report tree-admin-event-report" data-report-id="${report.id}" data-report-type="${isLocation?'location':'event'}" data-admin-search="${safe([report.event_title,report.locations_json,report.location_name,report.event_district,report.source_url,report.raw_excerpt,report.event_date,report.event_quantity,report.event_type==='planting'?'piantumazione verde':report.event_type==='decrement'?'abbattimento rosso':'da verificare'].filter(value=>value!==null&&value!==undefined).join(' '))}" data-admin-direct="${report.direct?'true':'false'}" data-source-key="${safe(report.source_key)}" data-updated-at="${safe(report.updated_at)}">${report.direct?`<details><summary>${safe(report.event_title||report.location_name)} · ${report.event_type==='planting'?'Piantumazione':report.event_type==='decrement'?'Abbattimento':'Da verificare'} · ${safe(report.event_quantity??'quantità sconosciuta')}</summary>`:''}
       <h3>${report.direct?'Evento':`Segnalazione ${isLocation?'posizione':'evento'}`} · ${safe(report.event_title||report.location_name)}</h3><p>${safe(report.reason)}</p><p>${reporter}</p><p>I dati dell’intervento corretti qui saranno pubblicati nell’app. La quantità e il tipo determinano numero e colore degli alberi pubblicati.</p>
       <label>Titolo<input data-admin-event-title maxlength="300" value="${safe(report.event_title)}"></label>
       <div class="tree-form-grid"><label>Comune<select data-admin-event-city>${option('roma','Roma',report.event_city)}${option('guidonia-montecelio','Guidonia Montecelio',report.event_city)}</select></label><label>Anno<input data-admin-event-year type="number" min="2013" max="${new Date().getFullYear()}" value="${Number(report.event_year)||''}"></label></div>
@@ -3664,6 +3664,7 @@ async function loadTreeAdminReports(password){
   const result=await response.json();if(!response.ok)throw new Error(result.error||`HTTP ${response.status}`);
   if(result.adminSchemaVersion!==2)throw new Error('Aggiorna il Worker ambientale alla versione 0.9.14 per modificare tutti i dati degli eventi.');
   $('treeAdminEvents').innerHTML='';
+  $('treeAdminSearchField')?.classList?.add('hidden');
   renderTreeAdminReports(result.reports||[]);status.textContent=`${result.reports?.length||0} segnalazioni in attesa.`
 }
 
@@ -3702,11 +3703,29 @@ async function reviewTreeAdminReport(article,action){
   result=await response.json();if(!response.ok){$('treeAdminStatus').textContent=result.error||`HTTP ${response.status}`;return}
   }finally{buttons.forEach(button=>button.disabled=false)}
   article.remove();
+  if(direct)globalThis.filterTreeAdminEvents?.();
   if(result.notificationEmail){$('treeAdminStatus').innerHTML=`Revisione salvata. <a href="mailto:${encodeURIComponent(result.notificationEmail)}?subject=${encodeURIComponent('A.R.I.A. – esito segnalazione posizione')}">Invia conferma al segnalante</a>.`}
   else $('treeAdminStatus').textContent=action==='split_event'?`Evento diviso in ${result.children?.length||0} interventi. Ricarica gli eventi per modificarli.`:action==='delete_event'?'Evento rimosso: sarà ignorato negli aggiornamenti.':'Revisione salvata.'
   if(result.geocoding?.pending)$('treeAdminStatus').append(' Ricerca posizioni da completare con i prossimi aggiornamenti.');
   if(result.geocoding?.attempted&&result.geocoding.geocoded===0)$('treeAdminStatus').append(' Posizione non trovata: nessun puntatore aggiunto.');
   if(isTrees()&&action!=='reject')await render();
+}
+
+function filterTreeAdminEvents(){
+  const normalize=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('it-IT');
+  const terms=normalize($('treeAdminSearch')?.value).trim().split(/\s+/).filter(Boolean);
+  const articles=[...$('treeAdminEvents').querySelectorAll('[data-admin-direct="true"]')];
+  let visible=0;
+  for(const article of articles){
+    const text=normalize(article.dataset.adminSearch);
+    const matches=terms.every(term=>text.includes(term));
+    // Hide existing editors instead of rebuilding them: unsaved changes survive filtering.
+    article.classList.toggle('hidden',!matches);
+    if(matches)visible++;
+  }
+  $('treeAdminSearchCount').textContent=visible
+    ?`${visible} di ${articles.length} eventi`
+    :terms.length?'Nessun evento corrisponde alla ricerca.':`0 di ${articles.length} eventi`;
 }
 
 function treeAdminEventBody(report){
@@ -3735,6 +3754,8 @@ async function loadTreeAdminEvents(password){
   }
   state.treeAdminOriginals=new Map(reports.map(report=>[report.source_key,treeAdminEventBody(report)]));
   renderTreeAdminReports(reports,'treeAdminEvents');
+  $('treeAdminSearchField')?.classList?.remove('hidden');
+  globalThis.filterTreeAdminEvents?.();
   status.textContent=`${reports.length} eventi. Apri un evento per modificarlo, dividerlo o rimuoverlo.`;
 }
 
@@ -3860,6 +3881,7 @@ function bind(){
   $('treeReportReset')?.addEventListener('click',resetTreeReportMap);
   $('treeReportMapToggle')?.addEventListener('click',toggleTreeReportMapStyle);
   $('treeAddressSearch')?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();searchTreeReportAddress()}});
+  $('treeAdminSearch')?.addEventListener('input',filterTreeAdminEvents);
   $('treeAdminLogin')?.addEventListener('submit',event=>{
     event.preventDefault();
     const password=$('treeAdminPassword').value;$('treeAdminPassword').value='';
@@ -3869,7 +3891,7 @@ function bind(){
   let versionClicks=0,lastVersionClick=0;
   const openAdmin=()=>{
     const now=Date.now();versionClicks=now-lastVersionClick<1800?versionClicks+1:1;lastVersionClick=now;
-    if(versionClicks===5){versionClicks=0;$('treeAdminReports').innerHTML='';$('treeAdminEvents').innerHTML='';$('treeAdminCity').value=TREE_CITY_CONFIG[eeaCity()]?eeaCity():'roma';$('treeAdminYear').value=/^20\d{2}$/.test($('yearSelect').value)?$('yearSelect').value:String(new Date().getFullYear());$('treeAdminStatus').textContent='';$('treeAdminDialog').showModal();$('treeAdminPassword').focus()}
+    if(versionClicks===5){versionClicks=0;$('treeAdminReports').innerHTML='';$('treeAdminEvents').innerHTML='';$('treeAdminSearch').value='';$('treeAdminSearchCount').textContent='';$('treeAdminSearchField').classList.add('hidden');$('treeAdminCity').value=TREE_CITY_CONFIG[eeaCity()]?eeaCity():'roma';$('treeAdminYear').value=/^20\d{2}$/.test($('yearSelect').value)?$('yearSelect').value:String(new Date().getFullYear());$('treeAdminStatus').textContent='';$('treeAdminDialog').showModal();$('treeAdminPassword').focus()}
   };
   $('appVersion')?.addEventListener('click',openAdmin);
   $('appVersion')?.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openAdmin()}});

@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.8.0` |
-| Build | `113` |
+| Applicazione | `0.8.1` |
+| Build | `114` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.10.0` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,10 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0012_tree_admin_event_split.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### Ricerca amministrativa 0.8.1
+
+Campo “Cerca negli eventi” nell'editor amministratore, con filtro locale immediato per titolo, località, municipio, fonte, descrizione, data, quantità e tipo. Tutte le parole devono corrispondere; maiuscole e accenti sono ignorati. Conteggio accessibile e messaggio per risultati vuoti. Il filtro nasconde le schede senza ricrearle, conservando le modifiche non salvate. Si azzera alla riapertura del pannello e si riapplica al ricaricamento dell'elenco. App 0.8.1 build 114, cache PWA aggiornata; nessun nuovo deploy Worker o migrazione rispetto a 0.8.0.
 
 ### Amministrazione Alberi 0.8.0 / Worker 0.10.0
 

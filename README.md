@@ -1,3 +1,7 @@
+# 0.8.1 — Ricerca negli eventi amministrativi
+
+Il pannello di modifica Alberi offre “Cerca negli eventi”: filtra in tempo reale titolo, indirizzi, municipio/zona, fonte, descrizione, data, quantità e tipo. La ricerca ignora maiuscole e accenti, combina più parole e mostra il conteggio dei risultati. Svuotando il campo tornano tutti gli eventi; le modifiche non salvate restano nei rispettivi editor durante il filtraggio. App `0.8.1` build `114`, cache PWA aggiornata. Nessuna nuova migrazione o modifica ai Worker rispetto a 0.8.0.
+
 # 0.8.0 — Amministrazione e divisione degli eventi Alberi
 
 Il pannello amministratore (cinque tocchi sulla versione) consente di caricare gli eventi per Comune e anno, anche senza una segnalazione. Ogni evento offre modifica del numero di alberi e del tipo: **Piantumazione · verde** oppure **Abbattimento · rosso**; le quantità sconosciute possono restare vuote.

@@ -37,3 +37,19 @@ assert.equal(c.state.treeAdminOriginals.get('local-id').quantity,3);
 assert.equal(c.state.treeAdminOriginals.get('local-id').eventDate,'','No invented execution date');
 c.fetch=async()=>Response.json({events:[]});await assert.rejects(()=>c.loadTreeAdminEvents('password'),/0\.10\.0/);
 console.log('trees-admin-events: ok');
+
+// Filtering preserves editor objects and unsaved values while hiding non-matches.
+vm.runInContext(extract('filterTreeAdminEvents'),c);
+const searchRows=[
+ {dataset:{adminSearch:'Città Studi Via Roma XIV https://comune.test/avviso piantumazione verde 12'},draft:'unsaved quantity 99'},
+ {dataset:{adminSearch:'Via Veneto II https://comune.test/altra-fonte abbattimento rosso 5'}}
+].map(row=>({...row,hidden:false,classList:{toggle(name,hidden){row.hidden=hidden}},get isHidden(){return row.hidden}}));
+node('treeAdminEvents').querySelectorAll=()=>searchRows;
+const firstEditor=searchRows[0];
+for(const [query,visible] of [['CITTA roma',[true,false]],['veneto rosso',[false,true]],['altra-fonte',[false,true]],['inesistente',[false,false]],['  ',[true,true]]]){
+ node('treeAdminSearch').value=query;c.filterTreeAdminEvents();
+ assert.deepEqual(searchRows.map(row=>!row.isHidden),visible);
+ assert.equal(searchRows[0],firstEditor);assert.equal(firstEditor.draft,'unsaved quantity 99');
+ if(query==='inesistente')assert.match(node('treeAdminSearchCount').textContent,/Nessun evento/);
+}
+assert.equal(node('treeAdminSearchCount').textContent,'2 di 2 eventi');
