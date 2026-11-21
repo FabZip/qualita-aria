@@ -17,3 +17,5 @@
 .tree-event-report-summary{padding:10px 12px;border:1px solid #29425d;border-radius:10px;background:#0d2032;color:#cbd5e1;font-weight:700}.tree-admin-event-report{border-color:#3d6488}.tree-admin-actions .is-danger{background:#7f1d1d;border-color:#ef4444}.tree-admin-actions .is-danger:hover{background:#991b1b}
 
 .tree-admin-split fieldset{min-width:0;margin:14px 0;padding:12px;border:1px solid #3d6488;border-radius:10px}.tree-admin-split legend{font-weight:700}.tree-admin-split button{margin-top:10px;padding:9px 12px;border:1px solid #3d6488;border-radius:9px;background:#183652;color:#fff;cursor:pointer}.tree-admin-login{flex-wrap:wrap}.tree-admin-event-report>details>summary{line-height:1.4}.tree-admin-event-report{overflow-wrap:anywhere}
+
+.tree-event-marker.is-unknown,.tree-list-icon.is-unknown{color:#94a3b8}

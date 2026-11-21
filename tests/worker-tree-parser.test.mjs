@@ -158,14 +158,14 @@ context.fetch=async resource=>{
 
 const firstDiscovery=await context.discoverTreePages(db);
 assert.equal(firstDiscovery.links.length,40);
-assert.equal(firstDiscovery.sources.filter(source=>source.deferred).length,2);
+assert.equal(firstDiscovery.sources.filter(source=>source.deferred).length,3);
 assert.equal(sqlite.prepare('SELECT COUNT(*) AS total FROM tree_source_cursors').get().total,0);
 await context.persistTreeSourceCursors(db,firstDiscovery.cursorUpdates);
 assert.equal(sqlite.prepare('SELECT COUNT(*) AS total FROM tree_source_cursors').get().total,2);
 
 const secondDiscovery=await context.discoverTreePages(db);
 assert.equal(secondDiscovery.links.length,40);
-assert.equal(secondDiscovery.sources.filter(source=>source.deferred).length,2);
+assert.equal(secondDiscovery.sources.filter(source=>source.deferred).length,3);
 await context.persistTreeSourceCursors(db,secondDiscovery.cursorUpdates);
 
 const discoveredSources=new Set([
@@ -176,9 +176,11 @@ assert.equal(discoveredSources.size,4);
 assert.equal(new Set([
   ...firstDiscovery.links.map(link=>link.url),
   ...secondDiscovery.links.map(link=>link.url)
-]).size,80);
+]).size,60);
 assert.equal(sqlite.prepare('SELECT COUNT(*) AS total FROM tree_source_cursors').get().total,4);
 
+// Isolate cursor-offset behavior from the independently tested Ambiente feed.
+vm.runInContext("globalThis.environmentSource=TREE_ARCHIVE_SOURCES.splice(TREE_ARCHIVE_SOURCES.findIndex(source=>source.id==='roma-service-environment'),1)[0]",context);
 const offsetSqlite=new DatabaseSync(':memory:');
 applyCursorMigrations(offsetSqlite);
 const offsetDb=cursorDb(offsetSqlite);
@@ -248,6 +250,7 @@ for(let run=0;run<5;run++){
 }
 assert.equal(freshLinks.size,10);
 
+vm.runInContext('TREE_ARCHIVE_SOURCES.push(environmentSource)',context);
 const cursorWrites=[];
 const refreshDb={
   prepare(sql){

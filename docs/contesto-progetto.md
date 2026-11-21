@@ -16,15 +16,26 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.8.2` |
-| Build | `115` |
+| Applicazione | `0.8.3` |
+| Build | `116` |
 | Proxy EEA | `0.2.2` |
-| Worker ambientale | `0.10.1` |
+| Worker ambientale | `0.11.0` |
 | Proxy OpenAQ | `0.4.3` |
 | Dataset arboreo consolidato | `22` |
-| Ultima migrazione D1 prevista | `0012_tree_admin_event_split.sql` |
+| Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### Calendari municipali 0.8.3 / Worker 0.11.0
+
+La verifica del 21 novembre 2026 ha confermato che mancava la fonte `INF1520290`: 15 pagine municipali, `pagina=2..16`. Rilevati 13 interventi ancora nel periodo previsto (non 13 nuove date di inizio future), comprese piantumazioni fino al 31 marzo 2027. L'intervallo invertito di via Salaria viene scartato e diagnosticato; la fine 28 novembre 2027 di via Petrolini resta quella pubblicata, senza correzioni arbitrarie. Potature e messe in sicurezza generiche escluse, potatura e/o abbattimento con tipo sconosciuto. Quantità non indicate restano null.
+
+Migrazione 0013: `event_end_date`, `source_kind`, `calendar_url` e registro separato `tree_calendar_sync_runs`. Identità stabile per municipio/atto/indirizzo, indipendente dall'ordine delle righe e dalle proroghe. Sincronizzazione separata alle 03:10 UTC: 15 richieste HTML, scritture D1 in batch, nessuna geocodifica nella stessa invocazione. Esclusioni e correzioni manuali preservate; calendari e record manuali non passano nel parser di avvisi. Aggiunto il feed dipartimentale Ambiente agli avvisi recenti e alla scansione paginata.
+
+API e frontend espongono l'intervallo, lo mantengono negli anni sovrapposti e non usano più la pubblicazione come data lavori in assenza di indicazioni. Per i vecchi record automatici con data uguale alla pubblicazione, rivalutazione dell'estratto alla lettura, senza cambiare le date manuali. Nell'editor, fine lavori modificabile anche per ogni figlio della divisione; fonte calendario conservata dal server. Interventi programmati esclusi dai totali eseguiti, indirizzi generici senza coordinate inventate. 22 file di test superati, migrazioni SQLite reali, casi di intervalli, proroghe, date invalide, potature escluse, autenticazione, divisione e preservazione delle revisioni. App 0.8.3 build 116, Worker 0.11.0.
+
+
+Distribuzione verificata il 21 novembre 2026: migrazione 0013 applicata, Worker 0.11.0 online e prima importazione dei 15 calendari completata senza errori. API pubblica: 305 eventi Roma 2026, di cui 13 da calendario ancora nel periodo programmato; i due figli manuali di `IDS1677374` restano separati con un abbattimento ciascuno. L'importazione iniziale usa gli stessi upsert del Worker su HTML ufficiali appena verificati, senza leggere secret. La geocodifica prosegue con il cron dedicato.
 
 ### Divisione eventi incompleti 0.8.2 / Worker 0.10.1
 

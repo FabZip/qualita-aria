@@ -1,3 +1,13 @@
+# 0.8.3 — Calendari arborei di Roma e intervalli dei lavori
+
+Importazione giornaliera dei calendari ufficiali dei 15 Municipi di Roma, oltre agli avvisi del dipartimento Ambiente. Gli intervalli mantengono inizio e fine lavori anche oltre dicembre; un intervento non risulta trascorso finché non termina il periodo previsto. La data dell'avviso non viene più usata come data di esecuzione quando questa manca, anche per gli avvisi automatici già archiviati. Le date manuali restano invariate.
+
+Sono esclusi i soli lavori di potatura e le generiche messe in sicurezza. Gli abbattimenti eventuali restano di tipo da verificare, con icona neutra e quantità sconosciuta. I lavori programmati non entrano nei totali degli interventi eseguiti. Nessun punto viene inventato per indirizzi generici o rinviati a un allegato. L'editor consente di correggere la fine lavori e assegnarla alle singole parti della divisione, conservando la provenienza e le esclusioni.
+
+App `0.8.3`, build `116`, Worker ambientale `0.11.0`; migrazione D1 `0013_tree_calendar_intervals.sql` da applicare prima del deploy. Nuovo cron alle **03:10 UTC** per i calendari, separato dalla scansione avvisi delle 03:00 e dalla geocodifica delle 03:30. Secret e binding invariati. Test: `node --test tests/*.test.mjs` (22 file), controllo sintassi e dry-run Wrangler.
+
+Distribuzione verificata il 21 novembre 2026: migrazione 0013 applicata, Worker 0.11.0 online e prima importazione dei 15 calendari completata senza errori. API pubblica: 305 eventi Roma 2026, di cui 13 da calendario ancora nel periodo programmato; i due figli manuali di `IDS1677374` restano separati con un abbattimento ciascuno. L'importazione iniziale usa gli stessi upsert del Worker su HTML ufficiali appena verificati, senza leggere secret. La geocodifica prosegue con il cron dedicato.
+
 # 0.8.2 — Divisione di eventi senza località originali
 
 Corretto il blocco del salvataggio quando l'evento automatico ha `locations: []`: il server ora valida gli indirizzi dei nuovi interventi, senza richiederli anche nel record originale incompleto. La stessa correzione consente di correggere o rimuovere questi eventi. Fonte comune e transazione atomica restano preservate.

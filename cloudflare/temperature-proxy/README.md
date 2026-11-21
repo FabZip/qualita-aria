@@ -1,3 +1,21 @@
+# Proxy ambientale 0.11.0 — calendari Roma / app 0.8.3
+
+Applicare **0013_tree_calendar_intervals.sql prima del deploy**. Il Worker importa le tabelle dei 15 Municipi dalla scheda ufficiale `INF1520290` (`pagina=2..16`), conservando il periodo dei lavori, il link all'atto e la pagina del calendario. Solo piantumazioni e abbattimenti espliciti; gli abbattimenti eventuali sono sconosciuti, potature e messe in sicurezza generiche escluse. Date invalide diagnosticate, quantità non dedotte, indirizzi generici senza geocodifica fittizia. Fonte Ambiente aggiunta alla scansione degli avvisi.
+
+```bash
+npx wrangler d1 migrations apply qualita-aria-tree-events --remote --config ./wrangler.toml
+npx wrangler deploy --config ./wrangler.toml
+```
+
+Cron UTC: `0 3 * * *` avvisi, `10 3 * * *` calendari, `30 3 * * *` geocodifica progressiva. I calendari richiedono al massimo 15 fetch HTML in gruppi di 3 e un batch D1, senza geocoder nella stessa invocazione. `POST /v1/trees/refresh?scope=calendars` forza il solo calendario, con lo stesso Bearer `TREE_ADMIN_TOKEN` già previsto; senza `scope` resta il refresh degli avvisi. Non cambiare account, database o secret.
+
+`GET /v1/trees/events` include `eventEndDate`, `sourceKind`, `calendarUrl` e metadati `calendarSync`. Gli intervalli sono selezionati anche nell'anno sovrapposto. I vecchi fallback automatici pubblicazione/esecuzione vengono disambiguati alla lettura; le date manuali sono preservate. Nell'API amministrativa `eventEndDate` è opzionale, se omesso conserva il valore esistente; stringa vuota lo cancella. Validazione ISO e fine non precedente all'inizio, anche per le singole parti della divisione. Provenienza calendario ereditata dal record server, senza fidarsi del client. Le esclusioni e le revisioni manuali sopravvivono agli upsert.
+
+Verifiche: 22 file di test, migrazioni SQLite reali, regressioni API/editor, sintassi e dry-run Wrangler 4.166.0. La prima importazione verificata del 21 novembre 2026 comprende 13 interventi ancora nel periodo programmato, non necessariamente con inizio futuro. Geocodifica progressiva nei successivi aggiornamenti; nessuna conversione automatica da programmato a eseguito. Le sezioni seguenti descrivono le release precedenti.
+
+
+Distribuzione verificata il 21 novembre 2026: migrazione 0013 applicata, Worker 0.11.0 online e prima importazione dei 15 calendari completata senza errori. API pubblica: 305 eventi Roma 2026, di cui 13 da calendario ancora nel periodo programmato; i due figli manuali di `IDS1677374` restano separati con un abbattimento ciascuno. L'importazione iniziale usa gli stessi upsert del Worker su HTML ufficiali appena verificati, senza leggere secret. La geocodifica prosegue con il cron dedicato.
+
 # Proxy ambientale 0.10.1 — app 0.8.2
 
 La validazione amministrativa non richiede più località nel record originale già presente: eventi automatici incompleti possono essere divisi, corretti o rimossi. Ogni nuovo intervento e ogni modifica salvata continuano a richiedere almeno una località valida; gli errori delle parti indicano il numero dell'intervento. Per gli originali importati dal catalogo locale è consentita una snapshot senza località, che viene conservata solo come originale escluso della divisione/rimozione; un aggiornamento pubblicato viene validato integralmente.
@@ -202,7 +220,7 @@ Nei progetti già configurati, aggiornare anche il file locale `wrangler.toml` (
 
 ```toml
 [triggers]
-crons = ["0 3 * * *", "30 3 * * *"]
+crons = ["0 3 * * *", "10 3 * * *", "30 3 * * *"]
 ```
 
 Poi distribuire il Worker:

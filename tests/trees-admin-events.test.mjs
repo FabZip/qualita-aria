@@ -12,8 +12,8 @@ const c=vm.createContext({console,Date,Response,URL,encodeURIComponent,state:{tr
  fetch:async(url,options)=>{payload={url,body:options?.body?JSON.parse(options.body):null};return Response.json({ok:true,children:['child-a','child-b'],geocoding:{attempted:2,geocoded:2}})}
 });
 for(const name of ['renderTreeAdminReports','reviewTreeAdminReport','treeAdminEventBody','loadTreeAdminEvents'])vm.runInContext(extract(name),c);
-const values={title:'Misto',city:'roma',year:'2026',date:'',district:'',locations:'Via A\nVia B',type:'unknown',status:'planned',quantity:'',source:original.sourceUrl,published:'',description:''};
-const splitPart=(location,type,quantity)=>({querySelector(selector){const key=selector.match(/data-split-(\w+)/)[1];return{value:{title:'Intervento',locations:location,type,status:'completed',quantity,date:''}[key]}}});
+const values={title:'Misto',city:'roma',year:'2026',date:'',end:'2026-12-12',district:'',locations:'Via A\nVia B',type:'unknown',status:'planned',quantity:'',source:original.sourceUrl,published:'',description:''};
+const splitPart=(location,type,quantity)=>({querySelector(selector){const key=selector.match(/data-split-(\w+)/)[1];return{value:{title:'Intervento',locations:location,type,status:'completed',quantity,date:'',end:'2026-12-14'}[key]}}});
 const buttons=[{disabled:false}];
 const article={dataset:{sourceKey:'mixed',adminDirect:'true',updatedAt:'revision',reportId:'1',reportType:'event'},
  querySelector(selector){if(selector==='[data-admin-feedback]')return node('inlineFeedback');return{value:values[selector.match(/data-admin-event-(\w+)/)[1]]}},
@@ -21,6 +21,7 @@ const article={dataset:{sourceKey:'mixed',adminDirect:'true',updatedAt:'revision
 await c.reviewTreeAdminReport(article,'split_event');
 assert.equal(payload.url,'https://worker.test/v1/trees/admin/events');assert.equal(payload.body.parts.length,2);
 assert.deepEqual(payload.body.parts.map(p=>p.quantity),['5','2']);assert.deepEqual(payload.body.parts.map(p=>p.eventType),['planting','decrement']);
+assert.equal(payload.body.eventEndDate,'2026-12-12');assert.ok(payload.body.parts.every(part=>part.eventEndDate==='2026-12-14'));
 assert.equal(payload.body.expectedUpdatedAt,'revision');assert.equal(payload.body.original.sourceUrl,original.sourceUrl);
 assert.equal(removed,true);assert.equal(renders,1);assert.equal(buttons[0].disabled,false);
 assert.match(node('treeAdminStatus').textContent,/diviso in 2/);

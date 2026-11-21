@@ -117,7 +117,7 @@ context.fetch=async resource=>{
 const refresh=await context.refreshTreeSources({TREE_DB:db});
 assert.equal(refresh.errors,0);
 assert.equal(refresh.futureEventsFound,1);
-assert.equal(refresh.recentPagesChecked,1);
+assert.equal(refresh.recentPagesChecked,2);
 const future=database.prepare("SELECT * FROM tree_events WHERE source_key='IDS9999999'").get();
 assert.equal(future.event_date,'2026-12-20');
 assert.equal(future.status,'planned');

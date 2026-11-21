@@ -1,4 +1,4 @@
-# Worker 0.10.1: applicare prima la migrazione 0012_tree_admin_event_split.sql.
+# Worker 0.11.0: applicare prima tutte le migrazioni fino a 0013_tree_calendar_intervals.sql.
 name = "qualita-aria-temperature"
 main = "src/index.js"
 compatibility_date = "2026-08-26"
@@ -10,7 +10,7 @@ database_id = "INSERIRE_DATABASE_ID"
 migrations_dir = "migrations"
 
 [triggers]
-crons = ["0 3 * * *", "30 3 * * *"]
+crons = ["0 3 * * *", "10 3 * * *", "30 3 * * *"]
 
 [vars]
 TREE_SYNC_ENABLED = "true"

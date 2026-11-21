@@ -135,3 +135,8 @@ assert.ok(!splitRows.documentedEvents.some(event=>event.id===localEvent.id));
 assert.equal(splitRows.documentedEvents.filter(event=>event.parentSourceKey===localEvent.id).length,2);
 assert.equal(splitRows.documentedSummary.plantings,deleted.documentedSummary.plantings+5);
 assert.equal(splitRows.documentedSummary.decrements,deleted.documentedSummary.decrements+2);
+assert.equal(api.dateLabel({dateType:'interval',eventDate:'2026-11-19',eventEndDate:'2026-12-12'}),'Periodo lavori: 2026-11-19 – 2026-12-12');
+assert.equal(api.dateLabel({dateType:'interval',eventDate:null,eventEndDate:'2026-12-12'}),'Fine lavori prevista: 2026-12-12');
+const calendarRows=await(await treeStats([{id:'dynamic-calendar-test',sourceKey:'calendar-test',year:'2026',date:'2026-11-23',eventDate:'2026-11-23',eventEndDate:'2027-03-31',sourceKind:'calendar',dateType:'interval',eventType:'planting',status:'planned',quantity:200,locations:[],locationName:'Roma',sourceUrl:'https://example.test/calendar',validation:'automatic_pending'}])).rows('roma','2026');
+assert.ok(calendarRows.documentedEvents.some(e=>e.sourceKey==='calendar-test'));
+assert.equal(calendarRows.documentedSummary.plantings,(await api.rows('roma','2026')).documentedSummary.plantings,'Planned calendar quantities never count as completed');

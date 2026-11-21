@@ -98,7 +98,7 @@
       const response=await fetch(url,{mode:'cors',cache:'no-store',headers:{Accept:'application/json'}});
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       const payload=await response.json();
-      return{events:Array.isArray(payload.events)?payload.events:[],availableYears:payload.availableYears||[],manualRevisions:payload.manualRevisions||[],lastSync:payload.lastSync||null,available:true}
+      return{events:Array.isArray(payload.events)?payload.events:[],availableYears:payload.availableYears||[],manualRevisions:payload.manualRevisions||[],lastSync:payload.lastSync||null,calendarSync:payload.calendarSync||null,available:true}
     }catch(error){
       return{events:[],lastSync:null,available:false,error:String(error?.message||error)}
     }
@@ -278,6 +278,7 @@
   }
 
   function dateLabel(event){
+    if(event.eventEndDate)return event.eventDate?`Periodo lavori: ${event.eventDate} – ${event.eventEndDate}`:`Fine lavori prevista: ${event.eventEndDate}`;
     if(event.dateType==='publication')return`Data lavori non indicata · avviso del ${event.sourcePublishedAt||event.date}`;
     if(event.dateType==='year')return`Data lavori non indicata · anno ${event.year}`;
     return event.date||event.year||''
@@ -308,12 +309,12 @@
         const documentedLocationIndex=event.markerLocationIndexes?.[locationIndex]??locationIndex;
         const el=document.createElement('button');
         el.type='button';
-        el.className=`tree-event-marker ${event.eventType==='planting'?'is-planted':'is-cut'} ${event.status==='planned'?'is-planned':''}`;
+        el.className=`tree-event-marker ${event.eventType==='planting'?'is-planted':event.eventType==='decrement'?'is-cut':'is-unknown'} ${event.status==='planned'?'is-planned':''}`;
         el.dataset.treeMarkerId=String(event.id);
         el.style.width=`${size}px`;
         el.style.height=`${Math.round(size*1.18)}px`;
         el.innerHTML=iconSvg({...event,id:`${event.id}-${locationIndex}`});
-        el.setAttribute('aria-label',`${event.eventType==='planting'?'Piantumazione':'Abbattimento'}: ${event.locationName}, località ${locationIndex+1} di ${markerCoordinates.length}, ${Number.isFinite(event.quantity)?fmt(event.quantity):'quantità non specificata'} alberi complessivi`);
+        el.setAttribute('aria-label',`${event.eventType==='planting'?'Piantumazione':event.eventType==='decrement'?'Abbattimento':'Tipo da verificare'}: ${event.locationName}, località ${locationIndex+1} di ${markerCoordinates.length}, ${Number.isFinite(event.quantity)?fmt(event.quantity):'quantità non specificata'} alberi complessivi`);
         const marker=new maplibregl.Marker({element:el,anchor:'bottom'})
           .setLngLat(coordinates)
           .setPopup(new maplibregl.Popup({offset:Math.ceil(size*.65)}).setHTML(documentedPopupHtml(event,documentedLocationIndex)))
@@ -512,7 +513,7 @@
     const record=events[0]||documentedSummary||aggregateRecord||null;
     return{
       city,events,aggregate:aggregateRecord,documentedEvents,documentedSummary,record,
-      diagnostic:{schemaVersion:data.schemaVersion,city:city.name,selection,available:city.available,officialAnnual:events.length,documentedEvents:documentedEvents.length,dynamicEvents:remoteDocumented.length,dynamicAvailable:dynamic.available,availableYears:dynamic.availableYears||[],lastSync:dynamic.lastSync,aggregatePeriod:aggregate?.period||null,dataKind:record?.dataKind||null}
+      diagnostic:{schemaVersion:data.schemaVersion,city:city.name,selection,available:city.available,officialAnnual:events.length,documentedEvents:documentedEvents.length,dynamicEvents:remoteDocumented.length,dynamicAvailable:dynamic.available,availableYears:dynamic.availableYears||[],lastSync:dynamic.lastSync,calendarSync:dynamic.calendarSync,aggregatePeriod:aggregate?.period||null,dataKind:record?.dataKind||null}
     }
   }
 

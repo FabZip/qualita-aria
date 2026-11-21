@@ -3064,7 +3064,7 @@ function treeListHtml(result,year,includeAggregate=true){
   const italianMonths={gennaio:0,febbraio:1,marzo:2,aprile:3,maggio:4,giugno:5,luglio:6,agosto:7,settembre:8,ottobre:9,novembre:10,dicembre:11};
   const plannedDateHasPassed=event=>{
     if(event.status!=='planned')return false;
-    const raw=String(event.date||'').trim().toLowerCase();
+    const raw=String(event.eventEndDate||event.date||'').trim().toLowerCase();
     let end=null;
     const iso=raw.match(/^(20\d{2})-(\d{2})-(\d{2})/);
     if(iso)end=Date.UTC(Number(iso[1]),Number(iso[2])-1,Number(iso[3]),23,59,59);
@@ -3098,11 +3098,11 @@ function treeListHtml(result,year,includeAggregate=true){
       const eventDetail=located
         ?`${type} · ${statusLabel}${validation}`
         :`${type} · ${statusLabel}${validation} · posizione non disponibile`;
-      return`<div class="tree-event-row" data-tree-event-index="${index}" data-tree-event-id="${safe(event.id)}"><button class="tree-event-focus" type="button" data-tree-focus="${safe(event.id)}" ${located?'':`disabled title="Coordinate non ancora disponibili"`}><span class="tree-list-symbol"><i class="tree-list-icon ${event.eventType==='planting'?'is-planted':'is-cut'} ${event.status==='planned'?'is-planned':''}">${TreeStats.iconSvg(event)}</i><b class="tree-list-quantity" title="${safe(quantityTitle)}">${safe(quantity)}</b></span><span><strong>${safe(event.locationName)}</strong><small>${safe(dateLabel)}${event.district?` · ${safe(event.district)}`:''}<br>${safe(eventDetail)}${pathDetail}</small></span></button><span class="tree-event-links"><a href="${safeUrl(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a>${reportButton}</span></div>`
+      return`<div class="tree-event-row" data-tree-event-index="${index}" data-tree-event-id="${safe(event.id)}"><button class="tree-event-focus" type="button" data-tree-focus="${safe(event.id)}" ${located?'':`disabled title="Coordinate non ancora disponibili"`}><span class="tree-list-symbol"><i class="tree-list-icon ${event.eventType==='planting'?'is-planted':event.eventType==='decrement'?'is-cut':'is-unknown'} ${event.status==='planned'?'is-planned':''}">${TreeStats.iconSvg(event)}</i><b class="tree-list-quantity" title="${safe(quantityTitle)}">${safe(quantity)}</b></span><span><strong>${safe(event.locationName)}</strong><small>${safe(dateLabel)}${event.district?` · ${safe(event.district)}`:''}<br>${safe(eventDetail)}${pathDetail}</small></span></button><span class="tree-event-links"><a href="${safeUrl(event.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale</a>${reportButton}</span></div>`
     }).join('')}</div>${documentedEvents.length>TREE_EVENTS_PER_PAGE?`<nav class="tree-pagination" data-tree-pagination aria-label="Pagine degli eventi"><button type="button" data-tree-page="prev">Precedente</button><span data-tree-page-status></span><button type="button" data-tree-page="next">Successiva</button></nav>`:''}`
     :'';
 
-  const syncDate=diagnostic.lastSync?.completed_at||diagnostic.lastSync?.completedAt||null;
+  const syncDate=[diagnostic.lastSync?.completed_at||diagnostic.lastSync?.completedAt,diagnostic.calendarSync?.completed_at].filter(Boolean).sort().at(-1)||null;
   const dynamicNote=diagnostic.dynamicAvailable
     ?`<div class="tree-period-note tree-sync-note">${syncDate?`Aggiornato al ${safe(new Date(syncDate).toLocaleString('it-IT'))}. `:''}${diagnostic.dynamicEvents||0} nuovi eventi aggiunti.</div>`
     :'';
@@ -3646,6 +3646,7 @@ function renderTreeAdminReports(reports,targetId='treeAdminReports'){
       <label>Titolo<input data-admin-event-title maxlength="300" value="${safe(report.event_title)}"></label>
       <div class="tree-form-grid"><label>Comune<select data-admin-event-city>${option('roma','Roma',report.event_city)}${option('guidonia-montecelio','Guidonia Montecelio',report.event_city)}</select></label><label>Anno<input data-admin-event-year type="number" min="2013" max="${new Date().getFullYear()}" value="${Number(report.event_year)||''}"></label></div>
       <label>Data lavori <small>(vuoto se non indicata)</small><input data-admin-event-date value="${safe(report.event_date)}" placeholder="AAAA-MM-GG"></label>
+      <label>Fine lavori <small>(vuoto se non indicata)</small><input data-admin-event-end value="${safe(report.event_end_date)}" placeholder="AAAA-MM-GG"></label>
       <label>Municipio / zona<input data-admin-event-district maxlength="180" value="${safe(report.event_district)}"></label>
       <label>Località <small>(una per riga; aggiungi, correggi o rimuovi le righe)</small><textarea data-admin-event-locations>${safe(locations.join('\n'))}</textarea></label>
       <div class="tree-form-grid"><label>Tipo<select data-admin-event-type>${option('planting','Piantumazione · verde',report.event_type)}${option('decrement','Abbattimento · rosso',report.event_type)}${option('unknown','Da verificare',report.event_type)}</select></label><label>Stato<select data-admin-event-status>${option('planned','Programmato',report.event_status)}${option('reported','Comunicazione ufficiale',report.event_status)}${option('completed','Eseguito',report.event_status)}${option('emergency_completed','Urgente eseguito',report.event_status)}${option('unknown','Da verificare',report.event_status)}</select></label></div>
@@ -3681,7 +3682,7 @@ async function reviewTreeAdminReport(article,action){
   let body={reportId:Number(article.dataset.reportId),action};
   if(action==='delete_event'&&!window.confirm('Rimuovere l’evento e tutte le sue posizioni? Sarà ignorato nei successivi aggiornamenti automatici. Gli altri eventi della stessa fonte restano separati.'))return;
   if(action==='update_event'||action==='split_event'){
-    body={...body,title:article.querySelector('[data-admin-event-title]').value,eventDate:article.querySelector('[data-admin-event-date]').value,locations:article.querySelector('[data-admin-event-locations]').value.split(/\n+/).map(value=>value.trim()).filter(Boolean),eventType:article.querySelector('[data-admin-event-type]').value,eventStatus:article.querySelector('[data-admin-event-status]').value,quantity:article.querySelector('[data-admin-event-quantity]').value,
+    body={...body,title:article.querySelector('[data-admin-event-title]').value,eventDate:article.querySelector('[data-admin-event-date]').value,eventEndDate:article.querySelector('[data-admin-event-end]')?.value||'',locations:article.querySelector('[data-admin-event-locations]').value.split(/\n+/).map(value=>value.trim()).filter(Boolean),eventType:article.querySelector('[data-admin-event-type]').value,eventStatus:article.querySelector('[data-admin-event-status]').value,quantity:article.querySelector('[data-admin-event-quantity]').value,
       city:article.querySelector('[data-admin-event-city]').value,year:Number(article.querySelector('[data-admin-event-year]').value),district:article.querySelector('[data-admin-event-district]').value,sourceUrl:article.querySelector('[data-admin-event-source]').value,sourcePublishedAt:article.querySelector('[data-admin-event-published]').value,description:article.querySelector('[data-admin-event-description]').value}
   }else if(!isEvent&&action==='approve'){
     const geometryText=article.querySelector('[data-admin-geometry]').value.trim();
@@ -3694,7 +3695,7 @@ async function reviewTreeAdminReport(article,action){
     body.expectedUpdatedAt=article.dataset.updatedAt||null;
     body.original=state.treeAdminOriginals?.get(body.sourceKey);
     if(action==='split_event'){
-      body.parts=[...article.querySelectorAll('[data-admin-split-part]')].map(part=>({city:body.city,year:body.year,district:body.district,description:body.description,title:part.querySelector('[data-split-title]').value,locations:part.querySelector('[data-split-locations]').value.split(/\n+/).map(value=>value.trim()).filter(Boolean),eventType:part.querySelector('[data-split-type]').value,eventStatus:part.querySelector('[data-split-status]').value,quantity:part.querySelector('[data-split-quantity]').value,eventDate:part.querySelector('[data-split-date]').value}));
+      body.parts=[...article.querySelectorAll('[data-admin-split-part]')].map(part=>({city:body.city,year:body.year,district:body.district,description:body.description,title:part.querySelector('[data-split-title]').value,locations:part.querySelector('[data-split-locations]').value.split(/\n+/).map(value=>value.trim()).filter(Boolean),eventType:part.querySelector('[data-split-type]').value,eventStatus:part.querySelector('[data-split-status]').value,quantity:part.querySelector('[data-split-quantity]').value,eventDate:part.querySelector('[data-split-date]').value,eventEndDate:part.querySelector('[data-split-end]')?.value??body.eventEndDate}));
       if(body.parts.length<2){feedback('Prepara almeno due interventi prima di salvare.');return}
       const emptyPart=body.parts.findIndex(part=>!part.locations.length);
       if(emptyPart>=0){
@@ -3742,7 +3743,7 @@ function filterTreeAdminEvents(){
 
 function treeAdminEventBody(report){
   let locations=[];try{locations=JSON.parse(report.locations_json||'[]')}catch{}
-  return{title:report.event_title||report.location_name,city:report.event_city,year:Number(report.event_year),eventDate:report.event_date||'',district:report.event_district||'',locations:locations.length?locations:[report.location_name],eventType:report.event_type,eventStatus:report.event_status,quantity:report.event_quantity??null,sourceUrl:report.source_url,sourcePublishedAt:report.source_published_at||null,description:report.raw_excerpt||''}
+  return{title:report.event_title||report.location_name,city:report.event_city,year:Number(report.event_year),eventDate:report.event_date||'',eventEndDate:report.event_end_date||'',district:report.event_district||'',locations:locations.length?locations:[report.location_name],eventType:report.event_type,eventStatus:report.event_status,quantity:report.event_quantity??null,sourceUrl:report.source_url,sourcePublishedAt:report.source_published_at||null,description:report.raw_excerpt||''}
 }
 
 async function loadTreeAdminEvents(password){
@@ -3761,7 +3762,7 @@ async function loadTreeAdminEvents(password){
   for(const event of local.documentedEvents||[]){
     const key=event.sourceKey||String(event.id).replace(/^dynamic-/,'');
     if(keys.has(key)||String(event.id).startsWith('dynamic-'))continue;
-    reports.push({id:`local-${key}`,direct:true,source_key:key,location_index:-1,event_title:event.title||event.locationName,event_city:city,event_year:Number(year),event_date:event.eventDate||(/^\d{4}-\d{2}-\d{2}$/.test(event.date||'')?event.date:''),event_district:event.district,locations_json:JSON.stringify(event.locations?.length?event.locations:[event.locationName]),location_name:event.locationName,event_type:event.eventType,event_status:event.status,event_quantity:event.quantity,source_url:event.sourceUrl,source_published_at:event.sourcePublishedAt,raw_excerpt:event.description||event.notes||''});
+    reports.push({id:`local-${key}`,direct:true,source_key:key,location_index:-1,event_title:event.title||event.locationName,event_city:city,event_year:Number(year),event_end_date:event.eventEndDate||'',event_date:event.eventDate||(/^\d{4}-\d{2}-\d{2}$/.test(event.date||'')?event.date:''),event_district:event.district,locations_json:JSON.stringify(event.locations?.length?event.locations:[event.locationName]),location_name:event.locationName,event_type:event.eventType,event_status:event.status,event_quantity:event.quantity,source_url:event.sourceUrl,source_published_at:event.sourcePublishedAt,raw_excerpt:event.description||event.notes||''});
     keys.add(key);
   }
   state.treeAdminOriginals=new Map(reports.map(report=>[report.source_key,treeAdminEventBody(report)]));
@@ -3777,7 +3778,7 @@ function addTreeAdminSplitPart(article,locations=[]){
   const safe=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const value=name=>article.querySelector(`[data-admin-event-${name}]`).value;
   const part=document.createElement('fieldset');part.dataset.adminSplitPart='true';
-  part.innerHTML=`<legend>Intervento</legend><label>Titolo<input data-split-title maxlength="300" value="${safe(value('title'))}"></label><label>Indirizzi <small>(uno per riga)</small><textarea data-split-locations>${safe(locations.join('\n'))}</textarea></label><div class="tree-form-grid"><label>Tipo<select data-split-type><option value="planting">Piantumazione · verde</option><option value="decrement">Abbattimento · rosso</option><option value="unknown">Da verificare</option></select></label><label>Numero alberi <small>(vuoto se sconosciuto)</small><input data-split-quantity type="number" min="0" step="1" value=""></label></div><label>Stato<select data-split-status>${article.querySelector('[data-admin-event-status]').innerHTML}</select></label><label>Data lavori <small>(vuoto se non indicata)</small><input data-split-date type="date" value="${safe(value('date'))}"></label><button type="button" data-admin-split-remove>Rimuovi questo intervento dalla divisione</button>`;
+  part.innerHTML=`<legend>Intervento</legend><label>Titolo<input data-split-title maxlength="300" value="${safe(value('title'))}"></label><label>Indirizzi <small>(uno per riga)</small><textarea data-split-locations>${safe(locations.join('\n'))}</textarea></label><div class="tree-form-grid"><label>Tipo<select data-split-type><option value="planting">Piantumazione · verde</option><option value="decrement">Abbattimento · rosso</option><option value="unknown">Da verificare</option></select></label><label>Numero alberi <small>(vuoto se sconosciuto)</small><input data-split-quantity type="number" min="0" step="1" value=""></label></div><label>Stato<select data-split-status>${article.querySelector('[data-admin-event-status]').innerHTML}</select></label><label>Data lavori <small>(vuoto se non indicata)</small><input data-split-date type="date" value="${safe(value('date'))}"></label><label>Fine lavori<input data-split-end type="date" value="${safe(value('end'))}"></label><button type="button" data-admin-split-remove>Rimuovi questo intervento dalla divisione</button>`;
   part.querySelector('[data-split-type]').value=value('type');
   part.querySelector('[data-split-status]').value=value('status');
   container.append(part);

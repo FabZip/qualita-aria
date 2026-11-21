@@ -79,3 +79,8 @@ await context.reviewTreeAdminReport(article,'update_event');
 assert.equal(removed,false);
 assert.match(status.textContent,/Data lavori e anno non coerenti/);
 console.log('trees-admin: ok');
+// An interval remains planned after its start until its explicit end.
+const interval={...future,date:'2026-10-01',eventDate:'2026-10-01',eventEndDate:'2026-12-12',dateType:'interval'};
+assert.doesNotMatch(context.treeListHtml({city:{available:true},events:[],documentedEvents:[interval]},'2026'),/Programmato · data trascorsa/);
+assert.match(context.treeListHtml({city:{available:true},events:[],documentedEvents:[{...interval,eventEndDate:'2026-10-01'}]},'2026'),/Programmato · data trascorsa/);
+assert.match(context.treeListHtml({city:{available:true},events:[],documentedEvents:[{...interval,eventType:'unknown'}]},'2026'),/is-unknown/);
