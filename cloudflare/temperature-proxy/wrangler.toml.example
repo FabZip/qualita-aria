@@ -1,4 +1,4 @@
-# Worker 0.10.0: applicare prima la migrazione 0012_tree_admin_event_split.sql.
+# Worker 0.10.1: applicare prima la migrazione 0012_tree_admin_event_split.sql.
 name = "qualita-aria-temperature"
 main = "src/index.js"
 compatibility_date = "2026-08-26"

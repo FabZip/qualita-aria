@@ -2366,7 +2366,7 @@ async function reviewTreeLocationReport(request,env,cors){
   return json({ok:true,reportId,status:'approved',notificationEmail:report.reporter_email||null},200,{...cors,'Cache-Control':'no-store'})
 }
 
-function validateAdminTreeEvent(body,original={}){
+function validateAdminTreeEvent(body,original={},allowEmptyLocations=false){
   const title=String(body?.title||'').trim();
   const city=String(body?.city??original.city??'');
   const year=Number(body?.year??original.year);
@@ -2381,7 +2381,7 @@ function validateAdminTreeEvent(body,original={}){
   if(!title||title.length>300)throw new Error('Titolo obbligatorio, massimo 300 caratteri');
   if(!['roma','guidonia-montecelio'].includes(city))throw new Error('Comune non supportato');
   if(!Number.isInteger(year)||year<2013||year>new Date().getUTCFullYear())throw new Error('Anno non valido');
-  if(!locations.length||locations.length>100||locations.some(value=>value.length>300))throw new Error('Inserire da 1 a 100 località, massimo 300 caratteri ciascuna');
+  if((!allowEmptyLocations&&!locations.length)||locations.length>100||locations.some(value=>value.length>300))throw new Error('Inserire da 1 a 100 località, massimo 300 caratteri ciascuna');
   if(!['planting','decrement','unknown'].includes(eventType))throw new Error('Tipo evento non valido');
   if(!['completed','emergency_completed','planned','reported','unknown'].includes(status))throw new Error('Stato evento non valido');
   if(quantity!==null&&(!Number.isSafeInteger(quantity)||quantity<0))throw new Error('Quantità non valida');
@@ -2395,7 +2395,7 @@ function validateAdminTreeEvent(body,original={}){
 
 function adminTreeInsert(db,key,event,now,parent=null){
   return db.prepare(`INSERT INTO tree_events(source_key,city,year,event_date,location_name,locations_json,district,event_type,quantity,status,validation,title,source_url,source_published_at,first_seen_at,last_checked_at,raw_excerpt,updated_at,parent_source_key)
-    VALUES(?,?,?,?,?,?,?,?,?,?,'manual_confirmed',?,?,?,?,?,?,?,?)`).bind(key,event.city,event.year,event.eventDate,event.locations[0],JSON.stringify(event.locations),event.district,event.eventType,event.quantity,event.status,event.title,event.sourceUrl,event.sourcePublishedAt,now,now,event.description,now,parent)
+    VALUES(?,?,?,?,?,?,?,?,?,?,'manual_confirmed',?,?,?,?,?,?,?,?)`).bind(key,event.city,event.year,event.eventDate,event.locations[0]||'',JSON.stringify(event.locations),event.district,event.eventType,event.quantity,event.status,event.title,event.sourceUrl,event.sourcePublishedAt,now,now,event.description,now,parent)
 }
 
 async function listAdminTreeEvents(env,cors,url){
@@ -2419,16 +2419,21 @@ async function editAdminTreeEvent(request,env,cors){
   if(original&&body.expectedUpdatedAt!==original.updated_at)return json({error:'Evento modificato nel frattempo: ricaricare l’elenco prima di salvare'},409,{...cors,'Cache-Control':'no-store'});
   let event,parts=[];
   try{
-    event=validateAdminTreeEvent(original?{
-      title:original.title,city:original.city,year:original.year,eventDate:original.event_date,locations:JSON.parse(original.locations_json||'null')||[original.location_name],eventType:original.event_type,eventStatus:original.status,quantity:original.quantity,sourceUrl:original.source_url,sourcePublishedAt:original.source_published_at,description:original.raw_excerpt,district:original.district
-    }:body.original);
+    // Existing source records may have no parsed address. Validate the replacement,
+    // not the incomplete original that the administrator is correcting.
+    event=original?{
+      title:original.title,city:original.city,year:original.year,eventDate:original.event_date,locations:JSON.parse(original.locations_json||'null')||[original.location_name],eventType:original.event_type,status:original.status,quantity:original.quantity,sourceUrl:original.source_url,sourcePublishedAt:original.source_published_at,description:original.raw_excerpt,district:original.district
+    }:validateAdminTreeEvent(body.original,{},true);
     if(action==='update_event'){
       const shared=original?.parent_source_key?await db.prepare('SELECT source_url,source_published_at FROM tree_events WHERE source_key=?').bind(original.parent_source_key).first():null;
       event=validateAdminTreeEvent(shared?{...body,sourceUrl:shared.source_url,sourcePublishedAt:shared.source_published_at}:body,original||{});
     }
     if(action==='split_event'){
       if(!Array.isArray(body.parts)||body.parts.length<2||body.parts.length>20)throw new Error('Inserire da 2 a 20 interventi');
-      parts=body.parts.map(part=>validateAdminTreeEvent({...part,sourceUrl:event.sourceUrl,sourcePublishedAt:event.sourcePublishedAt},original||{}));
+      parts=body.parts.map((part,index)=>{
+        try{return validateAdminTreeEvent({...part,sourceUrl:event.sourceUrl,sourcePublishedAt:event.sourcePublishedAt},original||{})}
+        catch(error){throw new Error(`Intervento ${index+1}: ${error.message}`)}
+      });
       if(parts.reduce((n,part)=>n+part.locations.length,0)>100)throw new Error('Massimo 100 località complessive');
     }
   }catch(error){return badRequest(error.message,cors)}
@@ -2566,7 +2571,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.10.0',
+        version:'0.10.1',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,

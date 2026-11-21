@@ -1,3 +1,19 @@
+# 0.8.2 — Divisione di eventi senza località originali
+
+Corretto il blocco del salvataggio quando l'evento automatico ha `locations: []`: il server ora valida gli indirizzi dei nuovi interventi, senza richiederli anche nel record originale incompleto. La stessa correzione consente di correggere o rimuovere questi eventi. Fonte comune e transazione atomica restano preservate.
+
+Il modulo segnala gli errori vicino ai pulsanti di salvataggio, conserva i campi e indica quale intervento ha un indirizzo mancante. Gli errori del server sulle parti includono il numero dell'intervento.
+
+App `0.8.2` build `115`, Worker ambientale `0.10.1`, cache PWA aggiornata. **Necessario il deploy del Worker**; nessuna nuova migrazione oltre alla `0012` richiesta da 0.8.0, nessuna modifica ai secret:
+
+```bash
+git pull --ff-only origin main
+cd cloudflare/temperature-proxy
+npx wrangler deploy --config ./wrangler.toml
+```
+
+Regressione basata sull'evento pubblico `IDS1677374` (piazza San Saturnino / via Avigliana), letto senza modificare D1 remoto: la validazione falliva prima della transazione. Test su SQLite locale di divisione con due indirizzi e un abbattimento ciascuno, modifica/rimozione dell'originale incompleto, importazione dal catalogo locale e rifiuto atomico delle parti non valide. Tutti i 21 file di test superati.
+
 # 0.8.1 — Ricerca negli eventi amministrativi
 
 Il pannello di modifica Alberi offre “Cerca negli eventi”: filtra in tempo reale titolo, indirizzi, municipio/zona, fonte, descrizione, data, quantità e tipo. La ricerca ignora maiuscole e accenti, combina più parole e mostra il conteggio dei risultati. Svuotando il campo tornano tutti gli eventi; le modifiche non salvate restano nei rispettivi editor durante il filtraggio. App `0.8.1` build `114`, cache PWA aggiornata. Nessuna nuova migrazione o modifica ai Worker rispetto a 0.8.0.

@@ -16,7 +16,7 @@ const values={title:'Misto',city:'roma',year:'2026',date:'',district:'',location
 const splitPart=(location,type,quantity)=>({querySelector(selector){const key=selector.match(/data-split-(\w+)/)[1];return{value:{title:'Intervento',locations:location,type,status:'completed',quantity,date:''}[key]}}});
 const buttons=[{disabled:false}];
 const article={dataset:{sourceKey:'mixed',adminDirect:'true',updatedAt:'revision',reportId:'1',reportType:'event'},
- querySelector(selector){return{value:values[selector.match(/data-admin-event-(\w+)/)[1]]}},
+ querySelector(selector){if(selector==='[data-admin-feedback]')return node('inlineFeedback');return{value:values[selector.match(/data-admin-event-(\w+)/)[1]]}},
  querySelectorAll(selector){return selector==='button'?buttons:[splitPart('Via A','planting','5'),splitPart('Via B','decrement','2')]},remove(){removed=true}};
 await c.reviewTreeAdminReport(article,'split_event');
 assert.equal(payload.url,'https://worker.test/v1/trees/admin/events');assert.equal(payload.body.parts.length,2);
@@ -53,3 +53,16 @@ for(const [query,visible] of [['CITTA roma',[true,false]],['veneto rosso',[false
  if(query==='inesistente')assert.match(node('treeAdminSearchCount').textContent,/Nessun evento/);
 }
 assert.equal(node('treeAdminSearchCount').textContent,'2 di 2 eventi');
+
+// An empty child address is explained next to the editor before any HTTP request.
+let sent=false;
+c.fetch=async()=>{sent=true;return Response.json({ok:true})};
+const previousQueryAll=article.querySelectorAll;
+article.querySelectorAll=selector=>selector==='button'?buttons:[splitPart('Piazza San Saturnino','decrement','1'),splitPart('','decrement','1')];
+await c.reviewTreeAdminReport(article,'split_event');
+assert.equal(sent,false);assert.match(node('inlineFeedback').textContent,/Intervento 2: inserisci almeno un indirizzo/);
+article.querySelectorAll=previousQueryAll;
+c.fetch=async()=>Response.json({error:'Intervento 2: indirizzo non valido'},{status:400});
+await c.reviewTreeAdminReport(article,'split_event');
+assert.match(node('inlineFeedback').textContent,/Intervento 2: indirizzo non valido/);
+assert.equal(buttons[0].disabled,false);

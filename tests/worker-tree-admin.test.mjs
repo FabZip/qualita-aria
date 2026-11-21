@@ -75,4 +75,25 @@ assert.equal(many.children.length,10);assert.equal(many.geocoding.attempted,8);
 assert.equal(many.children.map(row).filter(e=>e.geocoded_at===null).length,2);
 // New automatically generated keys for an excluded source cannot resurrect it.
 assert.equal(await c.upsertTreeEvent(db,{...automatic,sourceKey:'static-id--new',sourceUrl:original.sourceUrl},new Date().toISOString()),'ignored');
+
+// Production regression IDS1677374: the parser stored locations=[] and location_name=''.
+const incomplete={...original,district:null,title:'Municipio II: intervento di abbattimento di un Cercis in piazza San Saturnino e di un Prunus in via Avigliana',locations:[],eventType:'decrement',status:'planned',quantity:null,sourceUrl:'https://www.comune.roma.it/web/it/informazione-di-servizio.page?contentId=IDS1677374'};
+for(const key of ['IDS1677374','empty-update','empty-delete','empty-invalid'])await c.adminTreeInsert(db,key,incomplete,'2026-11-19T03:00:24.300Z').run();
+assert.equal(row('IDS1677374').location_name,'');
+const division=await call({sourceKey:'IDS1677374',action:'split_event',expectedUpdatedAt:row('IDS1677374').updated_at,parts:[part({title:'Cercis',locations:['Piazza San Saturnino'],eventType:'decrement',eventStatus:'planned',quantity:1}),part({title:'Prunus',locations:['Via Avigliana'],eventType:'decrement',eventStatus:'planned',quantity:1})]});
+assert.equal(division.status,200);
+const splitResult=await division.json();assert.equal(splitResult.children.length,2);
+assert.deepEqual(splitResult.children.map(key=>row(key).quantity),[1,1]);
+assert.deepEqual(splitResult.children.map(key=>JSON.parse(row(key).locations_json)),[['Piazza San Saturnino'],['Via Avigliana']]);
+assert.ok(splitResult.children.every(key=>row(key).source_url===incomplete.sourceUrl));
+assert.equal(row('IDS1677374').validation,'manual_rejected');
+const invalidPart=await call({sourceKey:'empty-invalid',action:'split_event',expectedUpdatedAt:row('empty-invalid').updated_at,parts:[part(),part({locations:[]})]});
+assert.equal(invalidPart.status,400);assert.match((await invalidPart.json()).error,/Intervento 2: Inserire da 1 a 100 località/);
+assert.equal(row('empty-invalid').validation,'manual_confirmed');
+assert.equal((await call({sourceKey:'empty-update',action:'update_event',expectedUpdatedAt:row('empty-update').updated_at,...part({locations:['Via Avigliana'],eventType:'decrement',quantity:1})})).status,200);
+assert.equal(row('empty-update').location_name,'Via Avigliana');
+assert.equal((await call({sourceKey:'empty-delete',action:'delete_event',expectedUpdatedAt:row('empty-delete').updated_at})).status,200);
+assert.equal(row('empty-delete').validation,'manual_rejected');
+// The same correction also applies to incomplete events imported from the local catalog.
+assert.equal((await call({sourceKey:'empty-local',action:'split_event',original:{...original,locations:[]},parts:[part({locations:['Piazza San Saturnino']}),part({locations:['Via Avigliana']})]})).status,200);
 database.close();console.log('worker-tree-admin: ok');

@@ -16,15 +16,21 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.8.1` |
-| Build | `114` |
+| Applicazione | `0.8.2` |
+| Build | `115` |
 | Proxy EEA | `0.2.2` |
-| Worker ambientale | `0.10.0` |
+| Worker ambientale | `0.10.1` |
 | Proxy OpenAQ | `0.4.3` |
 | Dataset arboreo consolidato | `22` |
 | Ultima migrazione D1 prevista | `0012_tree_admin_event_split.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### Divisione eventi incompleti 0.8.2 / Worker 0.10.1
+
+Caso pubblico `IDS1677374`, letto in sola lettura: titolo relativo a piazza San Saturnino / via Avigliana ma `locationName` vuoto e `locations: []`. Il server validava l'originale incompleto prima delle nuove parti e rispondeva 400, senza scritture. Ora i record esistenti non devono superare la validazione del risultato corretto: gli indirizzi sono obbligatori nei figli della divisione e negli eventi aggiornati. Anche rimozione e importazione da catalogo gestiscono originali senza località, senza inventarne.
+
+Il frontend controlla le località delle parti prima dell'invio e mostra gli errori accanto ai pulsanti; il server indica il numero della parte non valida. Campi conservati sugli errori. Test locale dello stesso caso con due abbattimenti da una unità, fonte comune e transazione atomica; regressioni per modifica, rimozione, snapshot locale e parti invalide. Tutti i 21 file di test superati. App 0.8.2 build 115, cache PWA aggiornata, Worker 0.10.1 da distribuire. Nessuna nuova migrazione rispetto a 0012 e nessuna modifica ai secret; nessuna scrittura su D1 remoto durante lo sviluppo.
 
 ### Ricerca amministrativa 0.8.1
 

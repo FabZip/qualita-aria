@@ -1,3 +1,13 @@
+# Proxy ambientale 0.10.1 — app 0.8.2
+
+La validazione amministrativa non richiede più località nel record originale già presente: eventi automatici incompleti possono essere divisi, corretti o rimossi. Ogni nuovo intervento e ogni modifica salvata continuano a richiedere almeno una località valida; gli errori delle parti indicano il numero dell'intervento. Per gli originali importati dal catalogo locale è consentita una snapshot senza località, che viene conservata solo come originale escluso della divisione/rimozione; un aggiornamento pubblicato viene validato integralmente.
+
+Caso verificato in sola lettura: `IDS1677374` ha `locationName: ""` e `locations: []`. Prima la validazione di questi campi bloccava la divisione prima di esaminare le parti e prima di qualsiasi scrittura. Ora il test locale crea due figli con gli indirizzi piazza San Saturnino / via Avigliana, quantità 1 ciascuno e tipo `decrement`, mantenendo la fonte originale.
+
+Nessuna nuova migrazione: resta necessaria la `0012` di 0.10.0. Deploy con `npx wrangler deploy --config ./wrangler.toml`; `/health` atteso `0.10.1`. Nessuna modifica ai secret o alle configurazioni reali. Database remoto letto, non modificato durante lo sviluppo.
+
+Verifiche 0.10.1: suite di 21 file superata, sintassi frontend/Worker valida, dry-run Wrangler 4.166.0 riuscito (124,64 KiB; gzip 28,86 KiB). Nessun deploy eseguito nello sviluppo.
+
 # Proxy ambientale 0.10.0 — amministrazione Alberi 0.8.0
 
 Nuovo endpoint autenticato con `TREE_ADMIN_PASSWORD` (Bearer), senza usare il token dei cron:

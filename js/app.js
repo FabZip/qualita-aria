@@ -3653,7 +3653,7 @@ function renderTreeAdminReports(reports,targetId='treeAdminReports'){
       <label>URL della fonte<input data-admin-event-source type="url" value="${safe(report.source_url)}" ${report.parent_source_key?'readonly title="Fonte condivisa con gli altri interventi della divisione"':''}></label>
       <label>Data pubblicazione<input data-admin-event-published type="date" ${report.parent_source_key?'readonly':''} value="${safe(report.source_published_at)}"></label>
       <label>Descrizione / dettagli estratti<textarea data-admin-event-description maxlength="5000">${safe(report.raw_excerpt)}</textarea></label>
-      ${position}${report.source_key&&(report.direct||report.updated_at)?`<details class="tree-admin-split"><summary>Dividi in più interventi</summary><p>Ogni intervento avrà quantità, tipo e indirizzi propri. La fonte originale e la sua data di pubblicazione resteranno comuni. L’evento originale sarà escluso dai totali. Inserisci le quantità documentate: non vengono ripartite automaticamente.</p><button type="button" data-admin-split-prepare>Prepara interventi dagli indirizzi</button><div data-admin-split-parts></div><button type="button" data-admin-split-add>Aggiungi intervento</button><button type="button" data-admin-action="split_event">Salva divisione</button></details>`:''}<div class="tree-admin-actions">${report.direct?'':'<button type="button" data-admin-action="reject">Rifiuta segnalazione</button>'}<button class="is-danger" type="button" data-admin-action="delete_event">Rimuovi e ignora evento</button><button type="button" data-admin-action="update_event">Salva dati evento</button></div>${report.direct?'</details>':''}</article>`
+      ${position}${report.source_key&&(report.direct||report.updated_at)?`<details class="tree-admin-split"><summary>Dividi in più interventi</summary><p>Ogni intervento avrà quantità, tipo e indirizzi propri. La fonte originale e la sua data di pubblicazione resteranno comuni. L’evento originale sarà escluso dai totali. Inserisci le quantità documentate: non vengono ripartite automaticamente.</p><button type="button" data-admin-split-prepare>Prepara interventi dagli indirizzi</button><div data-admin-split-parts></div><button type="button" data-admin-split-add>Aggiungi intervento</button><button type="button" data-admin-action="split_event">Salva divisione</button></details>`:''}<div class="tree-admin-actions">${report.direct?'':'<button type="button" data-admin-action="reject">Rifiuta segnalazione</button>'}<button class="is-danger" type="button" data-admin-action="delete_event">Rimuovi e ignora evento</button><button type="button" data-admin-action="update_event">Salva dati evento</button></div><p data-admin-feedback class="tree-form-status" role="status" aria-live="polite"></p>${report.direct?'</details>':''}</article>`
   }).join(''):targetId==='treeAdminEvents'?'<p>Nessun evento per Comune e anno selezionati.</p>':'<p>Nessuna segnalazione in attesa.</p>'
 }
 
@@ -3669,6 +3669,11 @@ async function loadTreeAdminReports(password){
 }
 
 async function reviewTreeAdminReport(article,action){
+  const feedback=message=>{
+    $('treeAdminStatus').textContent=message;
+    const inline=article.querySelector('[data-admin-feedback]');
+    if(inline)inline.textContent=message;
+  };
   const actionLabels={split_event:'dividere l’evento',approve:'approvare la posizione',reject:'rifiutare la segnalazione',update_event:'salvare le modifiche',delete_event:'eliminare l’evento'};
   const password=window.prompt(`Inserisci la password amministratore per ${actionLabels[action]||'revisionare la segnalazione'}:`);
   if(!password)return;
@@ -3690,18 +3695,25 @@ async function reviewTreeAdminReport(article,action){
     body.original=state.treeAdminOriginals?.get(body.sourceKey);
     if(action==='split_event'){
       body.parts=[...article.querySelectorAll('[data-admin-split-part]')].map(part=>({city:body.city,year:body.year,district:body.district,description:body.description,title:part.querySelector('[data-split-title]').value,locations:part.querySelector('[data-split-locations]').value.split(/\n+/).map(value=>value.trim()).filter(Boolean),eventType:part.querySelector('[data-split-type]').value,eventStatus:part.querySelector('[data-split-status]').value,quantity:part.querySelector('[data-split-quantity]').value,eventDate:part.querySelector('[data-split-date]').value}));
-      if(body.parts.length<2){$('treeAdminStatus').textContent='Prepara almeno due interventi prima di salvare.';return}
+      if(body.parts.length<2){feedback('Prepara almeno due interventi prima di salvare.');return}
+      const emptyPart=body.parts.findIndex(part=>!part.locations.length);
+      if(emptyPart>=0){
+        feedback(`Intervento ${emptyPart+1}: inserisci almeno un indirizzo.`);
+        article.querySelectorAll('[data-admin-split-part]')[emptyPart].querySelector('[data-split-locations]').focus?.();
+        return;
+      }
       if(!window.confirm(`Sostituire l’evento con ${body.parts.length} interventi distinti, mantenendo la fonte originale?`))return;
     }
   }
   const base=await treeApiBase();
   const buttons=Array.from(article.querySelectorAll?.('button')||[]);buttons.forEach(button=>button.disabled=true);
-  $('treeAdminStatus').textContent=action==='update_event'?'Salvataggio e ricerca della posizione…':'Salvataggio…';
+  feedback(action==='update_event'?'Salvataggio e ricerca della posizione…':'Salvataggio…');
   let response,result;
   try{
   response=await fetch(`${base}${direct?'/v1/trees/admin/events':'/v1/trees/location-reports/review'}`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${password}`},body:JSON.stringify(body)});
-  result=await response.json();if(!response.ok){$('treeAdminStatus').textContent=result.error||`HTTP ${response.status}`;return}
-  }finally{buttons.forEach(button=>button.disabled=false)}
+  result=await response.json();if(!response.ok){feedback(result.error||`HTTP ${response.status}`);return}
+  }catch(error){feedback(error.message||'Errore di rete durante il salvataggio');throw error}
+  finally{buttons.forEach(button=>button.disabled=false)}
   article.remove();
   if(direct)globalThis.filterTreeAdminEvents?.();
   if(result.notificationEmail){$('treeAdminStatus').innerHTML=`Revisione salvata. <a href="mailto:${encodeURIComponent(result.notificationEmail)}?subject=${encodeURIComponent('A.R.I.A. – esito segnalazione posizione')}">Invia conferma al segnalante</a>.`}
