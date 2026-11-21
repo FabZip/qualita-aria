@@ -7,7 +7,7 @@ function node(id){
   if(!nodes.has(id)){
     const classes=new Set();
     nodes.set(id,{
-      value:id==='pollutantSelect'?'PM2.5':'30',dataset:{},childNodes:[],
+      value:id==='eeaCitySelect'?'geolocate':id==='pollutantSelect'?'PM2.5':'30',dataset:{},childNodes:[],
       classList:{add:x=>classes.add(x),remove:x=>classes.delete(x),contains:x=>classes.has(x)},
       querySelector:()=>null,addEventListener(){},replaceChildren(...items){this.options=items}
     })
@@ -33,7 +33,7 @@ const context=vm.createContext({
   navigator:{geolocation:{getCurrentPosition:success=>success({coords:{longitude:12.5,latitude:41.9}})}},
   state:{map,mode:'map'},SOURCE_INFO:{},$:node,
   source:()=>active,isTemperature:()=>false,
-  fillYears(){},configureSourceUI(){},rowsFor(){},fitCurrentScope(){},setLoading(){},sourceNotice(){},render(){},initMaps(){},
+  configureTreeCityOptions(){},focusSelectedOpenAqCity(){},fillYears(){},configureSourceUI(){},rowsFor(){},fitCurrentScope(){},setLoading(){},sourceNotice(){},render(){},initMaps(){},
   withMapRefreshSuppressed:callback=>callback(),showToast(){},diagnostics(){},parseNumber:Number,
   QualitaAriaOpenAQProxy:{async viewportLatest(params){
     queriedZooms.push(zoom);
@@ -45,7 +45,7 @@ vm.runInContext(fs.readFileSync(new URL('../js/display-text.js',import.meta.url)
 vm.runInContext(fs.readFileSync(new URL('../js/openaq-world.js',import.meta.url),'utf8'),context);
 context.configureSourceUI();
 assert.equal(node('monthSelect').value,'today');
-assert.equal(node('eeaCityField').classList.contains('hidden'),true);
+assert.equal(node('eeaCityField').classList.contains('hidden'),false);
 assert.equal(node('pollutantField').classList.contains('hidden'),false);
 assert.deepEqual(node('pollutantSelect').options.map(item=>item.value),['PM2.5','PM10','NO2','O3','SO2','CO']);
 const rows=await context.rowsFor('latest');
@@ -74,3 +74,50 @@ const initialRows=await second;
 assert.equal(initialRows.length,1,'Il render più recente mostra i dati senza cambiare select');
 assert.deepEqual(queriedZooms,[11,10,9]);
 console.log('openaq-location: ok');
+
+// City selection wins over an in-flight geolocation, including initial entry.
+node('eeaCitySelect').value='geolocate';
+let pendingGeo;
+context.navigator.geolocation.getCurrentPosition=success=>{pendingGeo=success};
+context.focusSelectedOpenAqCity=()=>{center={lng:9.19,lat:45.46};zoom=11};
+const cityContext=vm.createContext({...context,state:{map,mode:'map',openaqCache:new Map()}});
+vm.runInContext(fs.readFileSync(new URL('../js/openaq-world.js',import.meta.url),'utf8'),cityContext);
+cityContext.configureSourceUI();
+const pendingRows=cityContext.rowsFor('latest');
+node('eeaCitySelect').value='milano';
+await cityContext.OpenAQCitySelection();
+pendingGeo({coords:{longitude:12.5,latitude:41.9}});
+await pendingRows;
+assert.equal(center.lng,9.19);
+assert.equal(center.lat,45.46);
+node('eeaCitySelect').value='geolocate';
+const locating=cityContext.OpenAQCitySelection();
+pendingGeo({coords:{longitude:12.5,latitude:41.9}});
+await locating;
+assert.equal(center.lng,12.5);
+assert.equal(center.lat,41.9);
+
+// Exercise the actual shared city options and camera helper (Roma + Milano).
+const appSource=fs.readFileSync(new URL('../js/app.js',import.meta.url),'utf8');
+const cityNode=node('eeaCitySelect');cityNode.dataset={};cityNode.value='roma';
+context.state.eeaCities=new Map([
+  ['roma',{id:'roma',name:'Roma',lon:12.5,lat:41.9}],
+  ['milano',{id:'milano',name:'Milano',lon:9.19,lat:45.46}]
+]);
+context.EEA_DEFAULT_CITY='roma';
+context.eeaCity=()=>cityNode.value;
+context.eeaCityScope=city=>({center:[city.lon,city.lat],zoom:11});
+context.viewportRefreshKey=()=>'';
+for(const name of ['configureTreeCityOptions','focusSelectedOpenAqCity']){
+  const start=appSource.indexOf(`function ${name}(`),end=appSource.indexOf('\nfunction ',start+1);
+  vm.runInContext(appSource.slice(start,end),context);
+}
+active='eea';context.configureTreeCityOptions(false);
+assert.equal(cityNode.value,'geolocate');
+active='openaq';context.configureTreeCityOptions(false);
+assert.equal(cityNode.value,'geolocate');
+assert.deepEqual(cityNode.options.map(option=>option.value),['geolocate','roma','milano']);
+for(const [id,lng,lat] of [['roma',12.5,41.9],['milano',9.19,45.46]]){
+  cityNode.value=id;context.focusSelectedOpenAqCity();
+  assert.equal(center.lng,lng);assert.equal(center.lat,lat);
+}

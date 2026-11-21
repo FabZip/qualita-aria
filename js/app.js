@@ -152,7 +152,7 @@ function sourceSettingFields(name){
   switch(name){
     case 'eea':return['eeaScopeSelect','eeaCitySelect','pollutantSelect',...periods];
     case 'arpa':return['arpaCitySelect','pollutantSelect',...periods];
-    case 'openaq':return['pollutantSelect','monthSelect'];
+    case 'openaq':return['eeaCitySelect','pollutantSelect','monthSelect'];
     case 'forecast':return['eeaCitySelect','pollutantSelect'];
     case 'trees':return['eeaCitySelect',...periods];
     default:return[]
@@ -582,8 +582,8 @@ function configureTreeCityOptions(active){
         id:city.id,name:city.name,lon:city.center[0],lat:city.center[1]
       }))
     :[...state.eeaCities.values()];
-  if(!active&&source()==='eea')desired=[{id:'geolocate',name:'Geolocalizza'},...desired];
-  const signature=`${active?'trees':'air'}:${desired.map(city=>city.id).join(',')}`;
+  if(!active&&['eea','openaq'].includes(source()))desired=[{id:'geolocate',name:'Geolocalizza'},...desired];
+  const signature=`${active?'trees':source()}:${desired.map(city=>city.id).join(',')}`;
   if(select.dataset.optionSignature===signature)return;
   const old=select.value;
   select.replaceChildren(...desired.map(city=>{
@@ -592,9 +592,9 @@ function configureTreeCityOptions(active){
     option.textContent=String(city.name);
     return option
   }));
-  select.value=!active&&source()==='eea'&&select.dataset.eeaDefault!=='true'
+  select.value=!active&&['eea','openaq'].includes(source())&&select.dataset[`${source()}Default`]!=='true'
     ?'geolocate':desired.some(city=>String(city.id)===old)?old:EEA_DEFAULT_CITY;
-  if(!active&&source()==='eea')select.dataset.eeaDefault='true';
+  if(!active&&['eea','openaq'].includes(source()))select.dataset[`${source()}Default`]='true';
   select.dataset.optionSignature=signature
 }
 
@@ -3731,8 +3731,7 @@ function bind(){
       return
     }
     if(source()==='openaq'){
-      focusSelectedOpenAqCity();
-      render();
+      globalThis.OpenAQCitySelection?.();
       return
     }
     if(source()!=='eea'||eeaScope()!=='italy')return;

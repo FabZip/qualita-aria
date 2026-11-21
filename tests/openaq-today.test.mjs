@@ -58,7 +58,7 @@ const health=await workerContext.worker.fetch(
   {waitUntil(){}}
 );
 const healthPayload=await health.json();
-assert.equal(healthPayload.version,'0.4.2');
+assert.equal(healthPayload.version,'0.4.3');
 assert.equal(healthPayload.viewportToday,true);
 
 const invalidDate=await workerContext.worker.fetch(
@@ -150,3 +150,47 @@ assert.equal(gasPayload.meta.pollutant.units,'µg/m³');
 assert.ok(Math.abs(gasPayload.results[0].value-18.8161554)<.0001);
 
 console.log('openaq-today: ok');
+
+// Catalog from openaq/openaq-db: one pollutant has separate IDs per unit.
+for(const [key,ids,mass] of [
+  ['no2',[5,7,15],46.0055],['co',[4,8,102],28.01],
+  ['so2',[6,9,101],64.066],['o3',[3,10,32],48],
+  ['pm10',[1],null],['pm25',[2],null]
+]){
+  for(const period of ['today','7','15','30']){
+    workerContext.fetch=async resource=>{
+      const url=new URL(String(resource));
+      if(url.pathname==='/v3/locations'){
+        assert.equal(url.searchParams.get('parameters_id'),ids.join(','));
+        return Response.json({meta:{found:ids.length},results:ids.map((id,i)=>({
+          id:i+1,name:`${key}-${id}`,isMonitor:true,isMobile:false,
+          datetimeLast:{utc:new Date().toISOString()},
+          coordinates:{latitude:41.9,longitude:12.5},
+          sensors:[{id:100+i,parameter:{id,units:['µg/m³','ppm','ppb'][i]}},
+            {id:999,parameter:{id:21,units:'ppm'}}]
+        }))});
+      }
+      const i=Number(url.pathname.split('/')[3])-1;
+      assert.ok(i>=0&&i<ids.length);
+      return Response.json({results:[
+        {sensorsId:999,value:999,datetime:{utc:new Date().toISOString()}},
+        {sensorsId:100+i,value:i===1?.01:10,datetime:{utc:new Date().toISOString()}}
+      ]});
+    };
+    const periodQuery=period==='today'
+      ?`datetime_min=${new Date(new Date().setUTCHours(0,0,0,0)).toISOString()}`
+      :`max_age_days=${period}`;
+    const response=await workerContext.worker.fetch(new Request(
+      `https://worker.test/v1/viewport/latest?pollutant=${key}&bbox=12,41,13,42&${periodQuery}`
+    ),{OPENAQ_API_KEY:'test'},{waitUntil(){}});
+    assert.equal(response.status,200);
+    const payload=await response.json();
+    assert.equal(payload.results.length,ids.length,`${key}/${period}: retain all reporting units`);
+    for(let i=0;i<ids.length;i++){
+      const expected=i===0?10:10*mass/24.45;
+      const row=payload.results.find(row=>row.sensorId===100+i);
+      assert.ok(row);
+      assert.ok(Math.abs(row.value-expected)<1e-8);
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Proxy OpenAQ — Qualità aria
 
-Versione preparata: `0.4.2`. `/v1/viewport/latest` supporta PM2.5, PM10, NO₂, O₃, SO₂ e CO; normalizza ppm/ppb in µg/m³ usando 25 °C e 1 atm (24,45 L/mol). Le unità non riconosciute vengono escluse. Distribuire questa versione prima del frontend `0.7.14`.
+Versione preparata: `0.4.3`. `/v1/viewport/latest` supporta PM2.5, PM10, NO₂, O₃, SO₂ e CO; normalizza ppm/ppb in µg/m³ usando 25 °C e 1 atm (24,45 L/mol). Le unità non riconosciute vengono escluse. Distribuire questa versione insieme al frontend `0.7.29`.
 
 Questo Worker protegge `OPENAQ_API_KEY`: la chiave resta come Secret Cloudflare e non viene mai inviata alla PWA.
 
@@ -96,3 +96,24 @@ Il Worker aggiunge `X-Proxy-Cache: HIT` o `MISS` alle risposte.
 - localhost e 127.0.0.1 sono ammessi per sviluppo;
 - query e pagine sono validate e limitate;
 - non è possibile scegliere arbitrariamente l'host o il path upstream.
+
+## Catalogo parametri — correzione 0.4.3
+
+Gli ID OpenAQ identificano inquinante **e unità**, non soltanto l'inquinante. La ricerca `/v1/viewport/latest` e `/v1/locations` usa `parameters_id` con elenco separato da virgole, supportato dal contratto ufficiale, e seleziona i sensori di tutte le varianti:
+
+| Inquinante | µg/m³ | ppm | ppb |
+| --- | --- | --- | --- |
+| PM10 | 1 | — | — |
+| PM2.5 | 2 | — | — |
+| NO₂ | 5 | 7 | 15 |
+| CO | 4 | 8 | 102 |
+| SO₂ | 6 | 9 | 101 |
+| O₃ | 3 | 10 | 32 |
+
+Fonte verificata il 21 novembre 2026: [catalogo ufficiale OpenAQ](https://github.com/openaq/openaq-db/blob/526918cc9549815ccfa0f4d30a9221260e36fb0e/openaqdb/lookups/measurands.sql). Il catalogo API `/v3/parameters` richiede una API key (401 senza chiave); non sono state lette o modificate credenziali per questa verifica. Il supporto della lista ID è verificato nel [sorgente API ufficiale](https://github.com/openaq/openaq-api/blob/main/openaq_api/v3/models/queries.py), classe `ParametersQuery`.
+
+Gli ID ppm precedenti erano validi, ma escludevano stazioni che riportano i gas in µg/m³ o ppb. La vista sceglie l'ultima misura del gas per stazione e normalizza a µg/m³ secondo l'unità del sensore. Le risposte esterne e la cache interna per stazione usano nuove chiavi, evitando di riutilizzare risultati precedenti incompleti. Il campo metadata `id` resta compatibile; `ids` esplicita tutte le varianti cercate. L'endpoint legacy `/v1/latest` continua a esporre la singola variante ppm per i gas; non è usato dalla vista frontend, che usa `/v1/viewport/latest`.
+
+Verifica: `node --test tests/*.test.mjs`, con fixture per sei inquinanti, quattro periodi, unità µg/m³/ppm/ppb e sensori estranei esclusi. I test simulano OpenAQ e non certificano la disponibilità dei dati reali in una città o il deploy remoto.
+
+Verifica pacchetto del 21 novembre 2026: `wrangler 4.166.0 deploy --dry-run --config ./wrangler.jsonc` riuscito (36,57 KiB, gzip 8,77 KiB), senza deploy remoto.

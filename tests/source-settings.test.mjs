@@ -25,7 +25,7 @@ const context=vm.createContext({console,
   configureSourceUI(){
     const active=node('sourceSelect').value;
     if(['openaq','forecast'].includes(active))context.state.mode='map';
-    options('eeaCitySelect',active==='trees'?['roma','guidonia-montecelio']:active==='eea'?['geolocate','roma','milano']:['roma','milano']);
+    options('eeaCitySelect',active==='trees'?['roma','guidonia-montecelio']:['eea','openaq'].includes(active)?['geolocate','roma','milano']:['roma','milano']);
     options('pollutantSelect',active==='openaq'||active==='forecast'?['PM2.5','PM10','NO2','O3','SO2','CO']:['PM2.5','PM10','NO2']);
     options('monthSelect',active==='openaq'?['today','7','15','30']:['0']);
     if(active==='openaq')node('monthSelect').value='today';
@@ -45,7 +45,7 @@ const switchTo=name=>{set('sourceSelect',name);context.changeSource()};
 set('sourceSelect','eea');context.configureSourceUI();context.fillYears();
 set('eeaCitySelect','geolocate');set('yearSelect','today');set('pollutantSelect','PM10');
 switchTo('forecast');set('eeaCitySelect','milano');set('pollutantSelect','CO');
-switchTo('openaq');set('monthSelect','15');set('pollutantSelect','SO2');
+switchTo('openaq');set('eeaCitySelect','milano');set('monthSelect','15');set('pollutantSelect','SO2');
 switchTo('trees');set('eeaCitySelect','guidonia-montecelio');context.fillYears();set('yearSelect','2025');set('compareYearA','2024');set('compareYearB','2026');
 switchTo('arpa');set('arpaCitySelect','058047');set('yearSelect','2019');set('pollutantSelect','NO2');context.state.mode='compare';set('compareYearA','2018');set('compareYearB','2020');
 
@@ -55,7 +55,7 @@ for(let iteration=0;iteration<2;iteration++){
   switchTo('forecast');
   assert.equal(node('eeaCitySelect').value,'milano');assert.equal(node('pollutantSelect').value,'CO');assert.equal(context.state.mode,'map');
   switchTo('openaq');
-  assert.equal(node('monthSelect').value,'15');assert.equal(node('pollutantSelect').value,'SO2');assert.equal(context.state.mode,'map');
+  assert.equal(node('eeaCitySelect').value,'milano');assert.equal(node('monthSelect').value,'15');assert.equal(node('pollutantSelect').value,'SO2');assert.equal(context.state.mode,'map');
   switchTo('trees');
   assert.equal(node('eeaCitySelect').value,'guidonia-montecelio');assert.equal(node('yearSelect').value,'2025');assert.equal(node('compareYearA').value,'2024');assert.equal(node('compareYearB').value,'2026');
   switchTo('arpa');

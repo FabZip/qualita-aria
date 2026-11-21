@@ -1,3 +1,17 @@
+# 0.7.29 — OpenAQ 0.4.3 (21 novembre 2026)
+
+La ricerca OpenAQ include tutte le varianti di unità dei gas, prima limitate ai soli ID ppm. Ripristinata la select città condivisa con EEA, mantenendo **Geolocalizza** come scelta iniziale e la memoria della città per fonte. Cambiare città aggiorna area e stazioni; cambiare periodo o inquinante conserva il centro corrente.
+
+App `0.7.29`, build `109`, cache PWA aggiornata; proxy OpenAQ `0.4.3` **da distribuire**. Nessuna migrazione, modifica ai secret o ai Worker EEA/temperature/alberi. Dopo il push frontend, per attivare la correzione dei gas:
+
+```bash
+git pull --ff-only origin main
+cd cloudflare/openaq-proxy
+npx wrangler deploy --config ./wrangler.jsonc
+```
+
+Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non distribuisce questo Worker.
+
 # Proxy EEA 0.2.2 — app 0.7.28
 
 - Risolto il 403 Discodata proveniente dal Worker: le POST multipart includono ora uno User-Agent esplicito e veritiero `QualitaAria/0.2.2 (+https://fabzip.github.io/qualita-aria/)`. Il solo passaggio a POST della versione 0.2.1 non era sufficiente da Cloudflare.

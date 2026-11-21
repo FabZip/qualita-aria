@@ -16,15 +16,25 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.28` |
-| Build | `108` |
+| Applicazione | `0.7.29` |
+| Build | `109` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.9.14` |
-| Proxy OpenAQ | `0.4.2` |
+| Proxy OpenAQ | `0.4.3` |
 | Dataset arboreo consolidato | `22` |
 | Ultima migrazione D1 prevista | `0011_tree_source_cursor_offsets.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### OpenAQ 0.7.29 / proxy 0.4.3 — 21 novembre 2026
+
+Stato iniziale verificato: checkout `main` e `origin/main` entrambi a `357f490`; app 0.7.28 build 108, EEA 0.2.2, temperature/alberi 0.9.14, OpenAQ 0.4.2. Versioni pubbliche verificate via HTTP: frontend 0.7.28 build 108 e proxy OpenAQ 0.4.2 configurato. Modifiche locali estranee preservate ed escluse dal commit.
+
+Il catalogo ufficiale OpenAQ distingue ID per unità: NO₂ 5/7/15, CO 4/8/102, SO₂ 6/9/101 e O₃ 3/10/32 rispettivamente in µg/m³/ppm/ppb; PM10 1, PM2.5 2. Prima il proxy interrogava e filtrava soltanto gli ID ppm dei gas. Ora discovery e selezione dei sensori della vista includono tutte e tre le varianti, con normalizzazione a µg/m³ e nuove chiavi cache. Fonte e limiti della verifica nel [README OpenAQ](../cloudflare/openaq-proxy/README.md#catalogo-parametri--correzione-043).
+
+Ripristinata la select città come EEA con `Geolocalizza` iniziale; scelta ricordata per fonte, centratura sulla città e ricerca stazioni al cambio. Una risposta geografica tardiva non sovrascrive una città scelta nel frattempo. Primo ingresso, cambio fonte e cambi di periodo mantengono i vincoli già esistenti.
+
+Suite completa di 18 file superata, inclusi test per tutti gli inquinanti nei quattro periodi, conversioni e concorrenza città/geolocalizzazione. Verifiche con upstream simulato: disponibilità reale dei gas e deploy 0.4.3 ancora da verificare. Richiesto deploy del solo proxy OpenAQ, nessuna migrazione o modifica ai secret; EEA, Worker ambientale e dataset invariati. Le note storiche seguenti descrivono release precedenti.
 
 ### Correzione verificata in produzione — EEA 0.2.2
 
@@ -796,3 +806,5 @@ Confrontare quindi:
 | Cache | `service-worker.js` | browser/PWA |
 
 Una nuova modifica deve iniziare solo dopo questo confronto.
+
+Verifica pacchetto del 21 novembre 2026: `wrangler 4.166.0 deploy --dry-run --config ./wrangler.jsonc` riuscito (36,57 KiB, gzip 8,77 KiB), senza deploy remoto.

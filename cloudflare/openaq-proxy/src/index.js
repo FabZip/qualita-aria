@@ -5,13 +5,15 @@ const EEA_UTD_URL_CACHE_TTL=300;
 const EEA_UTD_MAX_FILES=100;
 const EEA_UTD_MAX_FILE_BYTES=40*1024*1024;
 
+// Official catalog: https://github.com/openaq/openaq-db/blob/main/openaqdb/lookups/measurands.sql
+// Parameter IDs identify both pollutant and reporting unit.
 const PARAMETERS={
-  pm10:{id:1,label:'PM10',units:'µg/m³'},
-  pm25:{id:2,label:'PM2.5',units:'µg/m³'},
-  no2:{id:7,label:'NO₂',units:'ppm'},
-  co:{id:8,label:'CO',units:'ppm'},
-  so2:{id:9,label:'SO₂',units:'ppm'},
-  o3:{id:10,label:'O₃',units:'ppm'}
+  pm10:{id:1,ids:[1],label:'PM10',units:'µg/m³'},
+  pm25:{id:2,ids:[2],label:'PM2.5',units:'µg/m³'},
+  no2:{id:7,ids:[5,7,15],label:'NO₂',units:'ppm'},
+  co:{id:8,ids:[4,8,102],label:'CO',units:'ppm'},
+  so2:{id:9,ids:[6,9,101],label:'SO₂',units:'ppm'},
+  o3:{id:10,ids:[3,10,32],label:'O₃',units:'ppm'}
 };
 
 const PROD_ORIGIN='https://fabzip.github.io';
@@ -143,6 +145,7 @@ function cacheTtl(route,year=null){
 
 function cacheKeyFor(request,origin){
   const url=new URL(request.url);
+  url.searchParams.set('__qa_version','0.4.3');
   url.searchParams.set('__qa_origin',origin||'server');
   return new Request(url.toString(),{method:'GET'})
 }
@@ -295,7 +298,7 @@ async function cachedOpenAQ({
 
 function locationEndpoint(pollutant,bbox){
   const params=new URLSearchParams({
-    parameters_id:String(pollutant.id),
+    parameters_id:pollutant.ids.join(','),
     monitor:'true',
     mobile:'false',
     bbox:bbox.join(','),
@@ -346,7 +349,7 @@ async function discoverViewportLocations(env,pollutant,bbox,stats,depth=0){
 function locationTargetSensorIds(location,pollutant){
   return new Set(
     (Array.isArray(location?.sensors)?location.sensors:[])
-      .filter(sensor=>Number(sensor?.parameter?.id)===Number(pollutant.id))
+      .filter(sensor=>pollutant.ids.includes(Number(sensor?.parameter?.id)))
       .map(sensor=>Number(sensor.id))
       .filter(Number.isFinite)
   )
@@ -359,7 +362,7 @@ async function latestForLocation(env,ctx,location,pollutant,cutoffIso){
 
   const cacheRequest=internalCacheRequest('location-latest',{
     location:locationId,
-    pollutant:pollutant.id,
+    pollutant:pollutant.ids.join(','),
     cutoff:cutoffIso
   });
 
@@ -526,6 +529,7 @@ async function viewportLatest(request,env,ctx,origin,cors,pollutant,bbox,maxAgeD
       pollutant:{
         key:pollutant.key,
         id:pollutant.id,
+        ids:pollutant.ids,
         label:pollutant.label,
         units:'µg/m³'
       },
@@ -574,7 +578,7 @@ async function worldLatest(request,env,ctx,origin,cors,pollutant,maxAgeHours){
   const datetimeMin=new Date(Date.now()-maxAgeHours*3600_000).toISOString();
   const locationEndpointForPage=page=>{
     const params=new URLSearchParams({
-      parameters_id:String(pollutant.id),
+      parameters_id:pollutant.ids.join(','),
       monitor:'true',
       mobile:'false',
       limit:String(PAGE_LIMIT),
@@ -660,6 +664,7 @@ async function worldLatest(request,env,ctx,origin,cors,pollutant,maxAgeHours){
       pollutant:{
         key:pollutant.key,
         id:pollutant.id,
+        ids:pollutant.ids,
         label:pollutant.label,
         units:pollutant.units
       },
@@ -875,7 +880,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-openaq-proxy',
-        version:'0.4.2',
+        version:'0.4.3',
         openaqConfigured:Boolean(env.OPENAQ_API_KEY),
         upstream:'OpenAQ API v3',
         worldLatest:true,
@@ -961,7 +966,7 @@ export default{
       if(url.searchParams.has('bbox')&&bbox===null)return badRequest('Bounding box non valida',cors);
 
       const params=new URLSearchParams({
-        parameters_id:String(pollutant.id),
+        parameters_id:pollutant.ids.join(','),
         monitor:'true',
         mobile:'false',
         limit:String(PAGE_LIMIT),

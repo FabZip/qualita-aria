@@ -61,8 +61,25 @@
       },{enableHighAccuracy:false,timeout:10000,maximumAge:300000})
     });
     const coords=await locationPromise;
-    if(coords&&isOpenAQ())withMapRefreshSuppressed(()=>state.map.jumpTo({center:[coords.longitude,coords.latitude],zoom:11}));
+    if(coords&&isOpenAQ()&&$('eeaCitySelect').value==='geolocate')withMapRefreshSuppressed(()=>state.map.jumpTo({center:[coords.longitude,coords.latitude],zoom:11}));
   }
+
+  globalThis.OpenAQCitySelection=async function(){
+    const sequence=++searchSequence;
+    entering=false;
+    state.openaqCache.clear();
+    state.openaqLastViewportKey='';
+    // A pending initial geolocation must not override a newly selected city.
+    if($('eeaCitySelect').value==='geolocate'){
+      locationPromise=null;
+      entryPromise=locateUser();
+      await entryPromise;
+    }else{
+      entryPromise=null;
+      focusSelectedOpenAqCity();
+    }
+    if(isOpenAQ()&&sequence===searchSequence)render();
+  };
 
   SOURCE_INFO.openaq={
     name:'OpenAQ',
@@ -362,7 +379,8 @@
     $('sourceDescription').innerHTML=info.description;
     $('eeaScopeField').classList.add('hidden');
     $('singleYearField')?.classList.add('hidden');
-    $('eeaCityField')?.classList.add('hidden');
+    configureTreeCityOptions(false);
+    $('eeaCityField')?.classList.remove('hidden');
     $('arpaCityField')?.classList.add('hidden');
     $('pollutantField')?.classList.remove('hidden');
     $('temperatureMetricField')?.classList.add('hidden');
@@ -483,7 +501,8 @@
       if(entering){
         // Tutti i render iniziali attendono la stessa posizione: un refresh
         // della mappa non deve interrogare la vecchia area durante il consenso.
-        if(!entryPromise)entryPromise=locateUser();
+        if(!entryPromise)entryPromise=$('eeaCitySelect').value==='geolocate'
+          ?locateUser():Promise.resolve(focusSelectedOpenAqCity());
         await entryPromise;
         if(!isOpenAQ()||sequence!==searchSequence)return [];
         entering=false
