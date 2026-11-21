@@ -1,3 +1,7 @@
+# 0.7.32 — Etichette e barre Alberi
+
+Corretto il riepilogo Alberi: le etichette “Piantati documentati” e “Abbattimenti documentati” hanno spazio dedicato e vanno a capo senza sovrapporsi alle barre. Su mobile ogni etichetta precede la propria barra su una riga distinta. App `0.7.32`, build `112`, cache PWA/CSS aggiornata. Nessuna modifica ai dati o ai Worker.
+
 # 0.7.31 — Mappe mobile con due dita
 
 Su dispositivi con puntatore touch, spostamento e zoom delle mappe usano i gesti cooperativi MapLibre: un dito permette di scorrere la pagina, due dita di muovere la mappa. Suggerimento in italiano. Attivo su mappa principale, confronto e segnalazioni; il divisore del confronto resta trascinabile con un dito. Interazione desktop invariata. App `0.7.31`, build `111`, cache PWA e CSS aggiornati. Nessuna modifica ai Worker, database o secret.

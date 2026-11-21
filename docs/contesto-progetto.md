@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.31` |
-| Build | `111` |
+| Applicazione | `0.7.32` |
+| Build | `112` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.9.14` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,10 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0011_tree_source_cursor_offsets.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### Barre Alberi 0.7.32
+
+La griglia `tree-compare` riservava solo 74 px alle etichette (68 su mobile), che debordavano sotto le barre. Ora la colonna desktop arriva a 11 rem, con ritorno a capo; fino a 480 px la griglia usa una sola colonna, con ogni etichetta sopra la relativa barra. App 0.7.32 build 112 e cache PWA/CSS aggiornata. Verifica browser con markup rappresentativo e CSS reali a 320, 390 e 1000 px: nessuna sovrapposizione o overflow orizzontale. Tutti i 19 file di test superati. Valori e proporzioni invariati; nessun deploy Worker o migrazione.
 
 ### Mappe mobile 0.7.31
 
