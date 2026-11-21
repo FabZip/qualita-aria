@@ -1,3 +1,7 @@
+# 0.7.31 — Mappe mobile con due dita
+
+Su dispositivi con puntatore touch, spostamento e zoom delle mappe usano i gesti cooperativi MapLibre: un dito permette di scorrere la pagina, due dita di muovere la mappa. Suggerimento in italiano. Attivo su mappa principale, confronto e segnalazioni; il divisore del confronto resta trascinabile con un dito. Interazione desktop invariata. App `0.7.31`, build `111`, cache PWA e CSS aggiornati. Nessuna modifica ai Worker, database o secret.
+
 # 0.7.30 — OpenAQ: campo Periodo durante il caricamento
 
 Il campo anno `singleYearField` resta nascosto per tutta la richiesta OpenAQ, anche quando si cambia periodo o si sposta la mappa. Eliminata la comparsa temporanea di un secondo campo Periodo. App `0.7.30`, build `110`, cache PWA aggiornata; proxy OpenAQ invariato `0.4.3`, nessun nuovo deploy Worker o migrazione richiesti da questa modifica.

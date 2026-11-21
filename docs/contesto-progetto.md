@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.30` |
-| Build | `110` |
+| Applicazione | `0.7.31` |
+| Build | `111` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.9.14` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,10 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0011_tree_source_cursor_offsets.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### Mappe mobile 0.7.31
+
+MapLibre GL JS 5.24.0: `cooperativeGestures` attivo quando `matchMedia('(pointer: coarse)')` corrisponde. Vale per le tre mappe principali e la mappa segnalazioni, con messaggio italiano. Il contenitore del confronto consente il pan della pagina; `touch-action:none` è limitato al divisore. Desktop invariato. App 0.7.31 build 111, cache PWA/CSS aggiornata, nessun deploy Worker o migrazione. Comportamento nativo verificato nel [sorgente della versione usata](https://github.com/maplibre/maplibre-gl-js/blob/v5.24.0/src/ui/handler/cooperative_gestures.ts). Suite automatica superata; prova tattile su dispositivo fisico ancora da verificare.
 
 ### OpenAQ 0.7.30 — campo Periodo durante il caricamento
 

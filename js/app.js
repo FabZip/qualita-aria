@@ -3409,6 +3409,8 @@ function bindSwipe(){
 function baseMap(container){
   return new maplibregl.Map({
     container,
+    cooperativeGestures:globalThis.matchMedia?.('(pointer: coarse)').matches??false,
+    locale:{'CooperativeGesturesHandler.MobileHelpText':'Usa due dita per spostare la mappa'},
     style:MAP_STYLE,
     center:ROME.center,
     zoom:ROME.zoom,
@@ -3544,7 +3546,7 @@ function openTreeLocationReport(eventId,requestedIndex=0){
     const coordinates=treeLocationCoordinates(event,Number(select.value));
     if(!state.treeReportMap){
       state.treeReportInitialCoordinates=[...coordinates];
-      state.treeReportMap=new maplibregl.Map({container:'treeReportMap',style:TREE_REPORT_SATELLITE_STYLE,center:coordinates,zoom:17,attributionControl:true});
+      state.treeReportMap=new maplibregl.Map({container:'treeReportMap',cooperativeGestures:globalThis.matchMedia?.('(pointer: coarse)').matches??false,locale:{'CooperativeGesturesHandler.MobileHelpText':'Usa due dita per spostare la mappa'},style:TREE_REPORT_SATELLITE_STYLE,center:coordinates,zoom:17,attributionControl:true});
       state.treeReportMap.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
     }else{
       state.treeReportMap.resize();positionTreeReportMarker(event,Number(select.value))
