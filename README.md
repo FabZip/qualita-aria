@@ -1,3 +1,7 @@
+# 0.7.30 — OpenAQ: campo Periodo durante il caricamento
+
+Il campo anno `singleYearField` resta nascosto per tutta la richiesta OpenAQ, anche quando si cambia periodo o si sposta la mappa. Eliminata la comparsa temporanea di un secondo campo Periodo. App `0.7.30`, build `110`, cache PWA aggiornata; proxy OpenAQ invariato `0.4.3`, nessun nuovo deploy Worker o migrazione richiesti da questa modifica.
+
 # 0.7.29 — OpenAQ 0.4.3 (21 novembre 2026)
 
 La ricerca OpenAQ include tutte le varianti di unità dei gas, prima limitate ai soli ID ppm. Ripristinata la select città condivisa con EEA, mantenendo **Geolocalizza** come scelta iniziale e la memoria della città per fonte. Cambiare città aggiorna area e stazioni; cambiare periodo o inquinante conserva il centro corrente.

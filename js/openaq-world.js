@@ -553,11 +553,6 @@
     await baseRender();
     if(!isOpenAQ()||state.mode!=='map')return;
 
-    // baseRender mostra il campo anno in modalità Mappa: OpenAQ non ha un
-    // periodo selezionabile, quindi lo nascondiamo nuovamente. Resta soltanto
-    // il controllo Periodo (Oggi/7/15/30 giorni).
-    $('singleYearField')?.classList.add('hidden');
-
     // La ricerca può aver ampliato la vista per includere le stazioni trovate.
     keepGeographicLabelsVisible(state.map,'air');
 

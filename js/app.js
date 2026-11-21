@@ -3250,7 +3250,7 @@ async function render(){
   $('comparePanel').classList.toggle('hidden',!periodComparison);
   $('singleYearField').classList.toggle(
     'hidden',
-    !['map','temperature','trees'].includes(state.mode)
+    source()==='openaq'||!['map','temperature','trees'].includes(state.mode)
   );
   $('singleMapWrap').classList.toggle('hidden',state.mode==='compare');
   $('compareMapWrap').classList.toggle('hidden',state.mode!=='compare');
