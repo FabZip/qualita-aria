@@ -16,15 +16,25 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.7.32` |
-| Build | `112` |
+| Applicazione | `0.8.0` |
+| Build | `113` |
 | Proxy EEA | `0.2.2` |
-| Worker ambientale | `0.9.14` |
+| Worker ambientale | `0.10.0` |
 | Proxy OpenAQ | `0.4.3` |
 | Dataset arboreo consolidato | `22` |
-| Ultima migrazione D1 prevista | `0011_tree_source_cursor_offsets.sql` |
+| Ultima migrazione D1 prevista | `0012_tree_admin_event_split.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### Amministrazione Alberi 0.8.0 / Worker 0.10.0
+
+Nuovo accesso agli eventi per Comune e anno dal pannello amministrativo, senza richiedere una segnalazione: quantità e tipo modificabili (piantumazione verde, abbattimento rosso), divisione in interventi separati e rimozione permanente dalla pubblicazione. Ogni figlio può avere quantità, tipo, stato, data e indirizzi propri; fonte URL e pubblicazione restano comuni e sono imposti dal server. L'originale suddiviso è escluso nella stessa transazione degli inserimenti, non conteggiato insieme ai figli. Per assegnare quantità diverse a luoghi diversi si creano interventi distinti; non viene ripartita una quantità complessiva automaticamente.
+
+Le esclusioni sono tombstone `manual_rejected`, preservate dagli aggiornamenti e dalla fusione col catalogo locale. Il crawler non reintroduce la stessa chiave né nuove chiavi automatiche di una fonte con esclusioni/divisioni; altri record già presenti restano distinti. Nuova cronologia `tree_admin_audit`, legame `parent_source_key`, protezione da salvataggi concorrenti o divisioni ripetute. Nessuna password nel frontend o conservata dopo l'operazione; per ogni decisione resta richiesta la password amministratore.
+
+Necessaria **migrazione `0012_tree_admin_event_split.sql` prima del deploy del Worker 0.10.0**. App 0.8.0 build 113 e cache PWA aggiornata. Deploy e migrazione remoti non eseguiti nello sviluppo. Procedure nel [README del Worker](../cloudflare/temperature-proxy/README.md); secret, EEA e OpenAQ invariati.
+
+Verifiche: 21 file di test superati, SQLite con tutte le migrazioni e rollback simulato, API con/senza autenticazione, limiti di divisione/geocodifica e regressioni di fusione. Collaudo browser locale su Worker e database in memoria: 5 piantumazioni e 2 abbattimenti, stessa fonte, due coordinate distinte, successiva modifica quantità e rimozione; nessun overflow a 390 px. Conferme native e geocoder simulati nel browser, senza operazioni sul database pubblico. Dry-run Wrangler 4.166.0 riuscito con binding esistenti. Le note seguenti sono storiche.
 
 ### Barre Alberi 0.7.32
 

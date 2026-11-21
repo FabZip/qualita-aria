@@ -9,11 +9,11 @@
   <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
   <link rel="stylesheet" href="css/aria-splash.css?v=0.5.15">
-  <link rel="stylesheet" href="css/app.css?v=0.7.32">
+  <link rel="stylesheet" href="css/app.css?v=0.8.0">
   <link rel="stylesheet" href="css/station-list.css?v=0.2.3">
   <link rel="stylesheet" href="css/openaq-world.css?v=0.2.4">
   <link rel="stylesheet" href="css/temperature.css?v=0.3.9">
-  <link rel="stylesheet" href="css/trees.css?v=0.7.32">
+  <link rel="stylesheet" href="css/trees.css?v=0.8.0">
   <link rel="stylesheet" href="css/air-forecast.css?v=0.7.12">
   <link rel="stylesheet" href="css/header-overrides.css?v=0.5.20">
   <title>Qualità dell'aria</title>
@@ -265,31 +265,32 @@
     </dialog>
 
     <dialog id="treeAdminDialog" class="tree-dialog tree-admin-dialog">
-      <div class="tree-dialog-head"><h2>Revisione segnalazioni Alberi</h2><button type="button" data-dialog-close="treeAdminDialog" aria-label="Chiudi">×</button></div>
-      <form id="treeAdminLogin" class="tree-admin-login"><label>Password amministratore<input id="treeAdminPassword" type="password" autocomplete="current-password" required></label><button type="submit">Carica segnalazioni</button></form>
+      <div class="tree-dialog-head"><h2>Amministrazione eventi Alberi</h2><button type="button" data-dialog-close="treeAdminDialog" aria-label="Chiudi">×</button></div>
+      <div class="tree-form-grid"><label>Comune<select id="treeAdminCity"><option value="roma">Roma</option><option value="guidonia-montecelio">Guidonia Montecelio</option></select></label><label>Anno<input id="treeAdminYear" type="number" min="2013" value="2026"></label></div><form id="treeAdminLogin" class="tree-admin-login"><label>Password amministratore<input id="treeAdminPassword" type="password" autocomplete="current-password" required></label><button type="submit" value="events">Carica eventi</button><button type="submit" value="reports">Carica segnalazioni</button></form>
       <div id="treeAdminStatus" class="tree-form-status" role="status"></div>
+      <div id="treeAdminEvents" class="tree-admin-reports"></div>
       <div id="treeAdminReports" class="tree-admin-reports"></div>
     </dialog>
 
     <footer class="app-footer">
-      v<span id="appVersion" role="button" tabindex="0" aria-label="Versione applicazione">0.7.32</span> · dataset <span id="dataVersion">22</span>
+      v<span id="appVersion" role="button" tabindex="0" aria-label="Versione applicazione">0.8.0</span> · dataset <span id="dataVersion">22</span>
     </footer>
   </main>
 
   <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="js/aria-splash.js?v=0.5.14" defer></script>
-  <script src="js/display-text.js?v=0.7.32" defer></script>
+  <script src="js/display-text.js?v=0.8.0" defer></script>
   <script src="js/openaq-proxy.js?v=0.2.12" defer></script>
   <script src="js/eea-proxy.js?v=0.2.15" defer></script>
   <script src="js/temperature-proxy.js?v=0.3.9" defer></script>
-  <script src="js/trees.js?v=0.7.32" defer></script>
-  <script src="js/app.js?v=0.7.32" defer></script>
+  <script src="js/trees.js?v=0.8.0" defer></script>
+  <script src="js/app.js?v=0.8.0" defer></script>
   <script src="js/eea-utd.js?v=0.2.23" defer></script>
-  <script src="js/openaq-world.js?v=0.7.32" defer></script>
+  <script src="js/openaq-world.js?v=0.8.0" defer></script>
   <script src="js/temperature-overlay.js?v=0.3.11" defer></script>
   <script src="js/station-list.js?v=0.2.15" defer></script>
   <script src="js/air-forecast.js?v=0.7.12" defer></script>
-  <script src="js/eea-current.js?v=0.7.32" defer></script>
+  <script src="js/eea-current.js?v=0.8.0" defer></script>
 </body>
 </html>

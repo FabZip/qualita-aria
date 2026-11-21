@@ -481,6 +481,7 @@
       .filter(event=>{
         const key=String(event.sourceKey||event.id).replace(/^dynamic-/,'');
         if(consumedRemoteKeys.has(key))return false;
+        if(event.parentSourceKey)return true;
         return !enrichedLocal.some(local=>sameDocumentedEvent(local,event))
       })
       .map(event=>({...event,source:{publisher:`${city.source?.publisher||city.name} · aggiornamento automatico`,url:event.sourceUrl}}));

@@ -124,3 +124,14 @@ const deleted=await(await treeStats([],[{sourceKey:localEvent.id,city:'roma',yea
 assert.ok(!deleted.documentedEvents.some(event=>event.id===localEvent.id));
 
 console.log('trees-summary: ok');
+
+// Manual split children survive same-source deduplication and replace only the parent.
+const splitChildren=[
+ {...sameSourceDuplicate,id:'dynamic-admin-green',sourceKey:'admin-green',parentSourceKey:localEvent.id,eventType:'planting',quantity:5,status:'completed',validation:'manual_confirmed'},
+ {...sameSourceDuplicate,id:'dynamic-admin-red',sourceKey:'admin-red',parentSourceKey:localEvent.id,eventType:'decrement',quantity:2,status:'completed',validation:'manual_confirmed'}
+];
+const splitRows=await(await treeStats(splitChildren,[{sourceKey:localEvent.id,city:'roma',year:2026,validation:'manual_rejected'}])).rows('roma','2026');
+assert.ok(!splitRows.documentedEvents.some(event=>event.id===localEvent.id));
+assert.equal(splitRows.documentedEvents.filter(event=>event.parentSourceKey===localEvent.id).length,2);
+assert.equal(splitRows.documentedSummary.plantings,deleted.documentedSummary.plantings+5);
+assert.equal(splitRows.documentedSummary.decrements,deleted.documentedSummary.decrements+2);

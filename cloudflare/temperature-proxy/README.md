@@ -1,3 +1,32 @@
+# Proxy ambientale 0.10.0 — amministrazione Alberi 0.8.0
+
+Nuovo endpoint autenticato con `TREE_ADMIN_PASSWORD` (Bearer), senza usare il token dei cron:
+
+- `GET /v1/trees/admin/events?city=roma&year=2026`: editor di tutti gli eventi attivi del Comune/anno, con `adminSchemaVersion: 3`, versione `updated_at` e legame `parent_source_key`;
+- `POST /v1/trees/admin/events`: `action` è `update_event`, `split_event` o `delete_event`, con `sourceKey` ed `expectedUpdatedAt` del record caricato. Per gli eventi del catalogo locale non ancora presenti in D1, l'editor invia una snapshot `original` validata dal server e importa il record solo al salvataggio;
+- `split_event` accetta `parts` (da 2 a 20, massimo 100 località complessive): ogni parte ha titolo, Comune/anno, data, località, tipo, stato e quantità. Il server impone URL e pubblicazione della fonte originale, anche in successive revisioni dei figli. Il frontend applica il Comune/anno scelto ai nuovi interventi, che restano modificabili individualmente in seguito.
+
+Migrazione **`0012_tree_admin_event_split.sql` necessaria prima del deploy**: aggiunge `parent_source_key`, `split_parent` e `tree_admin_audit`. Nessun record esistente viene cancellato. Il precedente editor segnalazioni resta disponibile; il nuovo endpoint richiede schema 3.
+
+`delete_event` conserva una tombstone `manual_rejected`; il crawler ignora la chiave nei ricontrolli. Se una fonte ha record esclusi o un originale suddiviso, non introduce automaticamente nuove chiavi per lo stesso URL; altri record già esistenti della fonte restano distinti. Le correzioni manuali dei record attivi restano preservate dagli upsert. Gli originali suddivisi non possono essere riapprovati attraverso le vecchie API di revisione. La fusione frontend rispetta le tombstone anche per eventi del catalogo locale e non deduplica i figli manuali sulla sola fonte.
+
+La scrittura usa una transazione D1 `batch`: audit, esclusione dell'originale e inserimenti sono atomici. Un controllo sulla versione del record anche dentro la transazione rifiuta modifiche concorrenti; un fallimento non lascia figli parziali. Una seconda richiesta di divisione non duplica gli eventi. La geocodifica è successiva e limitata a otto tentativi complessivi per richiesta; gli altri punti restano in coda. Nessuna quantità viene derivata dal numero di indirizzi.
+
+Distribuzione (account e database da verificare prima di operare):
+
+```bash
+cd cloudflare/temperature-proxy
+npx wrangler whoami
+npx wrangler d1 list
+npx wrangler d1 migrations list qualita-aria-tree-events --remote --config ./wrangler.toml
+npx wrangler d1 migrations apply qualita-aria-tree-events --remote --config ./wrangler.toml
+npx wrangler deploy --config ./wrangler.toml
+```
+
+`/health` deve restituire `0.10.0`. Nessuna rotazione di `TREE_ADMIN_PASSWORD` o `TREE_ADMIN_TOKEN`. Non è richiesto un refresh completo per usare l'editor.
+
+Verifiche locali: suite di 21 file, SQLite con tutte le migrazioni, test delle API autorizzate e non autorizzate, quantità/tipi, divisioni invalide, rollback, richieste duplicate, versioni obsolete, geocodifica limitata, esclusioni dopo upsert e fusione del catalogo. Browser con funzioni frontend e Worker reali su SQLite in memoria, Nominatim e conferme native simulati: divisione 5 piantumazioni/2 abbattimenti con fonte comune e coordinate distinte, modifica quantità e rimozione persistente; layout a 390 px. Dry-run Wrangler 4.166.0 riuscito: binding `TREE_DB` e `TREE_SYNC_ENABLED`, 124,43 KiB (gzip 28,79 KiB). Non sono state effettuate scritture su D1 remoto o distribuzioni.
+
 # Proxy ambientale 0.9.14
 
 Gli avvisi misti vengono suddivisi per tipo di intervento e contesto del testo. Il contenuto di `<article>` evita interferenze di menu e metadati. Il comunicato reale `IDS1658896` del XIV Municipio produce abbattimenti entro il 30 ottobre nelle tre località (quantità complessiva non certa) e 19 piantumazioni in via Bitossi senza data lavori dichiarata. I blocchi non separabili restano `unknown`/`automatic_pending`; gli interventi misti non diventano automaticamente consuntivi completati.

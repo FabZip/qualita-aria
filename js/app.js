@@ -3632,29 +3632,29 @@ function resetTreeReportMap(){
   $('treeAddressSearch').value='';$('treeAddressResults').innerHTML=''
 }
 
-function renderTreeAdminReports(reports){
+function renderTreeAdminReports(reports,targetId='treeAdminReports'){
   const safe=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const option=(value,label,current)=>`<option value="${value}" ${value===current?'selected':''}>${label}</option>`;
-  $('treeAdminReports').innerHTML=reports.length?reports.map(report=>{
-    const reporter=`Segnalata il ${safe(new Date(report.created_at).toLocaleString('it-IT'))}${report.reporter_name?` · ${safe(report.reporter_name)}`:' · anonima'}${report.reporter_email?` · ${safe(report.reporter_email)}`:''}`;
+  $(targetId).innerHTML=reports.length?reports.map(report=>{
+    const reporter=report.direct?'':`Segnalata il ${safe(new Date(report.created_at).toLocaleString('it-IT'))}${report.reporter_name?` · ${safe(report.reporter_name)}`:' · anonima'}${report.reporter_email?` · ${safe(report.reporter_email)}`:''}`;
     const isLocation=Number(report.location_index)>=0;
     let locations=[];try{locations=JSON.parse(report.locations_json||'[]')}catch{};
     if(!locations.length)locations=[report.location_name];
     const position=isLocation?`<details><summary>Correggi la singola posizione segnalata</summary><div class="tree-form-grid"><label>Longitudine<input data-admin-lon type="number" step="any" value="${Number(report.suggested_longitude)}"></label><label>Latitudine<input data-admin-lat type="number" step="any" value="${Number(report.suggested_latitude)}"></label></div><label>Nome località<input data-admin-location value="${safe(report.location_name)}"></label><label>Geometria GeoJSON <small>(facoltativa)</small><textarea data-admin-geometry placeholder='{"type":"LineString","coordinates":[...]}'></textarea></label><button type="button" data-admin-action="approve">Approva solo questa posizione</button></details>`:'';
-    return`<article class="tree-admin-report tree-admin-event-report" data-report-id="${report.id}" data-report-type="${isLocation?'location':'event'}">
-      <h3>Segnalazione ${isLocation?'posizione':'evento'} · ${safe(report.event_title||report.location_name)}</h3><p>${safe(report.reason)}</p><p>${reporter}</p><p>I dati dell’intervento corretti qui saranno pubblicati nell’app. Identificativi e cronologia tecnica restano invariati.</p>
+    return`<article class="tree-admin-report tree-admin-event-report" data-report-id="${report.id}" data-report-type="${isLocation?'location':'event'}" data-admin-direct="${report.direct?'true':'false'}" data-source-key="${safe(report.source_key)}" data-updated-at="${safe(report.updated_at)}">${report.direct?`<details><summary>${safe(report.event_title||report.location_name)} · ${report.event_type==='planting'?'Piantumazione':report.event_type==='decrement'?'Abbattimento':'Da verificare'} · ${safe(report.event_quantity??'quantità sconosciuta')}</summary>`:''}
+      <h3>${report.direct?'Evento':`Segnalazione ${isLocation?'posizione':'evento'}`} · ${safe(report.event_title||report.location_name)}</h3><p>${safe(report.reason)}</p><p>${reporter}</p><p>I dati dell’intervento corretti qui saranno pubblicati nell’app. La quantità e il tipo determinano numero e colore degli alberi pubblicati.</p>
       <label>Titolo<input data-admin-event-title maxlength="300" value="${safe(report.event_title)}"></label>
       <div class="tree-form-grid"><label>Comune<select data-admin-event-city>${option('roma','Roma',report.event_city)}${option('guidonia-montecelio','Guidonia Montecelio',report.event_city)}</select></label><label>Anno<input data-admin-event-year type="number" min="2013" max="${new Date().getFullYear()}" value="${Number(report.event_year)||''}"></label></div>
       <label>Data lavori <small>(vuoto se non indicata)</small><input data-admin-event-date value="${safe(report.event_date)}" placeholder="AAAA-MM-GG"></label>
       <label>Municipio / zona<input data-admin-event-district maxlength="180" value="${safe(report.event_district)}"></label>
       <label>Località <small>(una per riga; aggiungi, correggi o rimuovi le righe)</small><textarea data-admin-event-locations>${safe(locations.join('\n'))}</textarea></label>
-      <div class="tree-form-grid"><label>Tipo<select data-admin-event-type>${option('planting','Piantumazione',report.event_type)}${option('decrement','Abbattimento',report.event_type)}${option('unknown','Da verificare',report.event_type)}</select></label><label>Stato<select data-admin-event-status>${option('planned','Programmato',report.event_status)}${option('reported','Comunicazione ufficiale',report.event_status)}${option('completed','Eseguito',report.event_status)}${option('emergency_completed','Urgente eseguito',report.event_status)}${option('unknown','Da verificare',report.event_status)}</select></label></div>
+      <div class="tree-form-grid"><label>Tipo<select data-admin-event-type>${option('planting','Piantumazione · verde',report.event_type)}${option('decrement','Abbattimento · rosso',report.event_type)}${option('unknown','Da verificare',report.event_type)}</select></label><label>Stato<select data-admin-event-status>${option('planned','Programmato',report.event_status)}${option('reported','Comunicazione ufficiale',report.event_status)}${option('completed','Eseguito',report.event_status)}${option('emergency_completed','Urgente eseguito',report.event_status)}${option('unknown','Da verificare',report.event_status)}</select></label></div>
       <label>Quantità complessiva <small>(vuoto se sconosciuta, non ripartita fra le località)</small><input data-admin-event-quantity type="number" min="0" step="1" value="${report.event_quantity??''}"></label>
-      <label>URL della fonte<input data-admin-event-source type="url" value="${safe(report.source_url)}"></label>
-      <label>Data pubblicazione<input data-admin-event-published type="date" value="${safe(report.source_published_at)}"></label>
+      <label>URL della fonte<input data-admin-event-source type="url" value="${safe(report.source_url)}" ${report.parent_source_key?'readonly title="Fonte condivisa con gli altri interventi della divisione"':''}></label>
+      <label>Data pubblicazione<input data-admin-event-published type="date" ${report.parent_source_key?'readonly':''} value="${safe(report.source_published_at)}"></label>
       <label>Descrizione / dettagli estratti<textarea data-admin-event-description maxlength="5000">${safe(report.raw_excerpt)}</textarea></label>
-      ${position}<div class="tree-admin-actions"><button type="button" data-admin-action="reject">Rifiuta segnalazione</button><button class="is-danger" type="button" data-admin-action="delete_event">Elimina evento</button><button type="button" data-admin-action="update_event">Salva dati evento</button></div></article>`
-  }).join(''):'<p>Nessuna segnalazione in attesa.</p>'
+      ${position}${report.source_key&&(report.direct||report.updated_at)?`<details class="tree-admin-split"><summary>Dividi in più interventi</summary><p>Ogni intervento avrà quantità, tipo e indirizzi propri. La fonte originale e la sua data di pubblicazione resteranno comuni. L’evento originale sarà escluso dai totali. Inserisci le quantità documentate: non vengono ripartite automaticamente.</p><button type="button" data-admin-split-prepare>Prepara interventi dagli indirizzi</button><div data-admin-split-parts></div><button type="button" data-admin-split-add>Aggiungi intervento</button><button type="button" data-admin-action="split_event">Salva divisione</button></details>`:''}<div class="tree-admin-actions">${report.direct?'':'<button type="button" data-admin-action="reject">Rifiuta segnalazione</button>'}<button class="is-danger" type="button" data-admin-action="delete_event">Rimuovi e ignora evento</button><button type="button" data-admin-action="update_event">Salva dati evento</button></div>${report.direct?'</details>':''}</article>`
+  }).join(''):targetId==='treeAdminEvents'?'<p>Nessun evento per Comune e anno selezionati.</p>':'<p>Nessuna segnalazione in attesa.</p>'
 }
 
 async function loadTreeAdminReports(password){
@@ -3663,17 +3663,18 @@ async function loadTreeAdminReports(password){
   const response=await fetch(`${base}/v1/trees/location-reports?status=pending`,{headers:{Authorization:`Bearer ${password}`}});
   const result=await response.json();if(!response.ok)throw new Error(result.error||`HTTP ${response.status}`);
   if(result.adminSchemaVersion!==2)throw new Error('Aggiorna il Worker ambientale alla versione 0.9.14 per modificare tutti i dati degli eventi.');
+  $('treeAdminEvents').innerHTML='';
   renderTreeAdminReports(result.reports||[]);status.textContent=`${result.reports?.length||0} segnalazioni in attesa.`
 }
 
 async function reviewTreeAdminReport(article,action){
-  const actionLabels={approve:'approvare la posizione',reject:'rifiutare la segnalazione',update_event:'salvare le modifiche',delete_event:'eliminare l’evento'};
+  const actionLabels={split_event:'dividere l’evento',approve:'approvare la posizione',reject:'rifiutare la segnalazione',update_event:'salvare le modifiche',delete_event:'eliminare l’evento'};
   const password=window.prompt(`Inserisci la password amministratore per ${actionLabels[action]||'revisionare la segnalazione'}:`);
   if(!password)return;
   const isEvent=article.dataset.reportType==='event';
   let body={reportId:Number(article.dataset.reportId),action};
-  if(action==='delete_event'&&!window.confirm('Escludere l’intero evento dalla pubblicazione, comprese tutte le sue località?'))return;
-  if(action==='update_event'){
+  if(action==='delete_event'&&!window.confirm('Rimuovere l’evento e tutte le sue posizioni? Sarà ignorato nei successivi aggiornamenti automatici. Gli altri eventi della stessa fonte restano separati.'))return;
+  if(action==='update_event'||action==='split_event'){
     body={...body,title:article.querySelector('[data-admin-event-title]').value,eventDate:article.querySelector('[data-admin-event-date]').value,locations:article.querySelector('[data-admin-event-locations]').value.split(/\n+/).map(value=>value.trim()).filter(Boolean),eventType:article.querySelector('[data-admin-event-type]').value,eventStatus:article.querySelector('[data-admin-event-status]').value,quantity:article.querySelector('[data-admin-event-quantity]').value,
       city:article.querySelector('[data-admin-event-city]').value,year:Number(article.querySelector('[data-admin-event-year]').value),district:article.querySelector('[data-admin-event-district]').value,sourceUrl:article.querySelector('[data-admin-event-source]').value,sourcePublishedAt:article.querySelector('[data-admin-event-published]').value,description:article.querySelector('[data-admin-event-description]').value}
   }else if(!isEvent&&action==='approve'){
@@ -3681,15 +3682,72 @@ async function reviewTreeAdminReport(article,action){
     let geometry=null;try{geometry=geometryText?JSON.parse(geometryText):null}catch{$('treeAdminStatus').textContent='Il GeoJSON inserito non è valido.';return}
     body={...body,longitude:Number(article.querySelector('[data-admin-lon]').value),latitude:Number(article.querySelector('[data-admin-lat]').value),locationName:article.querySelector('[data-admin-location]').value,geometry}
   }
+  const direct=article.dataset.adminDirect==='true'||action==='split_event';
+  if(direct){
+    body.sourceKey=article.dataset.sourceKey;
+    body.expectedUpdatedAt=article.dataset.updatedAt||null;
+    body.original=state.treeAdminOriginals?.get(body.sourceKey);
+    if(action==='split_event'){
+      body.parts=[...article.querySelectorAll('[data-admin-split-part]')].map(part=>({city:body.city,year:body.year,district:body.district,description:body.description,title:part.querySelector('[data-split-title]').value,locations:part.querySelector('[data-split-locations]').value.split(/\n+/).map(value=>value.trim()).filter(Boolean),eventType:part.querySelector('[data-split-type]').value,eventStatus:part.querySelector('[data-split-status]').value,quantity:part.querySelector('[data-split-quantity]').value,eventDate:part.querySelector('[data-split-date]').value}));
+      if(body.parts.length<2){$('treeAdminStatus').textContent='Prepara almeno due interventi prima di salvare.';return}
+      if(!window.confirm(`Sostituire l’evento con ${body.parts.length} interventi distinti, mantenendo la fonte originale?`))return;
+    }
+  }
   const base=await treeApiBase();
+  const buttons=Array.from(article.querySelectorAll?.('button')||[]);buttons.forEach(button=>button.disabled=true);
   $('treeAdminStatus').textContent=action==='update_event'?'Salvataggio e ricerca della posizione…':'Salvataggio…';
-  const response=await fetch(`${base}/v1/trees/location-reports/review`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${password}`},body:JSON.stringify(body)});
-  const result=await response.json();if(!response.ok){$('treeAdminStatus').textContent=result.error||`HTTP ${response.status}`;return}
+  let response,result;
+  try{
+  response=await fetch(`${base}${direct?'/v1/trees/admin/events':'/v1/trees/location-reports/review'}`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${password}`},body:JSON.stringify(body)});
+  result=await response.json();if(!response.ok){$('treeAdminStatus').textContent=result.error||`HTTP ${response.status}`;return}
+  }finally{buttons.forEach(button=>button.disabled=false)}
   article.remove();
   if(result.notificationEmail){$('treeAdminStatus').innerHTML=`Revisione salvata. <a href="mailto:${encodeURIComponent(result.notificationEmail)}?subject=${encodeURIComponent('A.R.I.A. – esito segnalazione posizione')}">Invia conferma al segnalante</a>.`}
-  else $('treeAdminStatus').textContent='Revisione salvata.'
+  else $('treeAdminStatus').textContent=action==='split_event'?`Evento diviso in ${result.children?.length||0} interventi. Ricarica gli eventi per modificarli.`:action==='delete_event'?'Evento rimosso: sarà ignorato negli aggiornamenti.':'Revisione salvata.'
+  if(result.geocoding?.pending)$('treeAdminStatus').append(' Ricerca posizioni da completare con i prossimi aggiornamenti.');
   if(result.geocoding?.attempted&&result.geocoding.geocoded===0)$('treeAdminStatus').append(' Posizione non trovata: nessun puntatore aggiunto.');
   if(isTrees()&&action!=='reject')await render();
+}
+
+function treeAdminEventBody(report){
+  let locations=[];try{locations=JSON.parse(report.locations_json||'[]')}catch{}
+  return{title:report.event_title||report.location_name,city:report.event_city,year:Number(report.event_year),eventDate:report.event_date||'',district:report.event_district||'',locations:locations.length?locations:[report.location_name],eventType:report.event_type,eventStatus:report.event_status,quantity:report.event_quantity??null,sourceUrl:report.source_url,sourcePublishedAt:report.source_published_at||null,description:report.raw_excerpt||''}
+}
+
+async function loadTreeAdminEvents(password){
+  const city=$('treeAdminCity').value,year=$('treeAdminYear').value;
+  const status=$('treeAdminStatus');status.textContent='Caricamento eventi…';
+  const base=await treeApiBase();
+  const response=await fetch(`${base}/v1/trees/admin/events?city=${encodeURIComponent(city)}&year=${encodeURIComponent(year)}`,{cache:'no-store',headers:{Authorization:`Bearer ${password}`}});
+  const data=await response.json();
+  if(!response.ok)throw new Error(response.status===404?'Aggiorna il Worker ambientale alla versione 0.10.0 e applica la migrazione 0012.':data.error||`HTTP ${response.status}`);
+  if(data.adminSchemaVersion!==3)throw new Error('Aggiorna il Worker ambientale alla versione 0.10.0 e applica la migrazione 0012.');
+  const local=await TreeStats.rows(city,year);
+  if(local.diagnostic?.dynamicAvailable===false)throw new Error('Archivio aggiornato non disponibile: ricarica prima di modificare gli eventi.');
+  $('treeAdminReports').innerHTML='';
+  const reports=(data.events||[]).map(report=>({...report,direct:true,location_index:-1}));
+  const keys=new Set(reports.map(report=>report.source_key));
+  for(const event of local.documentedEvents||[]){
+    const key=event.sourceKey||String(event.id).replace(/^dynamic-/,'');
+    if(keys.has(key)||String(event.id).startsWith('dynamic-'))continue;
+    reports.push({id:`local-${key}`,direct:true,source_key:key,location_index:-1,event_title:event.title||event.locationName,event_city:city,event_year:Number(year),event_date:event.eventDate||(/^\d{4}-\d{2}-\d{2}$/.test(event.date||'')?event.date:''),event_district:event.district,locations_json:JSON.stringify(event.locations?.length?event.locations:[event.locationName]),location_name:event.locationName,event_type:event.eventType,event_status:event.status,event_quantity:event.quantity,source_url:event.sourceUrl,source_published_at:event.sourcePublishedAt,raw_excerpt:event.description||event.notes||''});
+    keys.add(key);
+  }
+  state.treeAdminOriginals=new Map(reports.map(report=>[report.source_key,treeAdminEventBody(report)]));
+  renderTreeAdminReports(reports,'treeAdminEvents');
+  status.textContent=`${reports.length} eventi. Apri un evento per modificarlo, dividerlo o rimuoverlo.`;
+}
+
+function addTreeAdminSplitPart(article,locations=[]){
+  const container=article.querySelector('[data-admin-split-parts]');
+  if(container.children.length>=20){$('treeAdminStatus').textContent='Massimo 20 interventi per divisione.';return}
+  const safe=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const value=name=>article.querySelector(`[data-admin-event-${name}]`).value;
+  const part=document.createElement('fieldset');part.dataset.adminSplitPart='true';
+  part.innerHTML=`<legend>Intervento</legend><label>Titolo<input data-split-title maxlength="300" value="${safe(value('title'))}"></label><label>Indirizzi <small>(uno per riga)</small><textarea data-split-locations>${safe(locations.join('\n'))}</textarea></label><div class="tree-form-grid"><label>Tipo<select data-split-type><option value="planting">Piantumazione · verde</option><option value="decrement">Abbattimento · rosso</option><option value="unknown">Da verificare</option></select></label><label>Numero alberi <small>(vuoto se sconosciuto)</small><input data-split-quantity type="number" min="0" step="1" value=""></label></div><label>Stato<select data-split-status>${article.querySelector('[data-admin-event-status]').innerHTML}</select></label><label>Data lavori <small>(vuoto se non indicata)</small><input data-split-date type="date" value="${safe(value('date'))}"></label><button type="button" data-admin-split-remove>Rimuovi questo intervento dalla divisione</button>`;
+  part.querySelector('[data-split-type]').value=value('type');
+  part.querySelector('[data-split-status]').value=value('status');
+  container.append(part);
 }
 
 function bind(){
@@ -3777,6 +3835,19 @@ function bind(){
     if(eventReportButton){event.preventDefault();openTreeEventReport(eventReportButton.dataset.treeEventReport)}
     const closeButton=event.target.closest('[data-dialog-close]');
     if(closeButton)$(closeButton.dataset.dialogClose)?.close();
+    const splitPrepare=event.target.closest('[data-admin-split-prepare]');
+    if(splitPrepare){
+      const article=splitPrepare.closest('[data-report-id]'),parts=article.querySelector('[data-admin-split-parts]');
+      if(!parts.children.length){
+        const locations=article.querySelector('[data-admin-event-locations]').value.split(/\n+/).map(value=>value.trim()).filter(Boolean);
+        const count=Math.max(2,Math.min(20,locations.length));
+        for(let i=0;i<count;i++)addTreeAdminSplitPart(article,i===count-1?locations.slice(i):locations[i]?[locations[i]]:[]);
+      }
+    }
+    const splitAdd=event.target.closest('[data-admin-split-add]');
+    if(splitAdd)addTreeAdminSplitPart(splitAdd.closest('[data-report-id]'));
+    const splitRemove=event.target.closest('[data-admin-split-remove]');
+    if(splitRemove)splitRemove.closest('[data-admin-split-part]').remove();
     const adminAction=event.target.closest('[data-admin-action]');
     if(adminAction)reviewTreeAdminReport(adminAction.closest('[data-report-id]'),adminAction.dataset.adminAction).catch(error=>$('treeAdminStatus').textContent=error.message||error)
     const addressResult=event.target.closest('[data-tree-address-lon]');
@@ -3792,12 +3863,13 @@ function bind(){
   $('treeAdminLogin')?.addEventListener('submit',event=>{
     event.preventDefault();
     const password=$('treeAdminPassword').value;$('treeAdminPassword').value='';
-    loadTreeAdminReports(password).catch(error=>$('treeAdminStatus').textContent=error.message||error)
+    const action=event.submitter?.value||'events';
+    (action==='reports'?loadTreeAdminReports(password):loadTreeAdminEvents(password)).catch(error=>$('treeAdminStatus').textContent=error.message||error)
   });
   let versionClicks=0,lastVersionClick=0;
   const openAdmin=()=>{
     const now=Date.now();versionClicks=now-lastVersionClick<1800?versionClicks+1:1;lastVersionClick=now;
-    if(versionClicks===5){versionClicks=0;$('treeAdminReports').innerHTML='';$('treeAdminStatus').textContent='';$('treeAdminDialog').showModal();$('treeAdminPassword').focus()}
+    if(versionClicks===5){versionClicks=0;$('treeAdminReports').innerHTML='';$('treeAdminEvents').innerHTML='';$('treeAdminCity').value=TREE_CITY_CONFIG[eeaCity()]?eeaCity():'roma';$('treeAdminYear').value=/^20\d{2}$/.test($('yearSelect').value)?$('yearSelect').value:String(new Date().getFullYear());$('treeAdminStatus').textContent='';$('treeAdminDialog').showModal();$('treeAdminPassword').focus()}
   };
   $('appVersion')?.addEventListener('click',openAdmin);
   $('appVersion')?.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openAdmin()}});

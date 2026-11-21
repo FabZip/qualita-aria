@@ -1,3 +1,22 @@
+# 0.8.0 — Amministrazione e divisione degli eventi Alberi
+
+Il pannello amministratore (cinque tocchi sulla versione) consente di caricare gli eventi per Comune e anno, anche senza una segnalazione. Ogni evento offre modifica del numero di alberi e del tipo: **Piantumazione · verde** oppure **Abbattimento · rosso**; le quantità sconosciute possono restare vuote.
+
+**Dividi in più interventi** prepara record distinti con quantità, tipo, stato, data lavori e indirizzi propri, mantenendo la fonte e la pubblicazione originali in comune. Nessuna ripartizione automatica delle quantità. L'originale viene escluso mentre i nuovi interventi vengono creati nella stessa transazione, senza doppio conteggio. La geolocalizzazione lavora sulle località di ciascun intervento (massimo otto tentativi immediati, gli altri al cron).
+
+**Rimuovi e ignora evento** esclude il record da mappa, elenco e totali e impedisce che i successivi aggiornamenti lo ripristinino. I record esclusi e la cronologia delle nuove operazioni amministrative restano nell'archivio. Le decisioni richiedono sempre la password amministratore; non viene salvata nel browser.
+
+App `0.8.0` build `113`, Worker ambientale `0.10.0`, cache PWA aggiornata. **Per attivare il nuovo editor occorrono la migrazione D1 `0012_tree_admin_event_split.sql` e il deploy del Worker**; il push frontend da solo non basta. Dopo aver verificato account Cloudflare e database:
+
+```bash
+git pull --ff-only origin main
+cd cloudflare/temperature-proxy
+npx wrangler d1 migrations apply qualita-aria-tree-events --remote --config ./wrangler.toml
+npx wrangler deploy --config ./wrangler.toml
+```
+
+Nessuna modifica ai secret, al proxy OpenAQ o a EEA. Migrazione e deploy remoti non eseguiti durante lo sviluppo. Suite di 21 file di test superata; SQLite con tutte le migrazioni, collaudo browser locale su archivio simulato e dry-run Wrangler riusciti.
+
 # 0.7.32 — Etichette e barre Alberi
 
 Corretto il riepilogo Alberi: le etichette “Piantati documentati” e “Abbattimenti documentati” hanno spazio dedicato e vanno a capo senza sovrapporsi alle barre. Su mobile ogni etichetta precede la propria barra su una riga distinta. App `0.7.32`, build `112`, cache PWA/CSS aggiornata. Nessuna modifica ai dati o ai Worker.

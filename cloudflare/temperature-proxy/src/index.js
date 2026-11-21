@@ -1948,7 +1948,12 @@ async function staleTreePages(db,limit=20){
 }
 
 async function upsertTreeEvent(db,event,now){
-  const existing=await db.prepare('SELECT id FROM tree_events WHERE source_key = ?').bind(event.sourceKey).first();
+  const existing=await db.prepare('SELECT id,validation FROM tree_events WHERE source_key = ?').bind(event.sourceKey).first();
+  if(existing?.validation==='manual_rejected')return 'ignored';
+  if(!existing&&event.sourceUrl){
+    const split=await db.prepare("SELECT source_key FROM tree_events WHERE source_url=? AND (split_parent=1 OR validation='manual_rejected') LIMIT 1").bind(event.sourceUrl).first();
+    if(split)return 'ignored';
+  }
   await db.prepare(`
     INSERT INTO tree_events (
       source_key,city,year,event_date,location_name,locations_json,district,event_type,quantity,status,
@@ -1992,7 +1997,7 @@ function wait(milliseconds){
   return new Promise(resolve=>setTimeout(resolve,milliseconds))
 }
 
-async function geocodePendingTreeEvents(db,sourceKey=null){
+async function geocodePendingTreeEvents(db,sourceKey=null,maxAttempts=TREE_MAX_GEOCODES_PER_RUN){
   const pending=await db.prepare(`
     SELECT source_key,city,location_name,locations_json,location_points_json,geocoded_at FROM tree_events
     WHERE city IN ('roma','guidonia-montecelio') AND location_name!='Roma' AND validation!='manual_rejected'
@@ -2000,13 +2005,13 @@ async function geocodePendingTreeEvents(db,sourceKey=null){
         ${sourceKey?'':"AND datetime(geocoded_at)<datetime('now','-1 day')"}))
       ${sourceKey?'AND source_key=?':''}
     ORDER BY CASE WHEN validation='manual_confirmed' AND geocoded_at IS NULL THEN 0 WHEN geocoded_at IS NULL THEN 1 ELSE 2 END,first_seen_at ASC LIMIT ?
-  `).bind(...(sourceKey?[sourceKey,TREE_MAX_GEOCODES_PER_RUN]:[TREE_MAX_GEOCODES_PER_RUN])).all();
+  `).bind(...(sourceKey?[sourceKey,maxAttempts]:[maxAttempts])).all();
   let geocoded=0,rejected=0,attempted=0;
   for(const [index,row] of (pending.results||[]).entries()){
     const area=TREE_GEOCODE_AREAS[row.city]||TREE_GEOCODE_AREAS.roma;
     const locations=JSON.parse(row.locations_json||'null')||[row.location_name];
     const points=JSON.parse(row.location_points_json||'null')||Array(locations.length).fill(null);
-    for(let locationIndex=0;locationIndex<locations.length&&attempted<TREE_MAX_GEOCODES_PER_RUN;locationIndex+=1){
+    for(let locationIndex=0;locationIndex<locations.length&&attempted<maxAttempts;locationIndex+=1){
       if(points[locationIndex]?.geometryChecked&&(points[locationIndex]?.coordinates||!row.geocoded_at))continue;
       if(attempted||index)await wait(1100);
       attempted+=1;
@@ -2042,7 +2047,7 @@ async function geocodePendingTreeEvents(db,sourceKey=null){
     const firstResolved=points.find(point=>Array.isArray(point?.coordinates));
     await db.prepare(`UPDATE tree_events SET latitude=?,longitude=?,geocode_precision=?,geocode_label=?,location_points_json=?,geocoded_at=? WHERE source_key=?`)
       .bind(firstResolved?.coordinates?.[1]??null,firstResolved?.coordinates?.[0]??null,firstResolved?.precision||'unresolved',firstResolved?.label||'',JSON.stringify(points),complete?new Date().toISOString():null,row.source_key).run();
-    if(attempted>=TREE_MAX_GEOCODES_PER_RUN)break
+    if(attempted>=maxAttempts)break
   }
   return{geocoded,rejected,attempted,pending:(pending.results||[]).length}
 }
@@ -2120,7 +2125,7 @@ async function treeEventsResponse(env,cors,url){
   if(!['roma','guidonia-montecelio'].includes(city))return badRequest('Città non supportata',cors);
   if(!Number.isInteger(year)||year<2013||year>new Date().getUTCFullYear())return badRequest('Anno non valido',cors);
   const result=await env.TREE_DB.prepare(`
-    SELECT source_key,year,event_date,location_name,locations_json,location_points_json,district,event_type,quantity,latitude,longitude,geocode_precision,
+    SELECT source_key,parent_source_key,year,event_date,location_name,locations_json,location_points_json,district,event_type,quantity,latitude,longitude,geocode_precision,
       status,validation,title,source_url,source_published_at,raw_excerpt,first_seen_at,last_checked_at
     FROM tree_events
     WHERE city=? AND year=? AND validation!='manual_rejected'
@@ -2154,7 +2159,7 @@ async function treeEventsResponse(env,cors,url){
     const geometryFeatures=points.flatMap((point,index)=>point?.geometry?.type?[{type:'Feature',properties:{locationIndex:index,precision:point.precision||'automatic'},geometry:point.geometry}]:[]);
     geometryFeatures.push(...overrideFeatures);
     return{
-    id:`dynamic-${row.source_key}`,sourceKey:row.source_key,year:String(row.year),date:row.event_date||row.source_published_at||String(row.year),
+    id:`dynamic-${row.source_key}`,sourceKey:row.source_key,parentSourceKey:row.parent_source_key||null,year:String(row.year),date:row.event_date||row.source_published_at||String(row.year),
     eventDate:row.event_date||null,sourcePublishedAt:row.source_published_at||null,
     dateType:row.event_date?'execution':row.source_published_at?'publication':'year',description:row.raw_excerpt||'',
     locationName:locations.join(' · '),locations,district:row.district||undefined,
@@ -2276,7 +2281,7 @@ async function listTreeLocationReports(env,cors,url){
   const reportWhere=status==='all'?'':'WHERE r.status=?';
   const statement=env.TREE_DB.prepare(`SELECT r.id,r.source_key,r.event_id,r.location_index,r.location_name,r.reason,r.reporter_name,r.reporter_email,r.suggested_longitude,r.suggested_latitude,r.status,r.created_at,
     e.title AS event_title,e.event_date,e.locations_json,e.event_type,e.quantity AS event_quantity,e.status AS event_status,
-    e.year AS event_year,e.city AS event_city,e.district AS event_district,e.source_url,e.source_published_at,e.raw_excerpt
+    e.parent_source_key,e.updated_at,e.year AS event_year,e.city AS event_city,e.district AS event_district,e.source_url,e.source_published_at,e.raw_excerpt
     FROM tree_location_reports r LEFT JOIN tree_events e ON e.source_key=r.source_key ${reportWhere} ORDER BY r.created_at DESC LIMIT 200`);
   const result=await(status==='all'?statement:statement.bind(status)).all();
   return json({reports:result.results||[],adminSchemaVersion:2},200,{...cors,'Cache-Control':'no-store'})
@@ -2287,12 +2292,14 @@ async function reviewTreeLocationReport(request,env,cors){
   const reportId=Number(body?.reportId);
   const action=String(body?.action||'');
   if(!Number.isInteger(reportId)||!['approve','reject','update_event','delete_event'].includes(action))return badRequest('Revisione non valida',cors);
-  const report=await env.TREE_DB.prepare("SELECT r.*,e.city AS event_city,e.year AS event_year,e.district AS event_district,e.source_url,e.source_published_at,e.raw_excerpt,e.locations_json AS event_locations_json,e.location_name AS event_location_name FROM tree_location_reports r LEFT JOIN tree_events e ON e.source_key=r.source_key WHERE r.id=? AND r.status='pending'").bind(reportId).first();
+  const report=await env.TREE_DB.prepare("SELECT r.*,e.city AS event_city,e.year AS event_year,e.district AS event_district,e.source_url,e.source_published_at,e.raw_excerpt,e.parent_source_key,e.locations_json AS event_locations_json,e.location_name AS event_location_name FROM tree_location_reports r LEFT JOIN tree_events e ON e.source_key=r.source_key WHERE r.id=? AND r.status='pending'").bind(reportId).first();
   if(!report)return json({error:'Segnalazione non trovata o già revisionata'},404,{...cors,'Cache-Control':'no-store'});
   if(action==='reject'){
     await env.TREE_DB.prepare("UPDATE tree_location_reports SET status='rejected' WHERE id=?").bind(reportId).run();
     return json({ok:true,reportId,status:'rejected',notificationEmail:report.reporter_email||null},200,{...cors,'Cache-Control':'no-store'})
   }
+  const excluded=await env.TREE_DB.prepare("SELECT source_key FROM tree_events WHERE source_key=? AND validation='manual_rejected'").bind(report.source_key).first();
+  if(excluded)return json({error:'Evento già rimosso o suddiviso'},409,{...cors,'Cache-Control':'no-store'});
   if(action==='update_event'||action==='delete_event'){
     if(action==='delete_event'){
       await env.TREE_DB.batch([
@@ -2314,8 +2321,9 @@ async function reviewTreeLocationReport(request,env,cors){
     const city=String(body?.city??report.event_city);
     const year=body?.year===undefined?Number(eventDate?.match(/\b(20\d{2})\b/)?.[1]||report.event_year):Number(body.year);
     const district=String(body?.district??report.event_district??'').trim().slice(0,180)||null;
-    const sourceUrl=String(body?.sourceUrl??report.source_url??'').trim();
-    const sourcePublishedAt=String(body?.sourcePublishedAt??report.source_published_at??'').trim()||null;
+    const shared=report.parent_source_key?await env.TREE_DB.prepare('SELECT source_url,source_published_at FROM tree_events WHERE source_key=?').bind(report.parent_source_key).first():null;
+    const sourceUrl=String(shared?.source_url??body?.sourceUrl??report.source_url??'').trim();
+    const sourcePublishedAt=String(shared?.source_published_at??body?.sourcePublishedAt??report.source_published_at??'').trim()||null;
     const description=String(body?.description??report.raw_excerpt??'').trim().slice(0,5000);
     const validDate=value=>/^20\d{2}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(`${value}T00:00:00Z`).toISOString().slice(0,10)===value;
     if(!['roma','guidonia-montecelio'].includes(city))return badRequest('Comune non supportato',cors);
@@ -2358,6 +2366,107 @@ async function reviewTreeLocationReport(request,env,cors){
   return json({ok:true,reportId,status:'approved',notificationEmail:report.reporter_email||null},200,{...cors,'Cache-Control':'no-store'})
 }
 
+function validateAdminTreeEvent(body,original={}){
+  const title=String(body?.title||'').trim();
+  const city=String(body?.city??original.city??'');
+  const year=Number(body?.year??original.year);
+  const eventDate=String(body?.eventDate??'').trim()||null;
+  const locations=Array.isArray(body?.locations)?[...new Set(body.locations.map(value=>String(value||'').trim()).filter(Boolean))]:[];
+  const eventType=String(body?.eventType||'');
+  const status=String(body?.eventStatus||'');
+  const quantity=body?.quantity===''||body?.quantity===null?null:Number(body?.quantity);
+  const sourceUrl=String(body?.sourceUrl??original.source_url??'').trim();
+  const sourcePublishedAt=String(body?.sourcePublishedAt??original.source_published_at??'').trim()||null;
+  const validDate=value=>/^20\d{2}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(`${value}T00:00:00Z`).toISOString().slice(0,10)===value;
+  if(!title||title.length>300)throw new Error('Titolo obbligatorio, massimo 300 caratteri');
+  if(!['roma','guidonia-montecelio'].includes(city))throw new Error('Comune non supportato');
+  if(!Number.isInteger(year)||year<2013||year>new Date().getUTCFullYear())throw new Error('Anno non valido');
+  if(!locations.length||locations.length>100||locations.some(value=>value.length>300))throw new Error('Inserire da 1 a 100 località, massimo 300 caratteri ciascuna');
+  if(!['planting','decrement','unknown'].includes(eventType))throw new Error('Tipo evento non valido');
+  if(!['completed','emergency_completed','planned','reported','unknown'].includes(status))throw new Error('Stato evento non valido');
+  if(quantity!==null&&(!Number.isSafeInteger(quantity)||quantity<0))throw new Error('Quantità non valida');
+  if(eventDate&&(eventDate.length>80||(/^\d{4}-\d{2}-\d{2}$/.test(eventDate)&&(!validDate(eventDate)||Number(eventDate.slice(0,4))!==year))))throw new Error('Data lavori e anno non coerenti');
+  if(sourcePublishedAt&&!validDate(sourcePublishedAt))throw new Error('Data di pubblicazione non valida');
+  try{if(!['https:','http:'].includes(new URL(sourceUrl).protocol))throw new Error()}catch{throw new Error('URL della fonte non valido')}
+  return{title,city,year,eventDate,locations,eventType,status,quantity,sourceUrl,sourcePublishedAt,
+    district:String(body?.district??original.district??'').trim().slice(0,180)||null,
+    description:String(body?.description??original.raw_excerpt??'').trim().slice(0,5000)}
+}
+
+function adminTreeInsert(db,key,event,now,parent=null){
+  return db.prepare(`INSERT INTO tree_events(source_key,city,year,event_date,location_name,locations_json,district,event_type,quantity,status,validation,title,source_url,source_published_at,first_seen_at,last_checked_at,raw_excerpt,updated_at,parent_source_key)
+    VALUES(?,?,?,?,?,?,?,?,?,?,'manual_confirmed',?,?,?,?,?,?,?,?)`).bind(key,event.city,event.year,event.eventDate,event.locations[0],JSON.stringify(event.locations),event.district,event.eventType,event.quantity,event.status,event.title,event.sourceUrl,event.sourcePublishedAt,now,now,event.description,now,parent)
+}
+
+async function listAdminTreeEvents(env,cors,url){
+  if(!env.TREE_DB)return json({error:'Archivio arboreo non configurato'},503,{...cors,'Cache-Control':'no-store'});
+  const city=url.searchParams.get('city'),year=Number(url.searchParams.get('year'));
+  if(!['roma','guidonia-montecelio'].includes(city)||!Number.isInteger(year)||year<2013||year>new Date().getUTCFullYear())return badRequest('Comune o anno non valido',cors);
+  const rows=await env.TREE_DB.prepare(`SELECT id,source_key,title AS event_title,city AS event_city,year AS event_year,event_date,district AS event_district,locations_json,location_name,event_type,quantity AS event_quantity,status AS event_status,source_url,source_published_at,raw_excerpt,updated_at,parent_source_key,validation
+    FROM tree_events WHERE city=? AND year=? AND validation!='manual_rejected' ORDER BY COALESCE(event_date,source_published_at) DESC,id DESC`).bind(city,year).all();
+  return json({events:rows.results||[],adminSchemaVersion:3},200,{...cors,'Cache-Control':'no-store'})
+}
+
+async function editAdminTreeEvent(request,env,cors){
+  if(!env.TREE_DB)return json({error:'Archivio arboreo non configurato'},503,{...cors,'Cache-Control':'no-store'});
+  const body=await request.json().catch(()=>null);
+  const key=String(body?.sourceKey||'').trim();
+  const action=String(body?.action||'');
+  if(!key||key.length>160||!['update_event','split_event','delete_event'].includes(action))return badRequest('Evento o azione non validi',cors);
+  const db=env.TREE_DB;
+  const original=await db.prepare('SELECT * FROM tree_events WHERE source_key=?').bind(key).first();
+  if(original?.validation==='manual_rejected')return json({error:'Evento già escluso o suddiviso: ricaricare l’elenco'},409,{...cors,'Cache-Control':'no-store'});
+  if(original&&body.expectedUpdatedAt!==original.updated_at)return json({error:'Evento modificato nel frattempo: ricaricare l’elenco prima di salvare'},409,{...cors,'Cache-Control':'no-store'});
+  let event,parts=[];
+  try{
+    event=validateAdminTreeEvent(original?{
+      title:original.title,city:original.city,year:original.year,eventDate:original.event_date,locations:JSON.parse(original.locations_json||'null')||[original.location_name],eventType:original.event_type,eventStatus:original.status,quantity:original.quantity,sourceUrl:original.source_url,sourcePublishedAt:original.source_published_at,description:original.raw_excerpt,district:original.district
+    }:body.original);
+    if(action==='update_event'){
+      const shared=original?.parent_source_key?await db.prepare('SELECT source_url,source_published_at FROM tree_events WHERE source_key=?').bind(original.parent_source_key).first():null;
+      event=validateAdminTreeEvent(shared?{...body,sourceUrl:shared.source_url,sourcePublishedAt:shared.source_published_at}:body,original||{});
+    }
+    if(action==='split_event'){
+      if(!Array.isArray(body.parts)||body.parts.length<2||body.parts.length>20)throw new Error('Inserire da 2 a 20 interventi');
+      parts=body.parts.map(part=>validateAdminTreeEvent({...part,sourceUrl:event.sourceUrl,sourcePublishedAt:event.sourcePublishedAt},original||{}));
+      if(parts.reduce((n,part)=>n+part.locations.length,0)>100)throw new Error('Massimo 100 località complessive');
+    }
+  }catch(error){return badRequest(error.message,cors)}
+  const now=new Date().toISOString();
+  const audit=db.prepare(`INSERT INTO tree_admin_audit(source_key,action,previous_json,result_json,created_at) VALUES(?,?,${original?"CASE WHEN EXISTS(SELECT 1 FROM tree_events WHERE source_key=? AND updated_at=? AND validation!='manual_rejected') THEN ? ELSE NULL END":"?"},?,?)`);
+  const commands=[];
+  if(!original)commands.push(adminTreeInsert(db,key,event,now));
+  if(action==='update_event'){
+    const oldLocations=original?JSON.parse(original.locations_json||'null')||[original.location_name]:event.locations;
+    const changed=!original||original.city!==event.city||JSON.stringify(oldLocations)!==JSON.stringify(event.locations);
+    commands.push(db.prepare(`UPDATE tree_events SET title=?,city=?,year=?,event_date=?,district=?,locations_json=?,location_name=?,event_type=?,quantity=?,status=?,source_url=?,source_published_at=?,raw_excerpt=?,validation='manual_confirmed',updated_at=?${changed?',latitude=NULL,longitude=NULL,geocode_precision=NULL,geocode_label=NULL,geocoded_at=NULL,location_points_json=NULL':''} WHERE source_key=?`)
+      .bind(event.title,event.city,event.year,event.eventDate,event.district,JSON.stringify(event.locations),event.locations[0],event.eventType,event.quantity,event.status,event.sourceUrl,event.sourcePublishedAt,event.description,now,key));
+    if(changed)commands.push(db.prepare('DELETE FROM tree_location_overrides WHERE source_key=?').bind(key));
+  }else{
+    commands.push(db.prepare("UPDATE tree_events SET validation='manual_rejected',split_parent=?,updated_at=? WHERE source_key=?").bind(action==='split_event'?1:0,now,key));
+    commands.push(db.prepare("UPDATE tree_location_reports SET status='rejected' WHERE source_key=? AND status='pending'").bind(key));
+  }
+  const children=parts.map(part=>({key:`admin-${crypto.randomUUID()}`,event:part}));
+  for(const child of children)commands.push(adminTreeInsert(db,child.key,child.event,now,key));
+  commands.unshift(audit.bind(key,action,...(original?[key,body.expectedUpdatedAt]:[]),JSON.stringify(original||body.original),JSON.stringify({event,children}),now));
+  // D1 batch is transactional: original suppression and children become visible together.
+  try{await db.batch(commands)}catch(error){
+    if(/tree_admin_audit.previous_json|UNIQUE constraint failed: tree_events.source_key/.test(String(error.message)))return json({error:'Evento modificato nel frattempo: ricaricare l’elenco'},409,{...cors,'Cache-Control':'no-store'});
+    throw error;
+  }
+  const geocoding={attempted:0,geocoded:0,rejected:0};
+  // One bounded geocoding pass; cron completes any remaining locations.
+  const targets=action==='split_event'?children.map(child=>child.key):action==='update_event'?[key]:[];
+  for(const target of targets){
+    if(geocoding.attempted>=TREE_MAX_GEOCODES_PER_RUN)break;
+    try{
+      const result=await geocodePendingTreeEvents(db,target,TREE_MAX_GEOCODES_PER_RUN-geocoding.attempted);
+      for(const field of ['attempted','geocoded','rejected'])geocoding[field]+=result[field]||0;
+    }catch{geocoding.pending=true;break}
+  }
+  return json({ok:true,sourceKey:key,action,children:children.map(child=>child.key),geocoding},200,{...cors,'Cache-Control':'no-store'})
+}
+
 async function reviewTreeEvent(request,env,cors){
   if(!env.TREE_DB)return json({error:'Archivio arboreo dinamico non configurato'},503,{...cors,'Cache-Control':'no-store'});
   const body=await request.json().catch(()=>null);
@@ -2371,6 +2480,8 @@ async function reviewTreeEvent(request,env,cors){
   if(!['completed','emergency_completed','planned','reported','unknown'].includes(status))return badRequest('status non valido',cors);
   if(!['planting','decrement','unknown'].includes(eventType))return badRequest('eventType non valido',cors);
   if(quantity!==null&&(!Number.isInteger(quantity)||quantity<0))return badRequest('quantity non valida',cors);
+  const excluded=await env.TREE_DB.prepare("SELECT source_key FROM tree_events WHERE source_key=? AND validation='manual_rejected'").bind(sourceKey).first();
+  if(excluded)return json({error:'Evento già rimosso o suddiviso'},409,{...cors,'Cache-Control':'no-store'});
   const result=await env.TREE_DB.prepare(`
     UPDATE tree_events SET validation=?,status=?,event_type=?,quantity=?,
       location_name=COALESCE(?,location_name),updated_at=? WHERE source_key=?
@@ -2406,6 +2517,15 @@ export default{
       if(!adminAuthorized(request,env))return json({error:'Non autorizzato'},401,{...cors,'Cache-Control':'no-store'});
       try{return json(await refreshTreeSources(env),200,{...cors,'Cache-Control':'no-store'})}
       catch(error){return json({error:String(error?.message||error)},502,{...cors,'Cache-Control':'no-store'})}
+    }
+
+    if(url.pathname==='/v1/trees/admin/events'&&['GET','POST'].includes(request.method)){
+      if(!await adminPasswordAuthorized(request,env))return json({error:'Password amministratore non valida'},401,{...cors,'Cache-Control':'no-store'});
+      try{return await(request.method==='GET'?listAdminTreeEvents(env,cors,url):editAdminTreeEvent(request,env,cors))}
+      catch(error){
+        if(/no such (column|table)/i.test(String(error.message)))return json({error:'Applicare la migrazione D1 0012 e aggiornare il Worker ambientale a 0.10.0.'},503,{...cors,'Cache-Control':'no-store'});
+        throw error;
+      }
     }
 
     if(request.method==='POST'&&url.pathname==='/v1/trees/review'){
@@ -2446,7 +2566,7 @@ export default{
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.9.14',
+        version:'0.10.0',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,
