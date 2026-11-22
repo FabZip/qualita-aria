@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.8.5` |
-| Build | `118` |
+| Applicazione | `0.8.6` |
+| Build | `119` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.0` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,20 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 0.8.6 — Radar meteo, ricerca località e avvio geolocalizzato
+
+La pagina Meteo ora usa lo stesso stile cartografico delle altre fonti: condizioni attuali, mappa radar centrale e previsioni orarie/giornaliere sotto. Rimossa la sezione “Località della previsione”; nome della località e coordinate restano compatti accanto al meteo. Il selettore limitato alle città italiane è sostituito da ricerca mondiale di città, paesi e CAP tramite Open-Meteo / GeoNames, con risultati distinti per provincia/regione/Paese, attesa di 450 ms, cancellazione delle richieste precedenti e gestione accessibile degli esiti.
+
+All'apertura Meteo richiede la geolocalizzazione, condividendo le richieste concorrenti di inizializzazione. Se il consenso manca o la posizione non è disponibile, invita a cercare una località e **non usa Roma come ripiego**. Il pulsante Geolocalizza permette di tornare alla posizione corrente. La località cercata resta indipendente dalle selezioni delle altre fonti; spostare il radar non cambia il luogo della previsione.
+
+Radar gratuito **RainViewer Weather Maps API**, senza chiave, per uso personale/educativo e piccoli progetti comunitari. Attribuzione visibile. L'API corrente fornisce le ultime 2 ore di immagini a intervalli di 10 minuti; dal 2026 non offre nowcast futuro né satellite IR. Palette Universal Blue, zoom nativo massimo 7 (ingrandimento cartografico ulteriore senza inventare dettaglio radar). Comandi: riproduci/pausa, precedente/successivo, timeline da tastiera, opacità, maschera delle aree senza copertura, aggiornamento, ricentramento, zoom e schermo intero. Su mobile spostamento con due dita. Ora del frame nel fuso della località cercata, UTC esplicito quando il fuso non è ancora noto; dati non recenti segnalati.
+
+Metadati radar in cache per 5 minuti; immagini in memoria con limite di 128 elementi e coda di richieste distanziate di 800 ms per pagina (meno di 80 nuove richieste/minuto), per rispettare il limite prudenziale di 100/IP/minuto indicato nella documentazione di transizione. Animazione senza precaricamento di tutte le immagini, attesa del caricamento del frame, arresto quando si cambia fonte o si nasconde la pagina. Copertura scura distinta da assenza di precipitazioni. Errori radar non bloccano le previsioni e viceversa. Nessuna garanzia di disponibilità del servizio gratuito.
+
+Riferimenti: https://www.rainviewer.com/api/weather-maps-api.html, https://www.rainviewer.com/api/transition-faq.html, https://www.rainviewer.com/api.html e https://open-meteo.com/en/docs/geocoding-api.
+
+App **0.8.6 build 119**, cache PWA aggiornata; nessun nuovo Worker, database, account o secret. Verifiche: 30 test superati, API reali RainViewer e ricerca Guidonia, controlli radar nel browser e layout a 390 px senza overflow. Geolocalizzazione verificata con fixture controllate nei test; nessun consenso di posizione del dispositivo concesso automaticamente dall'agente.
 
 ### 0.8.5 — Posizione meteo riconoscibile e provenienza
 

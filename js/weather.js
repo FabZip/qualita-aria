@@ -49,15 +49,16 @@
     try{return {...city,...await task}}finally{locationInflight.delete(key)}
   }
   function locationDetails(payload,city){
-    const lat=number(city.lat),lon=number(city.lon),gridLat=number(payload.latitude),gridLon=number(payload.longitude);
-    const mapUrl=lat!==null&&lon!==null?`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=14/${lat}/${lon}`:null;
-    const gridAvailable=gridLat!==null&&gridLon!==null&&Math.abs(gridLat)<=90&&Math.abs(gridLon)<=180;
-    const distance=gridAvailable&&lat!==null&&lon!==null?distanceKm(city,{lat:gridLat,lon:gridLon}):null;
-    return `<section class="weather-location" aria-label="Posizione e provenienza dei dati"><h3>${city.geolocated?'Posizione rilevata':'Località della previsione'}</h3>
-      <p><strong>${escape(city.name)}</strong>${city.geolocated&&!city.locationResolved?'<br>Nome della località non disponibile: verifica le coordinate sulla mappa.':''}<br>${escape(coordinateLabel(city.lat,city.lon))}${mapUrl?` · <a href="${escape(mapUrl)}" target="_blank" rel="noopener noreferrer">Verifica sulla mappa</a>`:''}</p>
-      ${city.geolocated?`<p>Accuratezza dichiarata dal dispositivo: ${number(city.accuracy)!==null?`circa ${format(city.accuracy,' m')}`:'non disponibile'}.${number(city.locatedAt)!==null?` Posizione acquisita il ${escape(new Date(city.locatedAt).toLocaleString('it-IT'))}.`:''}</p>`:''}
-      <p><strong>Dati meteo: Open-Meteo · modelli previsionali, selezione automatica Best Match.</strong><br>Non sono letture di una stazione meteo. Punto della griglia restituito dal servizio: ${escape(coordinateLabel(payload.latitude,payload.longitude))}${distance!==null?` (a ${format(distance,' km')} dal punto richiesto)`:''}.${number(payload.elevation)!==null?` Quota di riferimento della previsione: ${format(payload.elevation,' m')}.`:''}</p>
-      ${city.geolocated?'<p class="weather-location-source">Nome località: <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a>, tramite coordinate del dispositivo. <a href="https://www.bigdatacloud.com/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy del servizio</a>.</p>':''}</section>`
+    return `<p class="weather-position">${escape(coordinateLabel(city.lat,city.lon))}${city.geolocated&&number(city.accuracy)!==null?` · accuratezza circa ${format(city.accuracy,' m')}`:''}${city.geolocated&&!city.locationResolved?' · nome della località non disponibile':''}</p>`
+  }
+  function searchUrl(query){
+    const name=String(query||'').trim();
+    if(name.length<3||name.length>100)throw Error('Inserisci almeno 3 caratteri, massimo 100.');
+    const url=new URL('https://geocoding-api.open-meteo.com/v1/search');
+    url.search=new URLSearchParams({name,count:'6',language:'it',format:'json'}).toString();return url.href
+  }
+  function searchLocations(payload){
+    return (Array.isArray(payload?.results)?payload.results:[]).filter(item=>item?.name&&number(item.latitude)!==null&&number(item.longitude)!==null&&Math.abs(Number(item.latitude))<=90&&Math.abs(Number(item.longitude))<=180).map(item=>({id:String(item.id),lat:Number(item.latitude),lon:Number(item.longitude),timezone:item.timezone,name:[...new Set([item.name,item.admin2,item.admin1,item.country].filter(Boolean))].join(' · ')}))
   }
   function condition(code,day=1){
     const n=number(code);
@@ -111,14 +112,15 @@
     return`<header class="weather-head"><div><p class="weather-kicker">Previsioni meteo · ${escape(city.name)}</p><h2><span aria-hidden="true">${icon}</span> ${format(c.temperature_2m,' °C')}</h2><p>${label} · percepita ${format(c.apparent_temperature,' °C')}</p></div><p class="weather-update">Ora locale ${escape(c.time?.slice(11,16))}<br>${escape(payload.timezone)}<br>Scaricato alle ${new Date(savedAt).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</p></header>
       ${locationDetails(payload,city)}
       <div class="weather-metrics"><article>Umidità<strong>${format(c.relative_humidity_2m,' %')}</strong></article><article>Vento<strong>${format(c.wind_speed_10m,' km/h')}</strong></article><article>Precipitazioni<strong>${format(c.precipitation,' mm')}</strong></article></div>
-      <h3>Prossime 24 ore</h3><div class="weather-scroll" tabindex="0" role="region" aria-label="Previsioni orarie, scorri orizzontalmente"><div class="weather-hours">${hourlyRows(payload).map(row=>{const [symbol,text]=condition(row.code,row.isDay);return`<article><time datetime="${escape(row.time)}">${escape(row.time.slice(8,10))}/${escape(row.time.slice(5,7))} · ${escape(row.time.slice(11,16))}</time><span role="img" aria-label="${text}">${symbol}</span><strong>${format(row.temperature,'°')}</strong><small>Pioggia ${format(row.probability,'%')}<br>${format(row.rain,' mm')} · ${format(row.wind,' km/h')}</small></article>`}).join('')}</div></div>
+      <!--weather-radar--><h3>Prossime 24 ore</h3><div class="weather-scroll" tabindex="0" role="region" aria-label="Previsioni orarie, scorri orizzontalmente"><div class="weather-hours">${hourlyRows(payload).map(row=>{const [symbol,text]=condition(row.code,row.isDay);return`<article><time datetime="${escape(row.time)}">${escape(row.time.slice(8,10))}/${escape(row.time.slice(5,7))} · ${escape(row.time.slice(11,16))}</time><span role="img" aria-label="${text}">${symbol}</span><strong>${format(row.temperature,'°')}</strong><small>Pioggia ${format(row.probability,'%')}<br>${format(row.rain,' mm')} · ${format(row.wind,' km/h')}</small></article>`}).join('')}</div></div>
       <h3>Previsioni a 7 giorni</h3><p class="weather-kicker">Temperature minime / massime</p><div class="weather-days">${payload.daily.time.slice(0,7).map((date,i)=>{const d=payload.daily,[symbol,text]=condition(d.weather_code?.[i]);return`<article><time datetime="${escape(date)}">${escape(dayLabel(date))}</time><span class="weather-condition"><span aria-hidden="true">${symbol}</span> ${text}</span><strong>${format(d.temperature_2m_min?.[i],'°')} / ${format(d.temperature_2m_max?.[i],'°')}</strong><small>Pioggia ${format(d.precipitation_probability_max?.[i],'%')} · ${format(d.precipitation_sum?.[i],' mm')}<br>Vento max ${format(d.wind_speed_10m_max?.[i],' km/h')}</small></article>`}).join('')}</div>
-      <p class="weather-attribution">Dati e previsioni modellistiche di <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. Le condizioni attuali sono stime del modello. Orari della località selezionata.</p>`
+      <p class="weather-attribution">Dati e previsioni modellistiche di <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. Le condizioni attuali sono stime del modello. Orari della località selezionata. Ricerca località: <a href="https://open-meteo.com/en/docs/geocoding-api" target="_blank" rel="noopener noreferrer">Open-Meteo / GeoNames</a>.</p>${city.geolocated?'<p class="weather-attribution">Nome località tramite coordinate: <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a> · <a href="https://www.bigdatacloud.com/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy</a>.</p>':''}`
   }
-  globalThis.WeatherForecast={buildUrl,fetchWeather,condition,hourlyRows,renderContent,validate,coordinateLabel,distanceKm,localityName,resolveLocation,locationDetails};
+  globalThis.WeatherForecast={buildUrl,fetchWeather,condition,hourlyRows,renderContent,validate,coordinateLabel,distanceKm,localityName,resolveLocation,locationDetails,searchUrl,searchLocations};
   if(typeof document==='undefined'||typeof source!=='function')return;
   SOURCE_INFO.weather={name:'Meteo · Open-Meteo',years:['forecast'],description:'<strong>Meteo:</strong> situazione attuale stimata, prossime 24 ore e previsioni a 7 giorni per la città selezionata. Dati Open-Meteo.',hint:''};
   const baseConfigure=configureSourceUI,baseRender=render;
+  let selection=null,geoPromise=null,geoSaved=null,searchTimer=null,searchController=null,searchSequence=0,results=[];
   const weather=()=>source()==='weather'&&!isTemperature();
   function layout(active){
     $('weatherPanel').classList.toggle('hidden',!active);
@@ -129,33 +131,75 @@
   }
   configureSourceUI=function(){
     $('weatherPanel').classList.add('hidden');
-    if(!weather())return baseConfigure();
+    document.documentElement.classList.toggle('weather-source',weather());
+    $('weatherLocationField')?.classList.toggle('hidden',!weather());
+    if(!weather()){globalThis.WeatherRadar?.suspend();searchSequence++;searchController?.abort();clearTimeout(searchTimer);return baseConfigure()}
     state.mode='map';
     setTemperatureModeLock(false);
-    configureTreeCityOptions(false);
-    $('eeaCityField').classList.remove('hidden');
+    $('eeaCityField').classList.add('hidden');
     $('sourceDescription').innerHTML=SOURCE_INFO.weather.description;
     layout(true)
   };
   async function selectedCity(){
-    if(eeaCity()!=='geolocate')return state.eeaCities.get(eeaCity())||state.eeaCities.get(EEA_DEFAULT_CITY);
-    if(!navigator.geolocation)throw Error('Geolocalizzazione non disponibile. Seleziona una città.');
-    const coords=await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(p=>resolve({coords:p.coords,timestamp:p.timestamp}),()=>reject(Error('Posizione non disponibile. Seleziona una città.')),{enableHighAccuracy:false,timeout:10000,maximumAge:300000}));
-    return{name:'La tua posizione',lat:coords.coords.latitude,lon:coords.coords.longitude,geolocated:true,accuracy:coords.coords.accuracy,locatedAt:coords.timestamp}
+    if(selection)return selection;
+    if(geoSaved&&Date.now()-geoSaved.savedAt<300000)return geoSaved.city;
+    if(geoPromise)return geoPromise;
+    if(!navigator.geolocation)throw Error('Geolocalizzazione non disponibile. Cerca una località.');
+    geoPromise=new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(position=>{
+      const city={name:'La tua posizione',lat:position.coords.latitude,lon:position.coords.longitude,geolocated:true,accuracy:position.coords.accuracy,locatedAt:position.timestamp};
+      geoSaved={savedAt:Date.now(),city};resolve(city)
+    },()=>reject(Error('Posizione non disponibile. Consenti la geolocalizzazione oppure cerca una località.')),{enableHighAccuracy:false,timeout:10000,maximumAge:300000}));
+    try{return await geoPromise}finally{geoPromise=null}
+  }
+  function chooseLocation(city){
+    if(city){buildUrl(city);if(!city.name)throw Error('Nome della località mancante')}
+    selection=city;searchSequence++;searchController?.abort();clearTimeout(searchTimer);
+    $('weatherSearchResults').innerHTML='';
+    $('weatherSearchStatus').textContent=city?`Località selezionata: ${city.name}`:'Ricerca della tua posizione…';
+    if(city)$('weatherSearch').value=city.name;
+    else{$('weatherSearch').value='';geoSaved=null}
+    return render()
+  }
+  async function runSearch(){
+    clearTimeout(searchTimer);const token=++searchSequence;searchController?.abort();
+    const query=$('weatherSearch').value.trim();results=[];$('weatherSearchResults').innerHTML='';
+    if(query.length<3){$('weatherSearchStatus').textContent='Digita almeno 3 caratteri.';return}
+    searchController=new AbortController();const controller=searchController;
+    const timeout=setTimeout(()=>controller.abort(),10000);
+    $('weatherSearchStatus').textContent='Ricerca località…';
+    try{
+      const response=await fetch(searchUrl(query),{signal:controller.signal,cache:'no-store'});
+      if(!response.ok)throw Error('Ricerca temporaneamente non disponibile.');
+      const payload=await response.json();if(token!==searchSequence||!weather())return;
+      results=searchLocations(payload);
+      $('weatherSearchResults').innerHTML=results.map((city,i)=>`<li><button type="button" data-weather-place="${i}">${escape(city.name)}</button></li>`).join('');
+      $('weatherSearchStatus').textContent=results.length?`${results.length} risultati. Scegli la località.`:'Nessuna località trovata. Prova con un nome o CAP diverso.'
+    }catch(error){if(token===searchSequence&&weather())$('weatherSearchStatus').textContent=error.name==='AbortError'?'Ricerca interrotta. Riprova.':error.message}
+    finally{clearTimeout(timeout)}
   }
   render=async function(){
     if(!weather())return baseRender();
     const token=++state.renderToken;
     configureSourceUI();clearTemperatureOverlays();window.TreeStats?.clear?.();
     $('weatherContent').innerHTML='<p role="status">Caricamento delle previsioni…</p>';
+    $('weatherForecastContent').innerHTML='';
+    globalThis.WeatherRadar?.suspend();
     $('weatherPanel').setAttribute('aria-busy','true');
     try{
       const city=await selectedCity();if(token!==state.renderToken)return;
+      globalThis.WeatherRadar?.show(city);
       const [result,locatedCity]=await Promise.all([fetchWeather(city),resolveLocation(city)]);if(token!==state.renderToken)return;
-      $('weatherContent').innerHTML=renderContent(result.payload,locatedCity,result.savedAt);
+      const [current,forecast]=renderContent(result.payload,locatedCity,result.savedAt).split('<!--weather-radar-->');
+      $('weatherContent').innerHTML=current;
+      $('weatherForecastContent').innerHTML=forecast||'';
+      if(!$('weatherSearch').value||$('weatherSearch').value===locatedCity.name)$('weatherSearchStatus').textContent=`Previsioni per ${locatedCity.name}`;
     }catch(error){if(token!==state.renderToken)return;$('weatherContent').innerHTML=`<p role="alert">${escape(error.message||'Meteo temporaneamente non disponibile.')}</p><button type="button" data-weather-retry>Riprova</button>`}
     finally{if(token===state.renderToken)$('weatherPanel').setAttribute('aria-busy','false')}
   };
-  $('eeaCitySelect').addEventListener('change',()=>{if(weather())render()});
+  $('weatherSearchForm').addEventListener('submit',event=>{event.preventDefault();return runSearch()});
+  $('weatherSearch').addEventListener('input',()=>{searchSequence++;searchController?.abort();clearTimeout(searchTimer);$('weatherSearchResults').innerHTML='';searchTimer=setTimeout(runSearch,450)});
+  $('weatherSearchResults').addEventListener('click',event=>{const button=event.target.closest('[data-weather-place]');if(button&&results[Number(button.dataset.weatherPlace)])chooseLocation(results[Number(button.dataset.weatherPlace)])});
+  $('weatherGeolocate').addEventListener('click',()=>chooseLocation(null));
+  Object.assign(globalThis.WeatherForecast,{chooseLocation});
   $('weatherPanel').addEventListener('click',event=>{if(event.target.closest('[data-weather-retry]')&&weather())render()});
 })();

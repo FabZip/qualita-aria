@@ -153,7 +153,7 @@ function sourceSettingFields(name){
     case 'eea':return['eeaScopeSelect','eeaCitySelect','pollutantSelect',...periods];
     case 'arpa':return['arpaCitySelect','pollutantSelect',...periods];
     case 'openaq':return['eeaCitySelect','pollutantSelect','monthSelect'];
-    case 'weather':return['eeaCitySelect'];
+    case 'weather':return[];
     case 'forecast':return['eeaCitySelect','pollutantSelect'];
     case 'trees':return['eeaCitySelect',...periods];
     default:return[]

@@ -1,13 +1,13 @@
-const CACHE='qualita-aria-v0.8.5';
+const CACHE='qualita-aria-v0.8.6';
 const CORE=[
-  './js/weather.js?v=0.8.5','./css/weather.css?v=0.8.5',
-  './js/display-text.js?v=0.8.5',
-  './js/eea-current.js?v=0.8.5',
+  './js/weather-radar.js?v=0.8.6','./js/weather.js?v=0.8.6','./css/weather.css?v=0.8.6',
+  './js/display-text.js?v=0.8.6',
+  './js/eea-current.js?v=0.8.6',
   './','./index.html',
-  './css/app.css?v=0.8.5','./css/aria-splash.css?v=0.5.15','./css/header-overrides.css?v=0.5.20','./css/trees.css?v=0.8.5','./js/aria-splash.js?v=0.5.14','./js/app.js?v=0.8.5','./js/trees.js?v=0.8.5','./data/trees.json?v=0.7.6','./data/tree-coordinates.json?v=0.7.6','./data/tree-paths.json?v=0.7.6','./data/trees-proxy.json?v=0.7.6','./assets/branding/aria-logo-header.svg','./js/eea-utd.js?v=0.2.23',
+  './css/app.css?v=0.8.6','./css/aria-splash.css?v=0.5.15','./css/header-overrides.css?v=0.5.20','./css/trees.css?v=0.8.6','./js/aria-splash.js?v=0.5.14','./js/app.js?v=0.8.6','./js/trees.js?v=0.8.6','./data/trees.json?v=0.7.6','./data/tree-coordinates.json?v=0.7.6','./data/tree-paths.json?v=0.7.6','./data/trees-proxy.json?v=0.7.6','./assets/branding/aria-logo-header.svg','./js/eea-utd.js?v=0.2.23',
   './css/station-list.css?v=0.2.3','./css/openaq-world.css?v=0.2.4','./css/air-forecast.css?v=0.7.12','./js/station-list.js?v=0.2.15','./js/air-forecast.js?v=0.7.12',
-  './js/openaq-proxy.js?v=0.2.12','./js/eea-proxy.js?v=0.2.15','./data/eea-proxy.json?v=0.2.14','./js/temperature-proxy.js?v=0.3.9','./js/temperature-overlay.js?v=0.3.11','./data/temperature-proxy.json?v=0.3.9','./css/temperature.css?v=0.3.9','./js/openaq-world.js?v=0.8.5',
-  './manifest.json?v=0.2.0','./version.json?v=0.8.5','./data/version.json?v=0.7.6','./data/italian-capitals.json?v=0.6.1',
+  './js/openaq-proxy.js?v=0.2.12','./js/eea-proxy.js?v=0.2.15','./data/eea-proxy.json?v=0.2.14','./js/temperature-proxy.js?v=0.3.9','./js/temperature-overlay.js?v=0.3.11','./data/temperature-proxy.json?v=0.3.9','./css/temperature.css?v=0.3.9','./js/openaq-world.js?v=0.8.6',
+  './manifest.json?v=0.2.0','./version.json?v=0.8.6','./data/version.json?v=0.7.6','./data/italian-capitals.json?v=0.6.1',
   './assets/icons/icon.svg','./assets/icons/icon-192.png','./assets/icons/icon-512.png'
 ];
 
@@ -34,6 +34,9 @@ self.addEventListener('fetch',event=>{
     url.hostname==='air-quality-api.open-meteo.com' ||
     url.hostname==='api.open-meteo.com' ||
     url.hostname==='api.bigdatacloud.net' ||
+    url.hostname==='geocoding-api.open-meteo.com' ||
+    url.hostname==='api.rainviewer.com' ||
+    url.hostname==='tilecache.rainviewer.com' ||
     url.hostname==='dati.lazio.it' ||
     url.hostname==='www.arpalazio.it' ||
     url.hostname==='raw.githubusercontent.com' ||

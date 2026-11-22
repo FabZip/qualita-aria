@@ -29,7 +29,7 @@ assert.match(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),/o
 assert.match(fs.readFileSync(new URL('../service-worker.js',import.meta.url),'utf8'),/url.hostname==='api.open-meteo.com'/);
 // UI failures and old geolocation callbacks cannot overwrite a newly selected city.
 let selected='geolocate',denyGeo,uiCalls=0;
-const nodes=new Map();const node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(){}});return nodes.get(id)};
+const handlers=new Map();const nodes=new Map();const node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(type,handler){handlers.set(`${id}:${type}`,handler)}});return nodes.get(id)};
 const ui=vm.createContext({URL,URLSearchParams,Date,Intl,AbortController,setTimeout,clearTimeout,console,
  document:{documentElement:node('html'),querySelector:node},$:node,source:()=> 'weather',isTemperature:()=>false,
  SOURCE_INFO:{},configureSourceUI(){},render(){},setTemperatureModeLock(){},configureTreeCityOptions(){},clearTemperatureOverlays(){},
@@ -38,9 +38,9 @@ const ui=vm.createContext({URL,URLSearchParams,Date,Intl,AbortController,setTime
  fetch:async()=>{uiCalls++;return Response.json(payload)}
 });
 vm.runInContext(source,ui);
-const pendingGeo=ui.render();selected='roma';await ui.render();denyGeo();await pendingGeo;
+const pendingGeo=ui.render();assert.equal(typeof denyGeo,'function');assert.equal(uiCalls,0,'Initial source waits for geolocation, with no Rome fallback');await ui.WeatherForecast.chooseLocation({name:'Roma',lat:41.9,lon:12.5});denyGeo();await pendingGeo;
 assert.match(node('weatherContent').innerHTML,/Previsioni meteo · Roma/);assert.doesNotMatch(node('weatherContent').innerHTML,/Posizione non disponibile/);assert.equal(uiCalls,1);
-selected='geolocate';const denied=ui.render();denyGeo();await denied;assert.match(node('weatherContent').innerHTML,/Posizione non disponibile/);assert.match(node('weatherContent').innerHTML,/data-weather-retry/);
+const denied=ui.WeatherForecast.chooseLocation(null);denyGeo();await denied;assert.match(node('weatherContent').innerHTML,/Posizione non disponibile/);assert.match(node('weatherContent').innerHTML,/data-weather-retry/);
 // Geolocation labels identify the actual requested point and the returned model grid independently.
 const detected={name:'La tua posizione',lat:41.9,lon:12.5,geolocated:true,accuracy:24,locatedAt:Date.now()};
 const locality={lookupSource:'coordinates',latitude:41.9,longitude:12.5,locality:'Quartiere <Test>',city:'Roma',principalSubdivision:'Lazio',countryName:'Italia'};
@@ -54,8 +54,8 @@ assert.equal(api.coordinateLabel(-12.3,-45.6),'12.30000° S · 45.60000° O');
 assert.ok(api.distanceKm({lat:0,lon:0},{lat:0,lon:1})>110);
 const locatedPayload={...payload,latitude:41.91,longitude:12.52,elevation:58};
 const detail=api.renderContent(locatedPayload,{...detected,name:api.localityName(locality,detected),locationResolved:true},clock);
-assert.match(detail,/Quartiere &lt;Test&gt; · Roma · Lazio · Italia/);assert.match(detail,/41\.90000° N/);assert.match(detail,/41\.91000° N/);assert.match(detail,/circa 24 m/);assert.match(detail,/Non sono letture di una stazione meteo/);assert.match(detail,/Best Match/);assert.match(detail,/58 m/);assert.match(detail,/Verifica sulla mappa/);assert.match(detail,/BigDataCloud/);
-const unknown=api.locationDetails({},detected);assert.match(unknown,/Nome della località non disponibile/);assert.match(unknown,/Coordinate non disponibili/);assert.doesNotMatch(unknown,/null m|NaN|undefined/);
+assert.match(detail,/Quartiere &lt;Test&gt; · Roma · Lazio · Italia/);assert.match(detail,/41\.90000° N/);assert.match(detail,/circa 24 m/);assert.match(detail,/BigDataCloud/);assert.doesNotMatch(detail,/Località della previsione|Punto della griglia/);
+const unknown=api.locationDetails({},detected);assert.match(unknown,/nome della località non disponibile/);assert.doesNotMatch(unknown,/null m|NaN|undefined/);
 let reverseCalls=0,releaseReverse;
 context.fetch=async url=>{reverseCalls++;assert.equal(new URL(url).hostname,'api.bigdatacloud.net');assert.equal(new URL(url).searchParams.get('latitude'),'41.9');await new Promise(resolve=>releaseReverse=resolve);return Response.json(locality)};
 const lookupA=api.resolveLocation(detected),lookupB=api.resolveLocation(detected);releaseReverse();
@@ -67,8 +67,23 @@ context.fetch=async()=>{throw Error('offline')};const failedPlace=await api.reso
 let successGeo;
 ui.navigator.geolocation.getCurrentPosition=resolve=>successGeo=resolve;
 ui.fetch=async url=>{if(String(url).includes('bigdatacloud'))throw Error('lookup unavailable');return Response.json(locatedPayload)};
-const geoView=ui.render();successGeo({coords:{latitude:42,longitude:13,accuracy:38},timestamp:Date.now()});await geoView;
-assert.match(node('weatherContent').innerHTML,/42\.00000° N · 13\.00000° E/);assert.match(node('weatherContent').innerHTML,/Nome della località non disponibile/);assert.match(node('weatherContent').innerHTML,/0 °C/);
+const geoView=ui.WeatherForecast.chooseLocation(null);successGeo({coords:{latitude:42,longitude:13,accuracy:38},timestamp:Date.now()});await geoView;
+assert.match(node('weatherContent').innerHTML,/42\.00000° N · 13\.00000° E/);assert.match(node('weatherContent').innerHTML,/nome della località non disponibile/);assert.match(node('weatherContent').innerHTML,/0 °C/);
 ui.fetch=async url=>String(url).includes('bigdatacloud')?Response.json({...locality,latitude:42,longitude:13,locality:'Località rilevata',city:'Comune rilevato'}):Response.json(locatedPayload);
-const namedGeo=ui.render();successGeo({coords:{latitude:42,longitude:13,accuracy:38},timestamp:Date.now()});await namedGeo;
+const namedGeo=ui.WeatherForecast.chooseLocation(null);successGeo({coords:{latitude:42,longitude:13,accuracy:38},timestamp:Date.now()});await namedGeo;
 assert.match(node('weatherContent').innerHTML,/Previsioni meteo · Località rilevata · Comune rilevato/);assert.match(node('weatherContent').innerHTML,/circa 38 m/);
+
+const search=new URL(api.searchUrl('Guidonia'));assert.equal(search.hostname,'geocoding-api.open-meteo.com');assert.equal(search.searchParams.get('language'),'it');assert.throws(()=>api.searchUrl('ab'),/almeno 3/);
+const found=api.searchLocations({results:[{id:1,name:'Comune <Test>',latitude:42,longitude:13,admin1:'Lazio',country:'Italia'},{id:2,name:'invalid',latitude:999,longitude:0}]});assert.equal(found.length,1);assert.equal(found[0].name,'Comune <Test> · Lazio · Italia');assert.equal(api.searchLocations({}).length,0);
+
+// Older searches and aborted responses cannot replace the latest results.
+node('weatherSearch').value='Napoli';let oldSearchResolve;
+ui.fetch=async()=>new Promise(resolve=>oldSearchResolve=resolve);
+const oldSearch=handlers.get('weatherSearchForm:submit')({preventDefault(){}});
+node('weatherSearch').value='Milano';
+ui.fetch=async()=>Response.json({results:[{id:1,name:'Milano',latitude:45.46,longitude:9.19,country:'Italia'}]});
+await handlers.get('weatherSearchForm:submit')({preventDefault(){}});
+oldSearchResolve(Response.json({results:[{id:2,name:'Napoli',latitude:40.85,longitude:14.27}]}));await oldSearch;
+assert.match(node('weatherSearchResults').innerHTML,/Milano/);assert.doesNotMatch(node('weatherSearchResults').innerHTML,/Napoli/);
+assert.match(node('weatherSearchStatus').textContent,/1 risultati/);
+ui.fetch=async()=>Response.json({results:[]});await handlers.get('weatherSearchForm:submit')({preventDefault(){}});assert.match(node('weatherSearchStatus').textContent,/Nessuna località/);
