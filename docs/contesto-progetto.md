@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `1.0.1` |
-| Build | `125` |
+| Applicazione | `1.0.2` |
+| Build | `126` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.0` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,16 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 1.0.2 — Menu di navigazione sotto il logo
+
+- Conservato il logo originale, con una barra di navigazione su una riga dedicata dentro `header.topbar`: menu a tendina con icone a sinistra e collegamento diretto Dashboard.
+- La scelta della pagina avviene dal menu; il selettore della fonte non è più mostrato nei filtri. La select interna rimane nascosta per compatibilità con i moduli esistenti.
+- Collegamenti diretti tramite hash, cronologia Indietro/Avanti e stato della pagina corrente. Chiusura del menu con Escape, clic esterno o selezione; collegamenti accessibili da tastiera.
+- Le icone colorate delle sei schede della dashboard sono preservate. Gli stili delle icone del menu sono limitati alla barra di navigazione.
+- Filtri e impostazioni per fonte continuano a essere gestiti dal cambio pagina esistente; nessuna nuova persistenza delle coordinate.
+
+App **1.0.2 build 126**, cache PWA aggiornata; nessuna modifica a Worker o database. Verifiche: 31 suite automatiche, menu e tastiera, link diretti, cronologia senza voci duplicate e prove browser desktop/mobile, ritorno alla dashboard e icone colorate.
 
 ### 1.0.1 — Ultimi eventi, magnitudo e icone del riepilogo
 

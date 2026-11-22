@@ -2953,7 +2953,7 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=1.0.1',{cache:'no-store'}).then(r=>r.json()),
+    fetch('version.json?v=1.0.2',{cache:'no-store'}).then(r=>r.json()),
     fetch('data/version.json?v=0.7.6',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
@@ -2973,7 +2973,7 @@ async function boot(){
   if(['weather','nearby'].includes(source()))render();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=1.0.1')
+    navigator.serviceWorker.register('./service-worker.js?v=1.0.2')
       .then(reg=>reg.update())
       .catch(console.error)
   }

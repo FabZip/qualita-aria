@@ -86,7 +86,7 @@
     else target.flyTo({center:[Number(event.lon),Number(event.lat)],zoom:10,offset:[0,70],duration:650});
     return true
   }
-  globalThis.Environment={point,distance,quakeUrl,earthquakes,contains,alertZones,treeEvents,filterEvents,alerts,fireTile,latestQuakeUrl,latestFireUrl,fireEvent,latestEvent,magnitudeHtml,eventHtml,focusMap,esc,link};
+  globalThis.Environment={point,distance,quakeUrl,earthquakes,contains,alertZones,treeEvents,filterEvents,alerts,fireTile,latestQuakeUrl,latestFireUrl,fireEvent,latestEvent,magnitudeHtml,eventHtml,focusMap,icon,esc,link};
   if(typeof document==='undefined'||typeof source!=='function')return;
   for(const [key,name] of Object.entries(SOURCES))SOURCE_INFO[key]={name,years:['recent'],description:'',hint:''};
   const $=id=>document.getElementById(id),active=()=>Object.hasOwn(SOURCES,source());

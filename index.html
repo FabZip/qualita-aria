@@ -9,16 +9,17 @@
   <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
   <link rel="stylesheet" href="css/aria-splash.css?v=0.5.15">
-  <link rel="stylesheet" href="css/app.css?v=1.0.1">
+  <link rel="stylesheet" href="css/app.css?v=1.0.2">
   <link rel="stylesheet" href="css/station-list.css?v=0.2.3">
   <link rel="stylesheet" href="css/openaq-world.css?v=0.2.4">
   <link rel="stylesheet" href="css/temperature.css?v=0.3.9">
-  <link rel="stylesheet" href="css/trees.css?v=1.0.1">
+  <link rel="stylesheet" href="css/trees.css?v=1.0.2">
   <link rel="stylesheet" href="css/air-forecast.css?v=0.7.12">
   <link rel="stylesheet" href="css/header-overrides.css?v=0.5.20">
   <title>Qualità dell'aria</title>
-  <link rel="stylesheet" href="css/weather.css?v=1.0.1">
-  <link rel="stylesheet" href="css/environment.css?v=1.0.1">
+  <link rel="stylesheet" href="css/weather.css?v=1.0.2">
+  <link rel="stylesheet" href="css/environment.css?v=1.0.2">
+  <link rel="stylesheet" href="css/navigation.css?v=1.0.2">
 </head>
 <body>
   <script>
@@ -73,10 +74,12 @@
       <button id="installBtn" class="install-btn" type="button" hidden>
         <span aria-hidden="true">⇩</span> Installa app
       </button>
-    </header>
-
-    <section class="toolbar" aria-label="Filtri">
-      <label id="pollutantSourceField">Fonte dati
+      <nav id="appNavigation" class="app-navigation" aria-label="Navigazione principale">
+        <div class="app-menu-container"><button id="appMenuToggle" class="app-menu-toggle" type="button" aria-expanded="false" aria-controls="appMenu"><span aria-hidden="true">☰</span> Menu <span aria-hidden="true">▾</span></button><div id="appMenu" class="app-menu" hidden></div></div>
+        <a class="app-home-link" href="#nearby" data-page="nearby"><span aria-hidden="true">⌂</span> Dashboard</a>
+        <span id="appCurrentPage" class="app-current-page" aria-current="page"></span>
+      </nav>
+      <label id="pollutantSourceField" hidden>Fonte dati
         <select id="sourceSelect">
           <option value="nearby" selected>Intorno a me</option>
           <option value="weather">Meteo · Open-Meteo</option>
@@ -90,6 +93,10 @@
           <option value="diary">Diario ambientale</option>
         </select>
       </label>
+    </header>
+
+    <section class="toolbar" aria-label="Filtri">
+
 
 
       <label id="eeaScopeField">Area EEA
@@ -269,26 +276,27 @@
     </dialog>
 
     <footer class="app-footer">
-      v<span id="appVersion" role="button" tabindex="0" aria-label="Versione applicazione">1.0.1</span> · dataset <span id="dataVersion">22</span>
+      v<span id="appVersion" role="button" tabindex="0" aria-label="Versione applicazione">1.0.2</span> · dataset <span id="dataVersion">22</span>
     </footer>
   </main>
 
   <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
   <script src="js/aria-splash.js?v=0.5.14" defer></script>
-  <script src="js/display-text.js?v=1.0.1" defer></script>
+  <script src="js/display-text.js?v=1.0.2" defer></script>
   <script src="js/openaq-proxy.js?v=0.2.12" defer></script>
   <script src="js/eea-proxy.js?v=0.2.15" defer></script>
   <script src="js/temperature-proxy.js?v=0.3.9" defer></script>
-  <script src="js/trees.js?v=1.0.1" defer></script>
-  <script src="js/app.js?v=1.0.1" defer></script>
+  <script src="js/trees.js?v=1.0.2" defer></script>
+  <script src="js/app.js?v=1.0.2" defer></script>
   <script src="js/eea-utd.js?v=0.2.23" defer></script>
-  <script src="js/openaq-world.js?v=1.0.1" defer></script>
-  <script src="js/temperature-overlay.js?v=1.0.1" defer></script>
+  <script src="js/openaq-world.js?v=1.0.2" defer></script>
+  <script src="js/temperature-overlay.js?v=1.0.2" defer></script>
   <script src="js/station-list.js?v=0.2.15" defer></script>
-  <script src="js/air-forecast.js?v=1.0.1" defer></script>
-  <script src="js/eea-current.js?v=1.0.1" defer></script>
-  <script src="js/weather-radar.js?v=1.0.1" defer></script>
-  <script src="js/weather.js?v=1.0.1" defer></script>
-  <script src="js/environment.js?v=1.0.1" defer></script>
+  <script src="js/air-forecast.js?v=1.0.2" defer></script>
+  <script src="js/eea-current.js?v=1.0.2" defer></script>
+  <script src="js/weather-radar.js?v=1.0.2" defer></script>
+  <script src="js/weather.js?v=1.0.2" defer></script>
+  <script src="js/environment.js?v=1.0.2" defer></script>
+  <script src="js/navigation.js?v=1.0.2" defer></script>
 </body>
 </html>
