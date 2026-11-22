@@ -1,3 +1,13 @@
+# 0.8.4 — Meteo come fonte iniziale
+
+Nuova fonte iniziale **Meteo · Open-Meteo**, con Roma selezionata, città italiane e opzione Geolocalizza su richiesta. Mostra condizioni attuali stimate dal modello, temperatura percepita, umidità, vento e precipitazioni, prossime 24 ore e previsione a 7 giorni con minime/massime, pioggia e vento. Orari nel fuso della località e condizioni meteorologiche tradotte in italiano. Nessun anno o filtro inquinante nella schermata meteo; le altre fonti restano disponibili con le proprie selezioni.
+
+API ufficiale `https://api.open-meteo.com/v1/forecast`, senza chiave, `timezone=auto`, unità °C/km/h/mm. Piano gratuito destinato a uso non commerciale: la sola gratuità dell'app non basta in presenza di pubblicità/monetizzazione. Attribuzione Open-Meteo e CC BY 4.0 visibile. Documentazione e condizioni: https://open-meteo.com/en/docs e https://open-meteo.com/en/terms.
+
+Cache per coordinate di 15 minuti in memoria e localStorage, riuso delle richieste simultanee, timeout e pulsante Riprova. Nessun dato meteo inventato o fallback silenzioso su risposte scadute; valori null mostrati come sconosciuti. Richieste obsolete ignorate dopo cambio città/fonte. Geolocalizzazione attivata solo scegliendo Geolocalizza, senza richieste automatiche di permesso all'avvio. Il caricamento meteo non attende che le mappe siano pronte.
+
+App **0.8.4 build 117**, cache PWA aggiornata; Worker, secret e database invariati. Verifiche: suite automatica (29 test), risposta API reale, browser con Roma/Milano e passaggio alle previsioni aria, layout mobile 390 px senza overflow, 24 schede orarie e 7 giornaliere.
+
 # 0.8.3 — Calendari arborei di Roma e intervalli dei lavori
 
 Importazione giornaliera dei calendari ufficiali dei 15 Municipi di Roma, oltre agli avvisi del dipartimento Ambiente. Gli intervalli mantengono inizio e fine lavori anche oltre dicembre; un intervento non risulta trascorso finché non termina il periodo previsto. La data dell'avviso non viene più usata come data di esecuzione quando questa manca, anche per gli avvisi automatici già archiviati. Le date manuali restano invariate.

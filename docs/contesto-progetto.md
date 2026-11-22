@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.8.3` |
-| Build | `116` |
+| Applicazione | `0.8.4` |
+| Build | `117` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.0` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,16 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 0.8.4 — Meteo come fonte iniziale
+
+Nuova fonte iniziale **Meteo · Open-Meteo**, con Roma selezionata, città italiane e opzione Geolocalizza su richiesta. Mostra condizioni attuali stimate dal modello, temperatura percepita, umidità, vento e precipitazioni, prossime 24 ore e previsione a 7 giorni con minime/massime, pioggia e vento. Orari nel fuso della località e condizioni meteorologiche tradotte in italiano. Nessun anno o filtro inquinante nella schermata meteo; le altre fonti restano disponibili con le proprie selezioni.
+
+API ufficiale `https://api.open-meteo.com/v1/forecast`, senza chiave, `timezone=auto`, unità °C/km/h/mm. Piano gratuito destinato a uso non commerciale: la sola gratuità dell'app non basta in presenza di pubblicità/monetizzazione. Attribuzione Open-Meteo e CC BY 4.0 visibile. Documentazione e condizioni: https://open-meteo.com/en/docs e https://open-meteo.com/en/terms.
+
+Cache per coordinate di 15 minuti in memoria e localStorage, riuso delle richieste simultanee, timeout e pulsante Riprova. Nessun dato meteo inventato o fallback silenzioso su risposte scadute; valori null mostrati come sconosciuti. Richieste obsolete ignorate dopo cambio città/fonte. Geolocalizzazione attivata solo scegliendo Geolocalizza, senza richieste automatiche di permesso all'avvio. Il caricamento meteo non attende che le mappe siano pronte.
+
+App **0.8.4 build 117**, cache PWA aggiornata; Worker, secret e database invariati. Verifiche: suite automatica (29 test), risposta API reale, browser con Roma/Milano e passaggio alle previsioni aria, layout mobile 390 px senza overflow, 24 schede orarie e 7 giornaliere.
 
 ### Calendari municipali 0.8.3 / Worker 0.11.0
 

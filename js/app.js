@@ -153,6 +153,7 @@ function sourceSettingFields(name){
     case 'eea':return['eeaScopeSelect','eeaCitySelect','pollutantSelect',...periods];
     case 'arpa':return['arpaCitySelect','pollutantSelect',...periods];
     case 'openaq':return['eeaCitySelect','pollutantSelect','monthSelect'];
+    case 'weather':return['eeaCitySelect'];
     case 'forecast':return['eeaCitySelect','pollutantSelect'];
     case 'trees':return['eeaCitySelect',...periods];
     default:return[]
@@ -582,7 +583,7 @@ function configureTreeCityOptions(active){
         id:city.id,name:city.name,lon:city.center[0],lat:city.center[1]
       }))
     :[...state.eeaCities.values()];
-  if(!active&&['eea','openaq'].includes(source()))desired=[{id:'geolocate',name:'Geolocalizza'},...desired];
+  if(!active&&['eea','openaq','weather'].includes(source()))desired=[{id:'geolocate',name:'Geolocalizza'},...desired];
   const signature=`${active?'trees':source()}:${desired.map(city=>city.id).join(',')}`;
   if(select.dataset.optionSignature===signature)return;
   const old=select.value;
@@ -3921,6 +3922,8 @@ async function loadVersion(){
 }
 
 async function boot(){
+  // All deferred source modules must install their handlers before initial setup.
+  if(document.readyState!=='complete')await new Promise(resolve=>document.addEventListener('DOMContentLoaded',resolve,{once:true}));
   updateInstallButtonVisibility();
   await loadEeaCities();
   fillYears();
@@ -3928,6 +3931,7 @@ async function boot(){
   bind();
   await loadVersion();
   initMaps();
+  if(source()==='weather')render();
 
   if('serviceWorker'in navigator){
     navigator.serviceWorker.register('./service-worker.js?v=0.7.28')
