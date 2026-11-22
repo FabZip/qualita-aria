@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.8.7` |
-| Build | `120` |
+| Applicazione | `0.8.8` |
+| Build | `121` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.0` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,12 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 0.8.8 — Ricerca meteo senza azioni duplicate
+
+Rimosso il pulsante Cerca: i suggerimenti compaiono automaticamente digitando e la scelta della località aggiorna meteo e radar. Invio continua ad anticipare la ricerca mentre si digita, ma non rilancia il geocoding del nome completo di una località già selezionata (causa del falso messaggio “località non trovata”, anche dopo la selezione di un CAP). Eliminata la riga duplicata “Previsioni per…” sotto la ricerca; la località resta visibile nella scheda meteo.
+
+App **0.8.8 build 121**, cache PWA aggiornata; Worker e database invariati. Verifica: suite completa e regressione selezione CAP seguita da Invio, senza nuova richiesta di ricerca.
 
 ### 0.8.7 — Widget ufficiale RainViewer e ricerca CAP italiani
 

@@ -76,7 +76,7 @@
         if(!postalPending)postalPending=(async()=>{
           const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
           try{
-          const response=await fetch('data/italian-postal-codes.json?v=0.8.7',{signal:controller.signal});
+          const response=await fetch('data/italian-postal-codes.json?v=0.8.8',{signal:controller.signal});
           if(!response.ok)throw Error('Catalogo CAP temporaneamente non disponibile. Cerca il nome del comune.');
           const payload=await response.json();if(!payload?.codes||typeof payload.codes!=='object')throw Error('Catalogo CAP non valido. Cerca il nome del comune.');
           postalData=payload;return payload
@@ -187,7 +187,7 @@
     if(city){buildUrl(city);if(!city.name)throw Error('Nome della località mancante')}
     selection=city;searchSequence++;searchController?.abort();clearTimeout(searchTimer);
     $('weatherSearchResults').innerHTML='';
-    $('weatherSearchStatus').textContent=city?`Località selezionata: ${city.name}`:'Ricerca della tua posizione…';
+    $('weatherSearchStatus').textContent=city?'':'Ricerca della tua posizione…';
     if(city)$('weatherSearch').value=city.name;
     else{$('weatherSearch').value='';geoSaved=null}
     return render()
@@ -195,6 +195,7 @@
   async function runSearch(){
     clearTimeout(searchTimer);const token=++searchSequence;searchController?.abort();
     const query=$('weatherSearch').value.trim();results=[];$('weatherSearchResults').innerHTML='';
+    if(selection&&query===selection.name){$('weatherSearchStatus').textContent='';return}
     if(query.length<3){$('weatherSearchStatus').textContent='Digita almeno 3 caratteri.';return}
     searchController=new AbortController();const controller=searchController;
     const timeout=setTimeout(()=>controller.abort(),10000);
@@ -222,7 +223,7 @@
       const [current,forecast]=renderContent(result.payload,locatedCity,result.savedAt).split('<!--weather-radar-->');
       $('weatherContent').innerHTML=current;
       $('weatherForecastContent').innerHTML=forecast||'';
-      if(!$('weatherSearch').value||$('weatherSearch').value===locatedCity.name)$('weatherSearchStatus').textContent=`Previsioni per ${locatedCity.name}`;
+      if(!$('weatherSearch').value||$('weatherSearch').value===locatedCity.name)$('weatherSearchStatus').textContent='';
     }catch(error){if(token!==state.renderToken)return;$('weatherContent').innerHTML=`<p role="alert">${escape(error.message||'Meteo temporaneamente non disponibile.')}</p><button type="button" data-weather-retry>Riprova</button>`}
     finally{if(token===state.renderToken)$('weatherPanel').setAttribute('aria-busy','false')}
   };

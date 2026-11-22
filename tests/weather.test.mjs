@@ -100,3 +100,13 @@ await api.findLocations('00012');assert.equal(catalogFetches,1);await assert.rej
 const cancelled=new AbortController();cancelled.abort();await assert.rejects(()=>api.findLocations('00012',cancelled.signal),/annullata/);
 node('weatherSearch').value='00012';ui.fetch=async url=>{assert.match(String(url),/^data\/italian-postal-codes\.json/);return Response.json(postal)};await handlers.get('weatherSearchForm:submit')({preventDefault(){}});assert.match(node('weatherSearchResults').innerHTML,/Guidonia Montecelio/);assert.match(node('weatherSearchResults').innerHTML,/00012/);
 node('weatherSearch').value='99999';await handlers.get('weatherSearchForm:submit')({preventDefault(){}});assert.match(node('weatherSearchStatus').textContent,/CAP italiano non trovato/);
+
+// Submitting a selected label must not geocode the decorated name again.
+ui.fetch=async()=>Response.json(payload);
+await ui.WeatherForecast.chooseLocation(postalResults.find(place=>place.name.includes('Guidonia Montecelio')));
+assert.equal(node('weatherSearchStatus').textContent,'');
+ui.fetch=async()=>{throw Error('Selected labels must not be searched again')};
+await handlers.get('weatherSearchForm:submit')({preventDefault(){}});
+assert.equal(node('weatherSearchStatus').textContent,'');
+assert.equal(node('weatherSearchResults').innerHTML,'');
+assert.doesNotMatch(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),/<button type="submit">Cerca<\/button>/);

@@ -1,3 +1,9 @@
+# 0.8.8 — Ricerca meteo senza azioni duplicate
+
+Rimosso il pulsante Cerca: i suggerimenti compaiono automaticamente digitando e la scelta della località aggiorna meteo e radar. Invio continua ad anticipare la ricerca mentre si digita, ma non rilancia il geocoding del nome completo di una località già selezionata (causa del falso messaggio “località non trovata”, anche dopo la selezione di un CAP). Eliminata la riga duplicata “Previsioni per…” sotto la ricerca; la località resta visibile nella scheda meteo.
+
+App **0.8.8 build 121**, cache PWA aggiornata; Worker e database invariati. Verifica: suite completa e regressione selezione CAP seguita da Invio, senza nuova richiesta di ricerca.
+
 # 0.8.7 — Widget ufficiale RainViewer e ricerca CAP italiani
 
 Il radar usa ora il widget ufficiale offerto dal comando **Incorpora** di [RainViewer](https://www.rainviewer.com/it/weather-radar-map-live.html), con tema scuro e centratura sulla località scelta. Animazione, timeline, zoom e funzioni interne sono gestiti direttamente da RainViewer; i controlli esterni consentono di ricentrare, ricaricare e aprire il radar in una nuova scheda. Disponibilità e funzioni dipendono dal servizio. Sostituito il precedente renderer delle immagini radar: le limitazioni dell'API pubblica descritte nella release 0.8.6 non definiscono le funzioni del widget.
