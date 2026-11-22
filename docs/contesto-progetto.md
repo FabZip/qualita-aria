@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.8.8` |
-| Build | `121` |
+| Applicazione | `0.8.9` |
+| Build | `122` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.0` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,12 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 0.8.9 — Radar senza testi ridondanti
+
+Rimossi la spiegazione permanente sotto il radar e il collegamento esterno duplicato: restano il marchio e il link RainViewer nel widget. Il messaggio di caricamento scompare al caricamento dell'iframe; eventuali errori invitano a usare Ricarica radar.
+
+App **0.8.9 build 122**, cache PWA aggiornata. Suite completa: 30 test superati. Worker e database invariati.
 
 ### 0.8.8 — Ricerca meteo senza azioni duplicate
 

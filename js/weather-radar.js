@@ -25,17 +25,16 @@
     city=location;const url=widgetUrl(city);suspend();const token=sequence;
     $('weatherRadarPanel').classList.remove('hidden');
     $('radarPlace').textContent=city.name;
-    $('radarOpen').href=url;
     $('radarStatus').textContent='Caricamento del radar ufficiale RainViewer…';
     iframe=document.createElement('iframe');
     iframe.title=`Radar meteo RainViewer · ${city.name}`;
     iframe.allowFullscreen=true;iframe.allow='fullscreen';iframe.referrerPolicy='strict-origin-when-cross-origin';
     iframe.setAttribute('aria-label',iframe.title);
-    iframe.onload=()=>{if(token!==sequence)return;clearTimeout(timer);$('radarStatus').textContent='Widget ufficiale RainViewer: animazione e controlli sono gestiti dal servizio. Se la mappa non compare, aprila con il collegamento qui sotto.'};
-    iframe.onerror=()=>{if(token!==sequence)return;clearTimeout(timer);$('radarStatus').textContent='Widget non disponibile. Riprova oppure apri RainViewer.'};
+    iframe.onload=()=>{if(token!==sequence)return;clearTimeout(timer);$('radarStatus').textContent=''};
+    iframe.onerror=()=>{if(token!==sequence)return;clearTimeout(timer);$('radarStatus').textContent='Radar non disponibile. Premi Ricarica radar per riprovare.'};
     $('weatherRadarMap').replaceChildren(iframe);
     lock(touch());
-    timer=setTimeout(()=>{if(token===sequence)$('radarStatus').textContent='Il radar sta impiegando più tempo del previsto. Puoi ricaricarlo o aprire RainViewer.'},20000);
+    timer=setTimeout(()=>{if(token===sequence)$('radarStatus').textContent='Il radar sta impiegando più tempo del previsto. Premi Ricarica radar per riprovare.'},20000);
     iframe.src=url;
   }
   $('radarActivate').addEventListener('click',()=>lock(false));

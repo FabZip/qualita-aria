@@ -12,7 +12,7 @@ const node=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',classList:{hidden
 const ui=vm.createContext({URL,URLSearchParams,setTimeout,clearTimeout,source:()=> 'weather',matchMedia:()=>({matches:true}),document:{hidden:false,getElementById:node,createElement:()=>({style:{},setAttribute(){},remove(){removed++}}),addEventListener(type,fn){handlers.set(`document:${type}`,fn)}}});
 vm.runInContext(src,ui);ui.WeatherRadar.show({lat:42,lon:13,name:'Guidonia'});let frame=node('weatherRadarMap').child;
 assert.equal(new URL(frame.src).searchParams.get('loc'),'42,13,7');assert.equal(frame.title,'Radar meteo RainViewer · Guidonia');assert.equal(frame.style.pointerEvents,'none');assert.equal(node('radarTouchShield').classList.hidden,false);
-frame.onload();assert.match(node('radarStatus').textContent,/Widget ufficiale/);
+frame.onload();assert.equal(node('radarStatus').textContent,'');
 handlers.get('radarActivate:click')();assert.equal(frame.style.pointerEvents,'auto');assert.equal(node('radarTouchShield').classList.hidden,true);
 handlers.get('radarLock:click')();assert.equal(frame.style.pointerEvents,'none');
 ui.WeatherRadar.show({lat:45,lon:9,name:'Milano'});frame=node('weatherRadarMap').child;assert.equal(removed,1);assert.match(frame.title,/Milano/);frame.onload();

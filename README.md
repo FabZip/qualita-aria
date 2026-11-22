@@ -1,3 +1,9 @@
+# 0.8.9 — Radar senza testi ridondanti
+
+Rimossi la spiegazione permanente sotto il radar e il collegamento esterno duplicato: restano il marchio e il link RainViewer nel widget. Il messaggio di caricamento scompare al caricamento dell'iframe; eventuali errori invitano a usare Ricarica radar.
+
+App **0.8.9 build 122**, cache PWA aggiornata. Suite completa: 30 test superati. Worker e database invariati.
+
 # 0.8.8 — Ricerca meteo senza azioni duplicate
 
 Rimosso il pulsante Cerca: i suggerimenti compaiono automaticamente digitando e la scelta della località aggiorna meteo e radar. Invio continua ad anticipare la ricerca mentre si digita, ma non rilancia il geocoding del nome completo di una località già selezionata (causa del falso messaggio “località non trovata”, anche dopo la selezione di un CAP). Eliminata la riga duplicata “Previsioni per…” sotto la ricerca; la località resta visibile nella scheda meteo.
