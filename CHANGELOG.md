@@ -1,3 +1,11 @@
+# 0.8.5 — Posizione meteo riconoscibile e provenienza
+
+Con Geolocalizza, la scheda meteo mostra località/comune/regione/Paese quando identificabili, coordinate effettivamente richieste al servizio, accuratezza dichiarata dal dispositivo, istante di acquisizione e link di verifica su OpenStreetMap. Il nome viene ricavato via BigDataCloud dal browser, solo dalle coordinate appena ottenute con consenso; nessuna chiamata per le città del catalogo, nessuna localizzazione automatica tramite IP. Cache in memoria per 15 minuti, richieste simultanee condivise e timeout. Attribuzione e link privacy visibili: il servizio usa i segnali coordinate/IP per migliorare la propria geolocalizzazione (documentazione: https://www.bigdatacloud.com/docs/free-api/free-reverse-geocode-to-city-api).
+
+La provenienza meteo distingue il punto richiesto dal punto della griglia restituito da Open-Meteo, con distanza e quota di riferimento della previsione. Esplicitata la selezione automatica Best Match: non si attribuiscono dati a stazioni o a un modello specifico non identificato nella risposta. Se mancano metadati, vengono indicati come non disponibili. Le coordinate e la fonte sono visibili anche per le città scelte manualmente.
+
+Un errore nel riconoscimento del nome non blocca il meteo e non sostituisce le coordinate con Roma o con quelle della griglia: mostra un avviso e mantiene il link mappa. Risposte IP o coordinate non coerenti vengono ignorate. App **0.8.5 build 118**, cache PWA aggiornata; nessuna modifica a Worker, database o secret. Test: suite completa (29 test), località/coordinate/griglia distinte, null e coordinate zero, escaping, cache, richieste condivise e guasto del servizio nomi senza perdita del meteo.
+
 # 0.8.4 — Meteo come fonte iniziale
 
 Nuova fonte iniziale **Meteo · Open-Meteo**, con Roma selezionata, città italiane e opzione Geolocalizza su richiesta. Mostra condizioni attuali stimate dal modello, temperatura percepita, umidità, vento e precipitazioni, prossime 24 ore e previsione a 7 giorni con minime/massime, pioggia e vento. Orari nel fuso della località e condizioni meteorologiche tradotte in italiano. Nessun anno o filtro inquinante nella schermata meteo; le altre fonti restano disponibili con le proprie selezioni.

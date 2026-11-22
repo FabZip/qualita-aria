@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.8.4` |
-| Build | `117` |
+| Applicazione | `0.8.5` |
+| Build | `118` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.0` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,14 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 0.8.5 — Posizione meteo riconoscibile e provenienza
+
+Con Geolocalizza, la scheda meteo mostra località/comune/regione/Paese quando identificabili, coordinate effettivamente richieste al servizio, accuratezza dichiarata dal dispositivo, istante di acquisizione e link di verifica su OpenStreetMap. Il nome viene ricavato via BigDataCloud dal browser, solo dalle coordinate appena ottenute con consenso; nessuna chiamata per le città del catalogo, nessuna localizzazione automatica tramite IP. Cache in memoria per 15 minuti, richieste simultanee condivise e timeout. Attribuzione e link privacy visibili: il servizio usa i segnali coordinate/IP per migliorare la propria geolocalizzazione (documentazione: https://www.bigdatacloud.com/docs/free-api/free-reverse-geocode-to-city-api).
+
+La provenienza meteo distingue il punto richiesto dal punto della griglia restituito da Open-Meteo, con distanza e quota di riferimento della previsione. Esplicitata la selezione automatica Best Match: non si attribuiscono dati a stazioni o a un modello specifico non identificato nella risposta. Se mancano metadati, vengono indicati come non disponibili. Le coordinate e la fonte sono visibili anche per le città scelte manualmente.
+
+Un errore nel riconoscimento del nome non blocca il meteo e non sostituisce le coordinate con Roma o con quelle della griglia: mostra un avviso e mantiene il link mappa. Risposte IP o coordinate non coerenti vengono ignorate. App **0.8.5 build 118**, cache PWA aggiornata; nessuna modifica a Worker, database o secret. Test: suite completa (29 test), località/coordinate/griglia distinte, null e coordinate zero, escaping, cache, richieste condivise e guasto del servizio nomi senza perdita del meteo.
 
 ### 0.8.4 — Meteo come fonte iniziale
 
