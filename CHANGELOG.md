@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.1] — Ultimi eventi, magnitudo e icone del riepilogo
+
+- Magnitudo evidenziata in un riquadro nelle schede sismiche, nel diario e nei popup, con tipo di magnitudo e valori zero preservati.
+- In Terremoti, scheda indipendente dalla località per l'ultimo evento del catalogo INGV (`orderby=time`, `limit=1`, nessun filtro geografico). Disponibile anche quando la geolocalizzazione è negata o non impostata.
+- In Incendi, ultima area bruciata rilevata nel catalogo EFFIS via WFS, ordinata per `FIREDATE` decrescente, senza bounding box locale. Mostra luogo, superficie e data della fonte; non è presentata come incendio ancora attivo. Il fuso delle date EFFIS prive di offset non viene inventato.
+- Clic o attivazione da tastiera del titolo centrano la mappa sull'evento; per EFFIS viene evidenziato il perimetro. Anche gli eventi degli elenchi locali sono selezionabili. La scelta non modifica la località condivisa né i filtri locali.
+- Sei icone SVG decorative, con colori coerenti, nelle schede di Intorno a me. Nessuna nuova dipendenza o richiesta esterna per le icone.
+- Cache in memoria degli ultimi eventi di 60 secondi, richieste simultanee condivise e aggiornamento manuale; errori del catalogo generale distinti dall'assenza di eventi locali.
+
+App **1.0.1 build 125**, cache PWA aggiornata. Nessuna modifica a Worker, secret o database. Verifiche: 30 suite, query senza vincoli geografici, parser WFS, geometrie, magnitudo zero, escaping, centramento della mappa e prove browser con geolocalizzazione non concessa.
+
 ## [1.0.0] — Intorno a me e diario ambientale
 
 Nuova schermata iniziale **Intorno a me**, con geolocalizzazione o ricerca città/CAP, senza ripiego su Roma. Riepiloga meteo, previsioni aria, eventi arborei documentati, disponibilità delle allerte e terremoti recenti. La località resta condivisa tra riepilogo, meteo, diario, allerte, terremoti e incendi; le viste EEA/OpenAQ/previsioni ricevono il punto selezionato. La scelta manuale di una città in queste viste aggiorna il riferimento comune. La località vive in memoria nella pagina, senza persistenza delle coordinate. Alberi conserva il proprio catalogo di comuni coperti.

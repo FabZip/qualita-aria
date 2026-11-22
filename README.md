@@ -6,7 +6,7 @@ A.R.I.A. è un’app web gratuita per consultare le condizioni ambientali e gli 
 
 ## Intorno a me
 
-La schermata iniziale raccoglie le informazioni della località scelta: meteo, previsioni della qualità dell’aria, eventi arborei documentati, allerte disponibili e terremoti recenti.
+La schermata iniziale presenta schede con icone per le informazioni della località scelta: meteo, previsioni della qualità dell’aria, eventi arborei documentati, allerte disponibili e terremoti recenti.
 
 La posizione può essere individuata con **Geolocalizza**, previo consenso, oppure cercando una città, un paese o un CAP italiano. I suggerimenti permettono di distinguere le località omonime. Nome e coordinate rendono riconoscibile il punto consultato; se la posizione non è disponibile, l’app invita a cercare una località.
 
@@ -22,8 +22,8 @@ La località è condivisa tra riepilogo, meteo, diario, allerte, terremoti e inc
 | **Previsioni qualità dell’aria** | Previsioni modellistiche CAMS tramite Open-Meteo per PM10, PM2.5, NO₂, O₃, SO₂ e CO, con riepiloghi giornalieri e per fascia oraria. |
 | **Alberi** | Bilanci, piantumazioni, abbattimenti e interventi documentati dalle fonti comunali, con luogo, quantità quando nota, periodo dei lavori, stato e fonte. Le raccolte di eventi coprono Roma e Guidonia Montecelio. |
 | **Allerte** | Bollettini ufficiali della Protezione Civile per la zona della località scelta: rischio idraulico, temporali e rischio idrogeologico, con validità e collegamento alla fonte. |
-| **Terremoti** | Eventi registrati da INGV, con magnitudo, profondità, ora, epicentro e distanza dalla località scelta. |
-| **Incendi** | Aree bruciate rilevate da Copernicus EFFIS negli ultimi uno, sette o trenta giorni. Collegamento al visualizzatore ufficiale per punti caldi satellitari e pericolo previsto. |
+| **Terremoti** | Eventi registrati da INGV, con magnitudo evidenziata, profondità, ora, epicentro e distanza. Una scheda mostra l’ultimo terremoto del catalogo anche senza geolocalizzazione; il clic sull’evento centra la mappa sull’epicentro. |
+| **Incendi** | Aree bruciate rilevate da Copernicus EFFIS negli ultimi uno, sette o trenta giorni. Una scheda mostra l’ultima area rilevata nel catalogo, senza filtro di distanza; il clic inquadra il suo perimetro. Collegamento al visualizzatore ufficiale per punti caldi satellitari e pericolo previsto. |
 
 Le viste osservazionali della qualità dell’aria possono affiancare informazioni sulle temperature delle stazioni fisiche disponibili.
 

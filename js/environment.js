@@ -13,8 +13,8 @@
   const day=v=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(v));
   const link=(url,label)=>{try{const u=new URL(url);return ['https:','http:'].includes(u.protocol)?`<a href="${esc(u.href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`:''}catch{return ''}};
   const memory=new Map(),pending=new Map();
-  async function request(url,json=true){
-    const key=String(url);const saved=memory.get(key);if(saved&&Date.now()-saved.at<900000)return saved.value;
+  async function request(url,json=true,ttl=900000){
+    const key=String(url);const saved=memory.get(key);if(saved&&Date.now()-saved.at<ttl)return saved.value;
     if(pending.has(key))return pending.get(key);
     const task=(async()=>{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),18000);try{const r=await fetch(url,{signal:controller.signal,cache:'no-store'});if(r.status===204)return json?{features:[]}:'';if(!r.ok)throw Error(`Servizio non disponibile (HTTP ${r.status})`);const value=json?await r.json():await r.text();if(memory.size>=64)memory.delete(memory.keys().next().value);memory.set(key,{at:Date.now(),value});return value}finally{clearTimeout(timer)}})();
     pending.set(key,task);try{return await task}finally{pending.delete(key)}
@@ -26,7 +26,7 @@
   }
   function earthquakes(payload,city){
     if(!Array.isArray(payload?.features))throw Error('Catalogo INGV non valido');
-    return payload.features.flatMap(f=>{const p=f.properties||{},c=f.geometry?.coordinates||[],where={lat:c[1],lon:c[0]},time=/(Z|[+-]\d{2}:\d{2})$/i.test(String(p.time||''))?String(p.time):`${p.time||''}Z`;if(!point(where)||stamp(time)===null||!finite(p.mag)||!p.eventId)return[];return[{id:`ingv-${p.eventId}`,category:'earthquakes',title:p.place||'Terremoto registrato',date:time,lat:Number(c[1]),lon:Number(c[0]),distance:distance(city,where),status:'Registrato',detail:`Magnitudo ${p.magType||''} ${p.mag} · profondità ${finite(c[2])?`${c[2]} km`:'non disponibile'}`,source:'INGV',url:`https://terremoti.ingv.it/event/${encodeURIComponent(p.eventId)}`} ]})
+    return payload.features.flatMap(f=>{const p=f.properties||{},c=f.geometry?.coordinates||[],where={lat:c[1],lon:c[0]},time=/(Z|[+-]\d{2}:\d{2})$/i.test(String(p.time||''))?String(p.time):`${p.time||''}Z`;if(!point(where)||stamp(time)===null||!finite(p.mag)||!p.eventId)return[];return[{id:`ingv-${p.eventId}`,category:'earthquakes',title:p.place||'Terremoto registrato',date:time,lat:Number(c[1]),lon:Number(c[0]),distance:point(city)?distance(city,where):null,magnitude:Number(p.mag),depth:finite(c[2])?Number(c[2]):null,magnitudeType:String(p.magType||''),status:'Registrato',detail:`Magnitudo ${p.magType||''} ${p.mag} · profondità ${finite(c[2])?`${c[2]} km`:'non disponibile'}`,source:'INGV',url:`https://terremoti.ingv.it/event/${encodeURIComponent(p.eventId)}`} ]})
   }
   function ringContains(ring,x,y){let inside=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const a=ring[i],b=ring[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])inside=!inside}return inside}
   function contains(geometry,city){const polygons=geometry?.type==='Polygon'?[geometry.coordinates]:geometry?.type==='MultiPolygon'?geometry.coordinates:[];return polygons.some(rings=>rings?.length&&ringContains(rings[0],Number(city.lon),Number(city.lat))&&!rings.slice(1).some(r=>ringContains(r,Number(city.lon),Number(city.lat))))}
@@ -53,13 +53,46 @@
     if(!['today','week','month'].includes(period))throw Error('Periodo incendi non valido');
     return `https://maps.effis.emergency.copernicus.eu/effis?service=WMS&version=1.1.1&request=GetMap&layers=modis.ba.${period}&styles=&srs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&format=image/png&transparent=true`
   }
-  globalThis.Environment={point,distance,quakeUrl,earthquakes,contains,alertZones,treeEvents,filterEvents,alerts,fireTile,esc,link};
+  function latestQuakeUrl(){return 'https://webservices.ingv.it/fdsnws/event/1/query?format=geojson&orderby=time&limit=1&nodata=204'}
+  function latestFireUrl(){
+    const url=new URL('https://maps.effis.emergency.copernicus.eu/effis');
+    url.search=new URLSearchParams({service:'WFS',version:'1.1.0',request:'GetFeature',typename:'modis.ba.poly',outputFormat:'application/json; subtype=geojson',srsName:'EPSG:4326',sortBy:'FIREDATE D',maxFeatures:'1'});return url.href
+  }
+  function fireEvent(payload){
+    if(!Array.isArray(payload?.features))throw Error('Catalogo EFFIS non valido');
+    const feature=payload.features[0];if(!feature)return null;
+    const p=feature.properties||{},geometry=feature.geometry,coords=[];
+    if(!['Polygon','MultiPolygon'].includes(geometry?.type))throw Error('Geometria EFFIS non valida');
+    const visit=a=>{if(!Array.isArray(a))return;if(a.length>=2&&!Array.isArray(a[0])){if(point({lat:a[1],lon:a[0]}))coords.push([Number(a[0]),Number(a[1])])}else a.forEach(visit)};visit(geometry.coordinates);
+    const raw=String(p.FIREDATE||''),dateOnly=raw.slice(0,10);
+    if(!coords.length||!/^\d{4}-\d{2}-\d{2}/.test(raw)||stamp(dateOnly)===null||!p.id)throw Error('Rilevamento EFFIS incompleto');
+    const bounds=[[Infinity,Infinity],[-Infinity,-Infinity]];for(const c of coords){bounds[0][0]=Math.min(bounds[0][0],c[0]);bounds[0][1]=Math.min(bounds[0][1],c[1]);bounds[1][0]=Math.max(bounds[1][0],c[0]);bounds[1][1]=Math.max(bounds[1][1],c[1])}
+    let country=p.COUNTRY;try{if(/^[A-Z]{2}$/.test(country))country=new Intl.DisplayNames(['it'],{type:'region'}).of(country)}catch{}
+    const place=[p.COMMUNE,p.PROVINCE,country].filter(v=>v&&v!=='N.A.');
+    return {id:`effis-${p.id}`,category:'fires',title:place.join(' · ')||`Area bruciata ${p.id}`,date:dateOnly,sourceTime:raw,updated:String(p.LASTUPDATE||''),lat:(bounds[0][1]+bounds[1][1])/2,lon:(bounds[0][0]+bounds[1][0])/2,distance:null,bounds,geometry,status:'Area bruciata rilevata',detail:`Superficie ${finite(p.AREA_HA)?`${Number(p.AREA_HA).toLocaleString('it-IT')} ha`:'non disponibile'}`,source:'Copernicus EFFIS / JRC',url:EFFIS}
+  }
+  async function latestEvent(kind){
+    const payload=await request(kind==='fires'?latestFireUrl():latestQuakeUrl(),true,60000);
+    if(kind==='fires')return fireEvent(payload);
+    const row=earthquakes(payload)[0];return row||null
+  }
+  function magnitudeHtml(e){return e.category==='earthquakes'&&finite(e.magnitude)?`<strong class="earthquake-magnitude"><span>Magnitudo ${esc(e.magnitudeType||'')}</span>${Number(e.magnitude).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})}</strong>`:''}
+  function eventHtml(e){return `<article class="environment-event" data-environment-focus="${esc(e.id)}"><span class="environment-tag">${e.category==='trees'?'Alberi':e.category==='fires'?'Incendi':'Terremoti'} · ${esc(e.status)}</span>${magnitudeHtml(e)}<h3><button type="button" class="environment-event-focus" data-environment-focus="${esc(e.id)}">${esc(e.title)}</button></h3><p>${esc(date(e.date))}${e.end?` – ${esc(date(e.end))}`:''}${e.distance===null?'':` · ${e.distance.toFixed(1)} km`}</p><p>${esc(e.category==='earthquakes'?`Profondità ${finite(e.depth)?`${e.depth} km`:'non disponibile'}`:e.detail)}</p>${link(e.url,e.source)}</article>`}
+  const iconPaths={weather:'<circle cx="9" cy="8" r="3"/><path d="M9 1v1m0 12v1M2 8H1m15 0h1M3.3 2.3l1 1m9.4 9.4 1 1M3.3 13.7l1-1m9.4-9.4 1-1M9 19h10a4 4 0 0 0 0-8 5 5 0 0 0-9 2 3 3 0 0 0-1 6Z"/>',air:'<path d="M3 8h12a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h6a3 3 0 1 1-3 3"/>',trees:'<path d="m12 2-6 8h3l-5 7h6v5h4v-5h6l-5-7h3Z"/>',alerts:'<path d="m12 3 10 18H2Z"/><path d="M12 9v5m0 3v1"/>',earthquakes:'<path d="M2 12h4l2-7 4 14 3-10 2 3h5"/>',fires:'<path d="M13 2c1 5-5 5-3 10 2-1 3-3 3-4 4 3 7 5 6 9a7 7 0 0 1-14-1c0-4 3-6 3-8 0 3 1 4 2 4"/>'};
+  function icon(name){return `<span class="environment-icon environment-icon-${name}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${iconPaths[name]||''}</svg></span>`}
+  function focusMap(target,event){
+    if(!target||!point(event))return false;
+    if(event.bounds)target.fitBounds(event.bounds,{padding:{top:130,bottom:35,left:45,right:45},maxZoom:13,duration:650});
+    else target.flyTo({center:[Number(event.lon),Number(event.lat)],zoom:10,offset:[0,70],duration:650});
+    return true
+  }
+  globalThis.Environment={point,distance,quakeUrl,earthquakes,contains,alertZones,treeEvents,filterEvents,alerts,fireTile,latestQuakeUrl,latestFireUrl,fireEvent,latestEvent,magnitudeHtml,eventHtml,focusMap,esc,link};
   if(typeof document==='undefined'||typeof source!=='function')return;
   for(const [key,name] of Object.entries(SOURCES))SOURCE_INFO[key]={name,years:['recent'],description:'',hint:''};
   const $=id=>document.getElementById(id),active=()=>Object.hasOwn(SOURCES,source());
   const baseConfigure=configureSourceUI,baseRender=render;
-  let events=[],city=null,view='',map=null,markers=[],renderSequence=0,loadKey='',loadPromise=null,loaded=null;
-  function stopMap(){for(const marker of markers)marker.remove();markers=[];map?.remove();map=null}
+  let events=[],city=null,view='',map=null,markers=[],renderSequence=0,loadKey='',loadPromise=null,loaded=null,latest=null,focusMarker=null,pendingFocus=null;
+  function stopMap(){focusMarker?.remove();focusMarker=null;for(const marker of markers)marker.remove();markers=[];map?.remove();map=null}
   const sharedApplied=new Map();
   configureSourceUI=function(){
     $('environmentPanel').classList.toggle('hidden',!active());
@@ -80,16 +113,32 @@
     $('pollutantSourceField').classList.remove('hidden');$('weatherLocationField').classList.remove('hidden');$('sourceDescription').textContent='';
   };
   function controls(){return `<div class="environment-filters"><label>Ricerca eventi<input id="environmentSearch" type="search" placeholder="Indirizzo, evento o fonte"></label><label>Categoria<select id="environmentCategory"><option value="all">Tutte</option><option value="trees">Alberi</option><option value="earthquakes">Terremoti</option></select></label><label>Periodo<select id="environmentDays"><option value="7">Da 7 giorni fa</option><option value="30" selected>Da 30 giorni fa</option><option value="365">Da un anno fa</option></select></label><label>Distanza<select id="environmentRadius"><option value="10">10 km</option><option value="50" selected>50 km</option><option value="100">100 km</option><option value="200">200 km</option></select></label></div>`}
-  function eventHtml(e){return `<article class="environment-event"><span class="environment-tag">${e.category==='trees'?'Alberi':'Terremoti'} · ${esc(e.status)}</span><h3>${esc(e.title)}</h3><p>${esc(date(e.date))}${e.end?` – ${esc(date(e.end))}`:''} · ${e.distance===null?'Posizione non disponibile':`${e.distance.toFixed(1)} km`}</p><p>${esc(e.detail)}</p>${link(e.url,e.source)}</article>`}
+  function focusEvent(event){
+    if(!map||!point(event))return;
+    const target=map;
+    const show=()=>{
+      if(map!==target)return;
+      focusMap(target,event);focusMarker?.remove();
+      focusMarker=new maplibregl.Marker({color:event.category==='fires'?'#fb923c':event.category==='earthquakes'?'#f0b657':event.detail.startsWith('Abbattimento')?'#ef7272':'#35d07f'}).setLngLat([event.lon,event.lat]).setPopup(new maplibregl.Popup({maxWidth:'320px',anchor:'bottom',offset:20}).setHTML(eventHtml(event))).addTo(target);
+      focusMarker.togglePopup();
+      if(event.geometry){
+        const feature={type:'Feature',properties:{},geometry:event.geometry};
+        if(target.getSource('focused-fire'))target.getSource('focused-fire').setData(feature);
+        else{target.addSource('focused-fire',{type:'geojson',data:feature});target.addLayer({id:'focused-fire-fill',type:'fill',source:'focused-fire',paint:{'fill-color':'#fb923c','fill-opacity':.35}});target.addLayer({id:'focused-fire-line',type:'line',source:'focused-fire',paint:{'line-color':'#fb923c','line-width':3}})}
+      }
+    };
+    if(target.isStyleLoaded())show();else target.once('load',show);
+    $('environmentMap')?.scrollIntoView({behavior:'smooth',block:'center'});
+  }
   function drawEvents(){
-    const list=filterEvents(events,{category:view==='earthquakes'?'earthquakes':$('environmentCategory')?.value||'all',query:$('environmentSearch')?.value||'',days:Number($('environmentDays')?.value||7),radius:Number($('environmentRadius')?.value||100)});
+    const list=point(city)?filterEvents(events,{category:view==='earthquakes'?'earthquakes':$('environmentCategory')?.value||'all',query:$('environmentSearch')?.value||'',days:Number($('environmentDays')?.value||7),radius:Number($('environmentRadius')?.value||100)}):[];
     $('environmentCount').textContent=`${list.length} eventi nei filtri selezionati`;
     $('environmentEvents').innerHTML=list.length?list.map(eventHtml).join(''):'<p>Nessun evento disponibile nei filtri selezionati. Non indica necessariamente assenza di eventi sul territorio.</p>';
     for(const m of markers)m.remove();markers=[];
-    if(map)for(const e of list){const marker=new maplibregl.Marker({color:e.category==='earthquakes'?'#f0b657':e.detail.startsWith('Piantumazione')?'#35d07f':'#ef7272'}).setLngLat([e.lon,e.lat]).setPopup(new maplibregl.Popup().setHTML(eventHtml(e))).addTo(map);markers.push(marker)}
+    if(map)for(const e of list){const marker=new maplibregl.Marker({color:e.category==='earthquakes'?'#f0b657':e.detail.startsWith('Piantumazione')?'#35d07f':'#ef7272'}).setLngLat([e.lon,e.lat]).setPopup(new maplibregl.Popup({maxWidth:'320px'}).setHTML(eventHtml(e))).addTo(map);markers.push(marker)}
     if(map&&list.length){const bounds=new maplibregl.LngLatBounds([Number(city.lon),Number(city.lat)],[Number(city.lon),Number(city.lat)]);for(const e of list)bounds.extend([e.lon,e.lat]);map.fitBounds(bounds,{padding:45,maxZoom:11,duration:0})}
   }
-  function makeMap(){if(!globalThis.maplibregl)return;map=new maplibregl.Map({container:'environmentMap',style:MAP_STYLE,cooperativeGestures:true,center:[Number(city.lon),Number(city.lat)],zoom:8});map.addControl(new maplibregl.NavigationControl({showCompass:false}));const current=map;map.on('load',()=>{if(map===current)drawEvents()})}
+  function makeMap(){if(!globalThis.maplibregl)return;map=new maplibregl.Map({container:'environmentMap',style:MAP_STYLE,cooperativeGestures:true,center:[Number((city||latest).lon),Number((city||latest).lat)],zoom:8});map.addControl(new maplibregl.NavigationControl({showCompass:false}));const current=map;map.on('load',()=>{if(map===current){drawEvents();if(pendingFocus){const selected=pendingFocus;pendingFocus=null;focusEvent(selected)}}})}
   async function bounded(task){let timer;try{return await Promise.race([task,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('Archivio arboreo non disponibile')),20000))])}finally{clearTimeout(timer)}}
   async function load(city){
     const key=`${city.lat}:${city.lon}`;if(loaded&&loadKey===key&&Date.now()-loaded.at<900000)return loaded;if(loadPromise&&loadKey===key)return loadPromise;
@@ -103,7 +152,7 @@
   function alertHtml(data){if(!data)return `<p>Bollettino non disponibile. ${link(DPC,'Consulta Protezione Civile')}</p>`;return `<h3>${esc(data.title)}</h3>${data.stale?'<p class="environment-warning">Il bollettino disponibile è scaduto: non descrive le allerte attuali.</p>':data.current.map(p=>`<article class="environment-event"><h3>Validità ${esc(p.date)}</h3>${p.zones.length?p.zones.map(z=>`<strong>${esc(z.name)}</strong>${z.risks.map(r=>`<p>${esc(r.type)}: ${esc(r.text)}</p>`).join('')}`).join(''):'<p>Nessuna zona individuata per queste coordinate. Non equivale ad assenza di allerta.</p>'}</article>`).join('')}${link(DPC,'Bollettino ufficiale e aggiornamenti regionali')}<p>La classificazione riguarda la zona di allerta del punto scelto, non una previsione puntuale. Verifica le comunicazioni della tua Regione e del Comune.</p>`}
   function openSource(name){$('sourceSelect').value=name;const shared=globalThis.SharedLocation?.peek();if(shared&&name==='trees'){const nearest=Object.values(TREE_CITY_CONFIG).sort((a,b)=>distance(shared,{lat:a.center[1],lon:a.center[0]})-distance(shared,{lat:b.center[1],lon:b.center[0]}))[0];state.sourceSettings.delete(name);configureTreeCityOptions(true);$('eeaCitySelect').value=nearest.id}if(shared&&['eea','openaq','forecast'].includes(name)){state.eeaCities.set('shared-location',{...shared,id:'shared-location'});state.sourceSettings.delete(name);$('eeaCitySelect').dataset[`${name}Default`]='true';configureTreeCityOptions(false);$('eeaCitySelect').value='shared-location'}changeSource()}
   async function overview(token,data){
-    $('environmentBody').innerHTML=`<div class="environment-grid"><article class="environment-card"><h3>Meteo</h3><div id="nearbyWeather">Caricamento…</div><button data-environment-open="weather">Apri meteo</button></article><article class="environment-card"><h3>Qualità dell’aria</h3><div id="nearbyAir">Caricamento…</div><button data-environment-open="forecast">Apri previsioni aria</button><button data-environment-open="eea">Stazioni EEA</button></article><article class="environment-card"><h3>Alberi · entro 50 km</h3><div id="nearbyTrees"></div><button data-environment-open="diary">Apri diario</button><button data-environment-open="trees">Fonti comunali</button></article><article class="environment-card"><h3>Allerte</h3><p>${data.alerts?.stale?'Bollettino scaduto':data.alerts?'Bollettino disponibile: consulta livelli e validità':'Bollettino non disponibile'}</p><button data-environment-open="alerts">Consulta allerte</button></article><article class="environment-card"><h3>Terremoti · entro 100 km</h3><p>${data.quakeAvailable?`${filterEvents(data.events,{category:'earthquakes',days:7,radius:100}).length} eventi registrati negli ultimi 7 giorni`:'Catalogo non disponibile'}</p><button data-environment-open="earthquakes">Apri terremoti</button></article><article class="environment-card"><h3>Incendi</h3><p>Aree bruciate sulla mappa Copernicus EFFIS; accesso al portale per punti caldi e pericolo previsto.</p><button data-environment-open="fires">Apri incendi</button></article></div>`;
+    $('environmentBody').innerHTML=`<div class="environment-grid"><article class="environment-card"><h3 class="environment-card-title">${icon('weather')}<span>Meteo</span></h3><div id="nearbyWeather">Caricamento…</div><button data-environment-open="weather">Apri meteo</button></article><article class="environment-card"><h3 class="environment-card-title">${icon('air')}<span>Qualità dell’aria</span></h3><div id="nearbyAir">Caricamento…</div><button data-environment-open="forecast">Apri previsioni aria</button><button data-environment-open="eea">Stazioni EEA</button></article><article class="environment-card"><h3 class="environment-card-title">${icon('trees')}<span>Alberi · entro 50 km</span></h3><div id="nearbyTrees"></div><button data-environment-open="diary">Apri diario</button><button data-environment-open="trees">Fonti comunali</button></article><article class="environment-card"><h3 class="environment-card-title">${icon('alerts')}<span>Allerte</span></h3><p>${data.alerts?.stale?'Bollettino scaduto':data.alerts?'Bollettino disponibile: consulta livelli e validità':'Bollettino non disponibile'}</p><button data-environment-open="alerts">Consulta allerte</button></article><article class="environment-card"><h3 class="environment-card-title">${icon('earthquakes')}<span>Terremoti · entro 100 km</span></h3><p>${data.quakeAvailable?`${filterEvents(data.events,{category:'earthquakes',days:7,radius:100}).length} eventi registrati negli ultimi 7 giorni`:'Catalogo non disponibile'}</p><button data-environment-open="earthquakes">Apri terremoti</button></article><article class="environment-card"><h3 class="environment-card-title">${icon('fires')}<span>Incendi</span></h3><p>Aree bruciate sulla mappa Copernicus EFFIS; accesso al portale per punti caldi e pericolo previsto.</p><button data-environment-open="fires">Apri incendi</button></article></div>`;
     const trees=filterEvents(data.events,{category:'trees',days:30,radius:50}).slice(0,3);$('nearbyTrees').innerHTML=trees.length?trees.map(eventHtml).join(''):data.trees?'<p>Nessun evento documentato nei filtri. Raccolta parziale, non censimento completo.</p>':'<p>Nessuna fonte comunale coperta in questa zona. Attualmente Roma e Guidonia Montecelio.</p>';
     await Promise.allSettled([
       WeatherForecast.fetchWeather(city).then(r=>{if(token!==renderSequence)return;const c=r.payload.current;$('nearbyWeather').innerHTML=`<strong class="environment-value">${finite(c?.temperature_2m)?`${esc(c.temperature_2m)} °C`:'—'}</strong><p>${esc(WeatherForecast.condition(c?.weather_code,c?.is_day)[1])}</p><p>Open-Meteo · stima modellistica · scaricato ${esc(date(new Date(r.savedAt).toISOString()))}</p>`}).catch(()=>{if(token===renderSequence)$('nearbyWeather').textContent='Meteo non disponibile: riprova dalla sezione Meteo.'}),
@@ -111,13 +160,24 @@
     ])
   }
   render=async function(){
-    if(!active())return baseRender();configureSourceUI();const token=++renderSequence;++state.renderToken;view=source();stopMap();$('environmentPlace').textContent='';$('environmentTitle').textContent=SOURCES[view];$('environmentBody').textContent='Caricamento della località…';$('environmentStatus').textContent='';
-    try{city=await SharedLocation.get();if(token!==renderSequence)return;$('weatherSearchStatus').textContent='';$('environmentPlace').textContent=`${city.name} · ${Number(city.lat).toFixed(4)}, ${Number(city.lon).toFixed(4)}`;
+    if(!active())return baseRender();configureSourceUI();const token=++renderSequence;++state.renderToken;view=source();if(view!=='diary')pendingFocus=null;stopMap();$('environmentPlace').textContent='';$('environmentTitle').textContent=SOURCES[view];$('environmentBody').textContent='Caricamento della località…';$('environmentStatus').textContent='';
+    try{
+      const independent=['earthquakes','fires'].includes(view);
+      const [locationResult,latestResult]=await Promise.allSettled([SharedLocation.get(),independent?latestEvent(view):Promise.resolve(null)]);
+      if(token!==renderSequence)return;
+      city=locationResult.status==='fulfilled'?locationResult.value:null;
+      if(!city&&!independent)throw locationResult.reason;
+      latest=latestResult.status==='fulfilled'?latestResult.value:null;
+      $('weatherSearchStatus').textContent='';
+      $('environmentPlace').textContent=city?`${city.name} · ${Number(city.lat).toFixed(4)}, ${Number(city.lon).toFixed(4)}`:'Località non impostata · ultimo evento del catalogo';
+      const latestHtml=independent?`<section class="environment-latest" aria-labelledby="environmentLatestTitle"><h2 id="environmentLatestTitle">${view==='earthquakes'?'Ultimo terremoto · catalogo INGV':'Ultima area bruciata rilevata · catalogo EFFIS'}</h2><p>Senza filtro di distanza dalla tua posizione.</p>${latest?eventHtml(latest):`<p>${latestResult.status==='rejected'?'Ultimo evento non disponibile. Premi Aggiorna per riprovare.':'Nessun evento restituito dal catalogo.'}</p>`}${view==='fires'&&latest?`<p>Prima rilevazione: ${esc(latest.sourceTime)} · orario della fonte, fuso non indicato. Le date del rilevamento non coincidono necessariamente con inizio e fine dell’incendio.</p>`:''}</section>`:'';
       if(view==='fires'){
-        const x=Number(city.lon)*20037508.34/180,y=Math.log(Math.tan((90+Math.max(-85.05112878,Math.min(85.05112878,Number(city.lat))))*Math.PI/360))*20037508.34/Math.PI;
+        const center=city||latest;
+        if(!center){$('environmentBody').innerHTML=latestHtml+'<p>Cerca una località per visualizzare la mappa.</p>';return}
+        const x=Number(center.lon)*20037508.34/180,y=Math.log(Math.tan((90+Math.max(-85.05112878,Math.min(85.05112878,Number(center.lat))))*Math.PI/360))*20037508.34/Math.PI;
         const url=new URL(EFFIS);url.search=new URLSearchParams({c:`${x},${y}`,z:'8'});
-        $('environmentBody').innerHTML=`<label>Periodo delle aree bruciate<select id="firePeriod"><option value="today">Ultime 24 ore</option><option value="week" selected>Ultimi 7 giorni</option><option value="month">Ultimi 30 giorni</option></select></label><p>Copernicus EFFIS · aree bruciate rilevate, evidenziate sulla mappa. L’assenza di poligoni non esclude incendi piccoli, recenti o non rilevati. Per punti caldi satellitari e pericolo previsto consulta ${link(url.href,'il visualizzatore ufficiale')}.</p><div id="environmentMap" class="environment-map" aria-label="Mappa delle aree bruciate"></div><p id="fireStatus" role="status">Caricamento aree bruciate…</p>`;
-        map=new maplibregl.Map({container:'environmentMap',style:MAP_STYLE,cooperativeGestures:true,center:[Number(city.lon),Number(city.lat)],zoom:8});
+        $('environmentBody').innerHTML=`${latestHtml}<label>Periodo delle aree bruciate<select id="firePeriod"><option value="today">Ultime 24 ore</option><option value="week" selected>Ultimi 7 giorni</option><option value="month">Ultimi 30 giorni</option></select></label><p>Copernicus EFFIS · aree bruciate rilevate, evidenziate sulla mappa. L’assenza di poligoni non esclude incendi piccoli, recenti o non rilevati. Per punti caldi satellitari e pericolo previsto consulta ${link(url.href,'il visualizzatore ufficiale')}.</p><div id="environmentMap" class="environment-map" aria-label="Mappa delle aree bruciate"></div><p id="fireStatus" role="status">Caricamento aree bruciate…</p>`;
+        map=new maplibregl.Map({container:'environmentMap',style:MAP_STYLE,cooperativeGestures:true,center:[Number(center.lon),Number(center.lat)],zoom:8});
         map.addControl(new maplibregl.NavigationControl({showCompass:false}));
         const current=map;
         map.on('load',()=>{if(map!==current)return;map.addSource('effis',{type:'raster',tiles:[fireTile()],tileSize:256,attribution:'Copernicus EFFIS / European Commission JRC'});map.addLayer({id:'effis',type:'raster',source:'effis',paint:{'raster-opacity':.85}})});
@@ -127,17 +187,22 @@
         $('firePeriod').addEventListener('change',()=>{failed=false;$('fireStatus').textContent='Caricamento aree bruciate…';map?.getSource('effis')?.setTiles([fireTile($('firePeriod').value)])});
         return
       }
-      $('environmentBody').textContent='Caricamento delle fonti ambientali…';
-      const data=await load(city);if(token!==renderSequence)return;events=data.events;
-      $('environmentStatus').textContent=`Consultato ${date(new Date(data.at).toISOString())}. ${data.errors?'Una o più fonti non disponibili. ':''}${data.partial?'Archivio arboreo aggiornato non raggiungibile; dati consolidati parziali. ':''}${data.limited&&view!=='alerts'?'INGV: raggiunto il limite di 500 eventi; elenco parziale. ':''}${!data.quakeAvailable?'Catalogo sismico non disponibile. ':''}`;
+      $('environmentBody').innerHTML=latestHtml+'<p>Caricamento delle fonti ambientali…</p>';
+      const data=city?await load(city):{at:Date.now(),events:[],quakeAvailable:false};if(token!==renderSequence)return;events=data.events;
+      $('environmentStatus').textContent=`Consultato ${date(new Date(data.at).toISOString())}. ${data.errors?'Una o più fonti non disponibili. ':''}${data.partial?'Archivio arboreo aggiornato non raggiungibile; dati consolidati parziali. ':''}${data.limited&&view!=='alerts'?'INGV: raggiunto il limite di 500 eventi; elenco parziale. ':''}${!data.quakeAvailable&&city?'Catalogo sismico locale non disponibile. ':''}`;
       if(view==='nearby'){await overview(token,data);return}
       if(view==='alerts'){$('environmentBody').innerHTML=alertHtml(data.alerts);return}
-      $('environmentBody').innerHTML=`${controls()}<p>${view==='earthquakes'?'INGV · terremoti registrati, non previsioni. Catalogo dell’ultimo anno entro 200 km, fino a 500 eventi più recenti.':'Eventi arborei documentati di Roma e Guidonia Montecelio e terremoti INGV. Include gli interventi programmati futuri; esclude dalla mappa gli eventi senza posizione o data.'}</p><div id="environmentMap" class="environment-map" aria-label="Mappa degli eventi"></div><p id="environmentCount" role="status"></p><div id="environmentEvents"></div>`;
+      $('environmentBody').innerHTML=`${latestHtml}${!city?'<p>Cerca una località per consultare anche gli eventi vicini.</p>':''}${controls()}<p>${view==='earthquakes'?'INGV · terremoti registrati, non previsioni. Catalogo dell’ultimo anno entro 200 km, fino a 500 eventi più recenti.':'Eventi arborei documentati di Roma e Guidonia Montecelio e terremoti INGV. Include gli interventi programmati futuri; esclude dalla mappa gli eventi senza posizione o data.'}</p><div id="environmentMap" class="environment-map" aria-label="Mappa degli eventi"></div><p id="environmentCount" role="status"></p><div id="environmentEvents"></div>`;
       if(view==='earthquakes'){$('environmentCategory').value='earthquakes';$('environmentCategory').disabled=true;$('environmentDays').value='7';$('environmentRadius').value='100'}
-      makeMap();drawEvents();
+      if(city||latest)makeMap();drawEvents();
     }catch(error){if(token!==renderSequence)return;$('environmentBody').innerHTML=`<p role="alert">${esc(error.message||'Dati non disponibili')}</p>`}
   };
-  $('environmentPanel').addEventListener('click',event=>{const button=event.target.closest('[data-environment-open]');if(button)openSource(button.dataset.environmentOpen)});
+  $('environmentPanel').addEventListener('click',event=>{
+    const button=event.target.closest('[data-environment-open]');if(button){openSource(button.dataset.environmentOpen);return}
+    if(event.target.closest('a'))return;
+    const target=event.target.closest('[data-environment-focus]');
+    if(target){const id=target.dataset.environmentFocus;const selected=latest?.id===id?latest:events.find(e=>e.id===id);if(selected){if(!map&&view==='nearby'){pendingFocus=selected;openSource('diary')}else focusEvent(selected)}}
+  });
   $('environmentPanel').addEventListener('input',event=>{if(event.target.id==='environmentSearch')drawEvents()});
   $('environmentPanel').addEventListener('change',event=>{if(['environmentCategory','environmentDays','environmentRadius'].includes(event.target.id))drawEvents()});
   $('environmentRefresh').addEventListener('click',()=>{loaded=null;memory.clear();render()});
