@@ -24,7 +24,7 @@ assert.throws(()=>api.validate({daily:{time:[]}}),/non valida/);
 vm.runInContext(source,context);await context.WeatherForecast.fetchWeather(city);assert.equal(calls,3);
 clock+=16*60*1000;failure=Error('offline');await assert.rejects(()=>context.WeatherForecast.fetchWeather(city),/offline/);failure=null;await context.WeatherForecast.fetchWeather(city);assert.equal(calls,5,'Failure does not poison later requests');
 context.localStorage={getItem(){throw Error('blocked')},setItem(){throw Error('blocked')}};vm.runInContext(source,context);await context.WeatherForecast.fetchWeather(city);assert.equal(calls,6);
-assert.match(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),/option value="weather" selected/);
+assert.match(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),/option value="nearby" selected/);
 
 assert.match(fs.readFileSync(new URL('../service-worker.js',import.meta.url),'utf8'),/url.hostname==='api.open-meteo.com'/);
 // UI failures and old geolocation callbacks cannot overwrite a newly selected city.

@@ -76,7 +76,7 @@
         if(!postalPending)postalPending=(async()=>{
           const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
           try{
-          const response=await fetch('data/italian-postal-codes.json?v=0.8.10',{signal:controller.signal});
+          const response=await fetch('data/italian-postal-codes.json?v=1.0.0',{signal:controller.signal});
           if(!response.ok)throw Error('Catalogo CAP temporaneamente non disponibile. Cerca il nome del comune.');
           const payload=await response.json();if(!payload?.codes||typeof payload.codes!=='object')throw Error('Catalogo CAP non valido. Cerca il nome del comune.');
           postalData=payload;return payload
@@ -153,6 +153,7 @@
   SOURCE_INFO.weather={name:'Meteo · Open-Meteo',years:['forecast'],description:'<strong>Meteo:</strong> situazione attuale stimata, prossime 24 ore e previsioni a 7 giorni per la città selezionata. Dati Open-Meteo.',hint:''};
   const baseConfigure=configureSourceUI,baseRender=render;
   let selection=null,geoPromise=null,geoSaved=null,searchTimer=null,searchController=null,searchSequence=0,results=[];
+  const locationSource=()=>['weather','nearby','diary','alerts','earthquakes','fires'].includes(source());
   const weather=()=>source()==='weather'&&!isTemperature();
   function layout(active){
     $('weatherPanel').classList.toggle('hidden',!active);
@@ -201,11 +202,11 @@
     const timeout=setTimeout(()=>controller.abort(),10000);
     $('weatherSearchStatus').textContent='Ricerca località…';
     try{
-      const found=await findLocations(query,controller.signal);if(token!==searchSequence||!weather())return;
+      const found=await findLocations(query,controller.signal);if(token!==searchSequence||!locationSource())return;
       results=found;
       $('weatherSearchResults').innerHTML=results.map((city,i)=>`<li><button type="button" data-weather-place="${i}">${escape(city.name)}</button></li>`).join('');
       $('weatherSearchStatus').textContent=results.length?`${results.length} risultati. Scegli la località.`:postalCode(query)?'CAP italiano non trovato nel catalogo. Cerca il nome del comune.':'Nessuna località trovata. Prova con un nome diverso.'
-    }catch(error){if(token===searchSequence&&weather())$('weatherSearchStatus').textContent=error.name==='AbortError'?'Ricerca interrotta. Riprova.':error.message}
+    }catch(error){if(token===searchSequence&&locationSource())$('weatherSearchStatus').textContent=error.name==='AbortError'?'Ricerca interrotta. Riprova.':error.message}
     finally{clearTimeout(timeout)}
   }
   render=async function(){
@@ -231,6 +232,11 @@
   $('weatherSearch').addEventListener('input',()=>{searchSequence++;searchController?.abort();clearTimeout(searchTimer);$('weatherSearchResults').innerHTML='';searchTimer=setTimeout(runSearch,450)});
   $('weatherSearchResults').addEventListener('click',event=>{const button=event.target.closest('[data-weather-place]');if(button&&results[Number(button.dataset.weatherPlace)])chooseLocation(results[Number(button.dataset.weatherPlace)])});
   $('weatherGeolocate').addEventListener('click',()=>chooseLocation(null));
+  globalThis.SharedLocation={
+    get:async()=>resolveLocation(await selectedCity()),
+    peek:()=>selection||geoSaved?.city||null,
+    set:city=>{buildUrl(city);selection=city;$('weatherSearch').value=city.name;$('weatherSearchStatus').textContent='';$('weatherSearchResults').innerHTML='';searchSequence++;searchController?.abort();clearTimeout(searchTimer)}
+  };
   Object.assign(globalThis.WeatherForecast,{chooseLocation});
   $('weatherPanel').addEventListener('click',event=>{if(event.target.closest('[data-weather-retry]')&&weather())render()});
 })();
