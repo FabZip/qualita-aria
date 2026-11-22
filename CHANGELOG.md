@@ -1,4 +1,6 @@
-# 1.0.0 — Intorno a me e diario ambientale
+# Changelog
+
+## [1.0.0] — Intorno a me e diario ambientale
 
 Nuova schermata iniziale **Intorno a me**, con geolocalizzazione o ricerca città/CAP, senza ripiego su Roma. Riepiloga meteo, previsioni aria, eventi arborei documentati, disponibilità delle allerte e terremoti recenti. La località resta condivisa tra riepilogo, meteo, diario, allerte, terremoti e incendi; le viste EEA/OpenAQ/previsioni ricevono il punto selezionato. La scelta manuale di una città in queste viste aggiorna il riferimento comune. La località vive in memoria nella pagina, senza persistenza delle coordinate. Alberi conserva il proprio catalogo di comuni coperti.
 
@@ -14,7 +16,7 @@ Riepilogo aria esplicitamente modellistico (CAMS / Open-Meteo), distinto dalle m
 
 App **1.0.0 build 124**, Worker ambientale **0.11.0**, nessuna migrazione, secret o nuovo deploy Worker. Verifiche: 30 suite automatiche superate; parser INGV, date, distanza, filtri, geometrie e bollettini scaduti; browser con dati reali su Guidonia e Milano, allerta locale, terremoti, ricerca nel diario, mappa EFFIS e passaggio della località verso EEA. Layout a 390 px senza overflow orizzontale. Geolocalizzazione del dispositivo non concessa dall'agente: percorsi con consenso/rifiuto coperti dalle fixture già presenti.
 
-# 0.8.10 — Rimozione della fonte ARPA Lazio
+## [0.8.10] — Rimozione della fonte ARPA Lazio
 
 Rimossa la fonte autonoma ARPA Lazio: opzione nel menu, selezione del comune, valutazioni annuali, grafico storico, parser CSV/XLSX, cache e stili dedicati. Rimossa anche la dipendenza SheetJS, usata soltanto per quei file. Restano Meteo, EEA, OpenAQ, previsioni della qualità dell'aria e alberi, con i rispettivi confronti e filtri.
 
@@ -22,19 +24,19 @@ I confini ISTAT condivisi con gli alberi restano disponibili tramite funzioni co
 
 App **0.8.10 build 123**, cache PWA aggiornata. Superate le 29 suite rimaste; eliminato il test del parser ARPA rimosso, aggiornati i test di cambio fonte e render OpenAQ.
 
-# 0.8.9 — Radar senza testi ridondanti
+## [0.8.9] — Radar senza testi ridondanti
 
 Rimossi la spiegazione permanente sotto il radar e il collegamento esterno duplicato: restano il marchio e il link RainViewer nel widget. Il messaggio di caricamento scompare al caricamento dell'iframe; eventuali errori invitano a usare Ricarica radar.
 
 App **0.8.9 build 122**, cache PWA aggiornata. Suite completa: 30 test superati. Worker e database invariati.
 
-# 0.8.8 — Ricerca meteo senza azioni duplicate
+## [0.8.8] — Ricerca meteo senza azioni duplicate
 
 Rimosso il pulsante Cerca: i suggerimenti compaiono automaticamente digitando e la scelta della località aggiorna meteo e radar. Invio continua ad anticipare la ricerca mentre si digita, ma non rilancia il geocoding del nome completo di una località già selezionata (causa del falso messaggio “località non trovata”, anche dopo la selezione di un CAP). Eliminata la riga duplicata “Previsioni per…” sotto la ricerca; la località resta visibile nella scheda meteo.
 
 App **0.8.8 build 121**, cache PWA aggiornata; Worker e database invariati. Verifica: suite completa e regressione selezione CAP seguita da Invio, senza nuova richiesta di ricerca.
 
-# 0.8.7 — Widget ufficiale RainViewer e ricerca CAP italiani
+## [0.8.7] — Widget ufficiale RainViewer e ricerca CAP italiani
 
 Il radar usa ora il widget ufficiale offerto dal comando **Incorpora** di [RainViewer](https://www.rainviewer.com/it/weather-radar-map-live.html), con tema scuro e centratura sulla località scelta. Animazione, timeline, zoom e funzioni interne sono gestiti direttamente da RainViewer; i controlli esterni consentono di ricentrare, ricaricare e aprire il radar in una nuova scheda. Disponibilità e funzioni dipendono dal servizio. Sostituito il precedente renderer delle immagini radar: le limitazioni dell'API pubblica descritte nella release 0.8.6 non definiscono le funzioni del widget.
 
@@ -46,7 +48,7 @@ Catalogo: 4.736 CAP e 18.415 località, [GeoNames IT.zip](https://download.geona
 
 App **0.8.7 build 120**, cache PWA aggiornata. Nessuna modifica a Worker, database o secret. Verifiche: 30 test automatici superati, ricerca e selezione di `00012` nel browser e caricamento effettivo del widget ufficiale.
 
-# 0.8.6 — Radar meteo, ricerca località e avvio geolocalizzato
+## [0.8.6] — Radar meteo, ricerca località e avvio geolocalizzato
 
 La pagina Meteo ora usa lo stesso stile cartografico delle altre fonti: condizioni attuali, mappa radar centrale e previsioni orarie/giornaliere sotto. Rimossa la sezione “Località della previsione”; nome della località e coordinate restano compatti accanto al meteo. Il selettore limitato alle città italiane è sostituito da ricerca mondiale di città, paesi e CAP tramite Open-Meteo / GeoNames, con risultati distinti per provincia/regione/Paese, attesa di 450 ms, cancellazione delle richieste precedenti e gestione accessibile degli esiti.
 
@@ -60,7 +62,7 @@ Riferimenti: https://www.rainviewer.com/api/weather-maps-api.html, https://www.r
 
 App **0.8.6 build 119**, cache PWA aggiornata; nessun nuovo Worker, database, account o secret. Verifiche: 30 test superati, API reali RainViewer e ricerca Guidonia, controlli radar nel browser e layout a 390 px senza overflow. Geolocalizzazione verificata con fixture controllate nei test; nessun consenso di posizione del dispositivo concesso automaticamente dall'agente.
 
-# 0.8.5 — Posizione meteo riconoscibile e provenienza
+## [0.8.5] — Posizione meteo riconoscibile e provenienza
 
 Con Geolocalizza, la scheda meteo mostra località/comune/regione/Paese quando identificabili, coordinate effettivamente richieste al servizio, accuratezza dichiarata dal dispositivo, istante di acquisizione e link di verifica su OpenStreetMap. Il nome viene ricavato via BigDataCloud dal browser, solo dalle coordinate appena ottenute con consenso; nessuna chiamata per le città del catalogo, nessuna localizzazione automatica tramite IP. Cache in memoria per 15 minuti, richieste simultanee condivise e timeout. Attribuzione e link privacy visibili: il servizio usa i segnali coordinate/IP per migliorare la propria geolocalizzazione (documentazione: https://www.bigdatacloud.com/docs/free-api/free-reverse-geocode-to-city-api).
 
@@ -68,7 +70,7 @@ La provenienza meteo distingue il punto richiesto dal punto della griglia restit
 
 Un errore nel riconoscimento del nome non blocca il meteo e non sostituisce le coordinate con Roma o con quelle della griglia: mostra un avviso e mantiene il link mappa. Risposte IP o coordinate non coerenti vengono ignorate. App **0.8.5 build 118**, cache PWA aggiornata; nessuna modifica a Worker, database o secret. Test: suite completa (29 test), località/coordinate/griglia distinte, null e coordinate zero, escaping, cache, richieste condivise e guasto del servizio nomi senza perdita del meteo.
 
-# 0.8.4 — Meteo come fonte iniziale
+## [0.8.4] — Meteo come fonte iniziale
 
 Nuova fonte iniziale **Meteo · Open-Meteo**, con Roma selezionata, città italiane e opzione Geolocalizza su richiesta. Mostra condizioni attuali stimate dal modello, temperatura percepita, umidità, vento e precipitazioni, prossime 24 ore e previsione a 7 giorni con minime/massime, pioggia e vento. Orari nel fuso della località e condizioni meteorologiche tradotte in italiano. Nessun anno o filtro inquinante nella schermata meteo; le altre fonti restano disponibili con le proprie selezioni.
 
@@ -78,7 +80,7 @@ Cache per coordinate di 15 minuti in memoria e localStorage, riuso delle richies
 
 App **0.8.4 build 117**, cache PWA aggiornata; Worker, secret e database invariati. Verifiche: suite automatica (29 test), risposta API reale, browser con Roma/Milano e passaggio alle previsioni aria, layout mobile 390 px senza overflow, 24 schede orarie e 7 giornaliere.
 
-# 0.8.3 — Calendari arborei di Roma e intervalli dei lavori
+## [0.8.3] — Calendari arborei di Roma e intervalli dei lavori
 
 Importazione giornaliera dei calendari ufficiali dei 15 Municipi di Roma, oltre agli avvisi del dipartimento Ambiente. Gli intervalli mantengono inizio e fine lavori anche oltre dicembre; un intervento non risulta trascorso finché non termina il periodo previsto. La data dell'avviso non viene più usata come data di esecuzione quando questa manca, anche per gli avvisi automatici già archiviati. Le date manuali restano invariate.
 
@@ -88,7 +90,7 @@ App `0.8.3`, build `116`, Worker ambientale `0.11.0`; migrazione D1 `0013_tree_c
 
 Distribuzione verificata il 21 novembre 2026: migrazione 0013 applicata, Worker 0.11.0 online e prima importazione dei 15 calendari completata senza errori. API pubblica: 305 eventi Roma 2026, di cui 13 da calendario ancora nel periodo programmato; i due figli manuali di `IDS1677374` restano separati con un abbattimento ciascuno. L'importazione iniziale usa gli stessi upsert del Worker su HTML ufficiali appena verificati, senza leggere secret. La geocodifica prosegue con il cron dedicato.
 
-# 0.8.2 — Divisione di eventi senza località originali
+## [0.8.2] — Divisione di eventi senza località originali
 
 Corretto il blocco del salvataggio quando l'evento automatico ha `locations: []`: il server ora valida gli indirizzi dei nuovi interventi, senza richiederli anche nel record originale incompleto. La stessa correzione consente di correggere o rimuovere questi eventi. Fonte comune e transazione atomica restano preservate.
 
@@ -104,11 +106,11 @@ npx wrangler deploy --config ./wrangler.toml
 
 Regressione basata sull'evento pubblico `IDS1677374` (piazza San Saturnino / via Avigliana), letto senza modificare D1 remoto: la validazione falliva prima della transazione. Test su SQLite locale di divisione con due indirizzi e un abbattimento ciascuno, modifica/rimozione dell'originale incompleto, importazione dal catalogo locale e rifiuto atomico delle parti non valide. Tutti i 21 file di test superati.
 
-# 0.8.1 — Ricerca negli eventi amministrativi
+## [0.8.1] — Ricerca negli eventi amministrativi
 
 Il pannello di modifica Alberi offre “Cerca negli eventi”: filtra in tempo reale titolo, indirizzi, municipio/zona, fonte, descrizione, data, quantità e tipo. La ricerca ignora maiuscole e accenti, combina più parole e mostra il conteggio dei risultati. Svuotando il campo tornano tutti gli eventi; le modifiche non salvate restano nei rispettivi editor durante il filtraggio. App `0.8.1` build `114`, cache PWA aggiornata. Nessuna nuova migrazione o modifica ai Worker rispetto a 0.8.0.
 
-# 0.8.0 — Amministrazione e divisione degli eventi Alberi
+## [0.8.0] — Amministrazione e divisione degli eventi Alberi
 
 Il pannello amministratore (cinque tocchi sulla versione) consente di caricare gli eventi per Comune e anno, anche senza una segnalazione. Ogni evento offre modifica del numero di alberi e del tipo: **Piantumazione · verde** oppure **Abbattimento · rosso**; le quantità sconosciute possono restare vuote.
 
@@ -127,19 +129,19 @@ npx wrangler deploy --config ./wrangler.toml
 
 Nessuna modifica ai secret, al proxy OpenAQ o a EEA. Migrazione e deploy remoti non eseguiti durante lo sviluppo. Suite di 21 file di test superata; SQLite con tutte le migrazioni, collaudo browser locale su archivio simulato e dry-run Wrangler riusciti.
 
-# 0.7.32 — Etichette e barre Alberi
+## [0.7.32] — Etichette e barre Alberi
 
 Corretto il riepilogo Alberi: le etichette “Piantati documentati” e “Abbattimenti documentati” hanno spazio dedicato e vanno a capo senza sovrapporsi alle barre. Su mobile ogni etichetta precede la propria barra su una riga distinta. App `0.7.32`, build `112`, cache PWA/CSS aggiornata. Nessuna modifica ai dati o ai Worker.
 
-# 0.7.31 — Mappe mobile con due dita
+## [0.7.31] — Mappe mobile con due dita
 
 Su dispositivi con puntatore touch, spostamento e zoom delle mappe usano i gesti cooperativi MapLibre: un dito permette di scorrere la pagina, due dita di muovere la mappa. Suggerimento in italiano. Attivo su mappa principale, confronto e segnalazioni; il divisore del confronto resta trascinabile con un dito. Interazione desktop invariata. App `0.7.31`, build `111`, cache PWA e CSS aggiornati. Nessuna modifica ai Worker, database o secret.
 
-# 0.7.30 — OpenAQ: campo Periodo durante il caricamento
+## [0.7.30] — OpenAQ: campo Periodo durante il caricamento
 
 Il campo anno `singleYearField` resta nascosto per tutta la richiesta OpenAQ, anche quando si cambia periodo o si sposta la mappa. Eliminata la comparsa temporanea di un secondo campo Periodo. App `0.7.30`, build `110`, cache PWA aggiornata; proxy OpenAQ invariato `0.4.3`, nessun nuovo deploy Worker o migrazione richiesti da questa modifica.
 
-# 0.7.29 — OpenAQ 0.4.3 (21 novembre 2026)
+## [0.7.29] — OpenAQ 0.4.3 (21 novembre 2026)
 
 La ricerca OpenAQ include tutte le varianti di unità dei gas, prima limitate ai soli ID ppm. Ripristinata la select città condivisa con EEA, mantenendo **Geolocalizza** come scelta iniziale e la memoria della città per fonte. Cambiare città aggiorna area e stazioni; cambiare periodo o inquinante conserva il centro corrente.
 
@@ -153,20 +155,20 @@ npx wrangler deploy --config ./wrangler.jsonc
 
 Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non distribuisce questo Worker.
 
-# Proxy EEA 0.2.2 — app 0.7.28
-
-- Risolto il 403 Discodata proveniente dal Worker: le POST multipart includono ora uno User-Agent esplicito e veritiero `QualitaAria/0.2.2 (+https://fabzip.github.io/qualita-aria/)`. Il solo passaggio a POST della versione 0.2.1 non era sufficiente da Cloudflare.
-- Diagnostica degli errori limitata al titolo e all'identificazione del gateway, senza esporre l'intera pagina; preservato `upstreamStatus` anche negli errori dell'elenco file UTD.
-- Worker 0.2.2 distribuito e verificato su metadati non in cache, catalogo UTD e lettura dei Parquet reali nel browser al primo caricamento e dopo reload. Nessuna modifica a frontend, dataset, credenziali o database.
-
-# 0.7.28
+## [0.7.28]
 
 - Le query Discodata usano POST multipart, come il client ufficiale EEA, sia nel Worker sia nel fallback del browser. Risolto il percorso GET rifiutato dal gateway EEA con 403, che causava anche 502 su metadati ed elenco file UTD.
 - Conservati parametri SQL, paginazione, limiti, cache e filtri geografici. Nessuna credenziale aggiunta o modificata.
 - Aggiunti test sul trasporto POST, boundary multipart, paginazione, risultati vuoti, limiti ed errori; aggiornato il test di selezione geografica UTD.
 - App `0.7.28` build 108 e cache PWA aggiornata; proxy EEA `0.2.1` da distribuire. Worker ambientale `0.9.14`, OpenAQ `0.4.2`, dataset e database invariati.
 
-# 0.7.27
+### Proxy EEA [0.2.2]
+
+- Risolto il 403 Discodata proveniente dal Worker: le POST multipart includono ora uno User-Agent esplicito e veritiero `QualitaAria/0.2.2 (+https://fabzip.github.io/qualita-aria/)`. Il solo passaggio a POST della versione 0.2.1 non era sufficiente da Cloudflare.
+- Diagnostica degli errori limitata al titolo e all'identificazione del gateway, senza esporre l'intera pagina; preservato `upstreamStatus` anche negli errori dell'elenco file UTD.
+- Worker 0.2.2 distribuito e verificato su metadati non in cache, catalogo UTD e lettura dei Parquet reali nel browser al primo caricamento e dopo reload. Nessuna modifica a frontend, dataset, credenziali o database.
+
+## [0.7.27]
 
 - Inclusi gli avvisi arborei misti, separando blocchi di abbattimento e piantumazione quando identificabili; blocchi ambigui conservati come da verificare, senza quantità inventate.
 - Il parser usa il corpo dell'articolo anziché menu e metadati; corretti titolo, data di pubblicazione esplicita, scadenze con giorno della settimana, entità accentate e località elencate. Quantità parziali non diventano totali completi.
@@ -176,14 +178,14 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Le date di pubblicazione non sono presentate come date dei lavori quando questi non hanno una data dichiarata.
 - App `0.7.27` build 107, Worker `0.9.14`, cache PWA aggiornata. Nessuna nuova migrazione o rotazione dei secret; deploy Worker e successivo recupero degli avvisi richiesti.
 
-# 0.7.26
+## [0.7.26]
 
 - Aggiunta memoria separata delle select per EEA, OpenAQ, ARPA Lazio, previsioni e alberi: area/città/Comune, inquinante, periodo e anni di confronto vengono ripristinati tornando alla fonte.
 - Ripristinata anche la modalità Mappa/Confronto/Differenza, rispettando i limiti di OpenAQ e previsioni; stato delle schede sincronizzato.
 - Il ripristino rispetta le dipendenze città → periodi e fonte → inquinanti, valida le opzioni disponibili e riapplica i valori dopo la ricostruzione delle select. Nessuna persistenza tra ricaricamenti della pagina.
 - App `0.7.26` build 106, cache PWA aggiornata; nessuna modifica ai Worker o al database.
 
-# 0.7.25
+## [0.7.25]
 
 - Rimossa l'esclusione sistematica delle serie giornaliere dalla vista EEA `Oggi`, che può mostrare stazioni con la sola ultima media giornaliera disponibile.
 - La selezione verifica la fine dell'intervallo quando disponibile; per le medie giornaliere senza fine esplicita attende 24 ore dall'inizio. Restano esclusi valori futuri e periodi non conclusi. A parità d'inizio viene preferito il dato subgiornaliero dello stesso sampling point.
@@ -191,14 +193,14 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Aggiunta diagnostica delle osservazioni per aggregazione e test sintetico con due file, 582 righe, 556 osservazioni valide; test di primo avvio/reload nel browser con risposte giornaliere e orarie simulate.
 - App `0.7.25` build 105, cache PWA e moduli aggiornati. Statistiche annuali, Worker e database invariati.
 
-# 0.7.24
+## [0.7.24]
 
 - Aggiunto il pulsante Mappa stradale / Satellite nella mappa delle segnalazioni arboree, mantenendo centro, zoom e mirino al cambio di stile.
 - Le segnalazioni di posizione e dell'evento chiudono la modale soltanto dopo l'invio riuscito e mostrano una notifica con il numero di segnalazione.
 - Pulsante di invio disabilitato durante la richiesta per evitare duplicati; in caso di errore viene riabilitato e il modulo resta aperto con i dati inseriti.
 - App `0.7.24` build 104, cache PWA e riferimenti CSS/JS aggiornati. Nessuna modifica ai Worker o al database.
 
-# 0.7.23
+## [0.7.23]
 
 - Conservati gli avvisi arborei programmati senza quantità dichiarata, esclusi dai totali degli interventi eseguiti. Riconosciute date ISO, intervalli e giorni multipli, con anno di pubblicazione come fallback nei campi data.
 - Ricontrollate le prime pagine degli archivi a ogni refresh, con rotazione dei link oltre i primi due, senza attendere la conclusione del backfill. Budget riservato al ricontrollo dei vecchi avvisi; date vecchie isolate non interrompono pagine contenenti pubblicazioni dell'anno corrente.
@@ -207,7 +209,7 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - App `0.7.23` build 103, cache PWA aggiornata; Worker ambientale `0.9.13` da distribuire, nessuna nuova migrazione o modifica dei secret.
 - Aggiunti test di revisione su SQLite con tutte le migrazioni, refresh durante backfill, geocodifica, conservazione dei puntatori, fusione dei tracciati e aggiornamento dell'interfaccia.
 
-# 0.7.22
+## [0.7.22]
 
 - Estesa a OpenAQ la correzione di `MILANO PASCAL CITTÀ STUDI`, prima limitata a EEA.
 - Aggiunta `js/display-text.js` per normalizzare i testi visualizzati e ripristinare sequenze UTF-8 interpretate come Latin-1/Windows-1252, compresi accenti e apostrofi; i caratteri definitivamente persi vengono corretti soltanto per nomi noti.
@@ -215,20 +217,20 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Verificati 51 file applicativi/dati senza UTF-8 invalido o altre sequenze sospette; test di regressione OpenAQ, accenti, Unicode internazionale e doppia codifica.
 - App `0.7.22` build 102, cache PWA aggiornata; nessun nuovo deploy dei Worker.
 
-# 0.7.21
+## [0.7.21]
 
 - Inquadratura EEA più ravvicinata alla selezione di una città: raggio da 40 a 10 km; zoom previsionale cittadino portato a 11.
 - Corretto il parser CSV ARPA: rimosso il separatore vuoto e ripristinato il punto e virgola, mantenendo virgola e tabulazione.
 - Migliorata la normalizzazione dei codici ISTAT comunali; le righe senza codice possono essere associate tramite nome esatto e univoco. Il Comune richiesto viene conservato durante i download paralleli.
 - App `0.7.21` build 101; cache e test aggiornati. Nessun nuovo deploy dei Worker.
 
-# 0.7.20
+## [0.7.20]
 
 - Corretto il nome EEA `MILANO PASCAL CITT� STUDI` in `MILANO PASCAL CITTÀ STUDI`, anche nelle varianti di codifica alterata e nelle risposte già in cache.
 - Normalizzazione applicata alle ultime misure UTD, alle statistiche annuali dal proxy e al fallback diretto, mantenendo gli identificativi delle stazioni.
 - App `0.7.20` build 100; cache aggiornata, nessuna modifica ai Worker.
 
-# 0.7.19
+## [0.7.19]
 
 - Rimossa la dipendenza dal nome città nella richiesta EEA UTD: il servizio restituisce un catalogo nazionale filtrato per Paese ISO e nome dell’inquinante.
 - Il proxy usa bounding box e metadati per selezionare i file con codici stazione riconoscibili; i file non classificabili vengono conservati e filtrati per sampling point nel browser.
@@ -237,7 +239,7 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Test con 329 file nazionali e stazione rilevante oltre il vecchio limite, filtro geografico, nomi non classificabili e download coerente.
 - App `0.7.19` build 99; Worker EEA `0.2.0`, da distribuire per attivare la correzione.
 
-# 0.7.18
+## [0.7.18]
 
 - Il periodo EEA `Oggi` mostra ora l’ultima misura disponibile per stazione anche quando risale a giornate precedenti, mantenendo esclusi valori futuri e medie giornaliere.
 - Badge mappa uniformato a `<inquinante> - ultima misura` per PM2.5, PM10 e NO₂.
@@ -245,7 +247,7 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - L’overlay temperatura continua a mostrare minima e massima previste di oggi e temperatura attuale.
 - App `0.7.18` build 98, cache aggiornata; nessuna modifica ai Worker.
 
-# 0.7.17
+## [0.7.17]
 
 - Corretto il selettore EEA: `Oggi` è aggiunto al controllo che contiene gli anni, etichettato `Periodo`, sempre visibile in modalità Mappa.
 - Eliminata la sostituzione del campo Mese con `Oggi`/`Intero anno`. Le annualità storiche restano disponibili nello stesso controllo; Confronto e Differenza usano soltanto anni.
@@ -253,7 +255,7 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Aggiunto test di regressione del selettore e verificato nel browser il passaggio Oggi → 2025 → Oggi con servizi simulati.
 - App `0.7.17` build 97; cache aggiornata, nessuna modifica ai Worker.
 
-# 0.7.16
+## [0.7.16]
 
 - Aggiunta `Geolocalizza` come selezione iniziale delle città EEA, mantenendo il catalogo delle città e gestendo il consenso alla posizione.
 - Aggiunto il periodo `Oggi`: ultima misura UTD disponibile nella giornata locale per ogni stazione, con data e ora. Non si applica la soglia di copertura annuale del 75%; dati mancanti, futuri e medie giornaliere sono esclusi.
@@ -261,21 +263,21 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Aggiunti test per selezione delle misure odierne, valori mancanti e temperatura corrente; verificato nel browser il flusso con geolocalizzazione e servizi simulati.
 - App `0.7.16` build 96, cache PWA aggiornata. Nessuna modifica ai Worker.
 
-# 0.7.15
+## [0.7.15]
 
 - Corretta una concorrenza al primo ingresso in OpenAQ: tutti i render iniziali attendono la stessa geolocalizzazione, evitando richieste sulla vecchia area e ricerche annullate.
 - Aggiornate le dimensioni della mappa prima della richiesta dei dati, anche quando si proviene dalla vista previsionale nascosta.
 - Aggiunto test di regressione con due caricamenti concorrenti durante la geolocalizzazione.
 - App `0.7.15` build 95; proxy OpenAQ invariato alla versione `0.4.2`.
 
-# 0.7.14
+## [0.7.14]
 
 - OpenAQ usa la geolocalizzazione con inquadratura iniziale a livello cittadino e periodo predefinito `Oggi`; rimosso il selettore città.
 - In assenza di misure, la mappa allarga progressivamente la ricerca fino al limite di zoom 5, mantenendo periodo e inquinante.
 - Ripristinato il selettore inquinante con PM2.5, PM10, NO₂, O₃, SO₂ e CO. Il proxy normalizza i gas da ppm/ppb a µg/m³ a 25 °C e 1 atm (volume molare 24,45 L/mol).
 - App `0.7.14` build 94; proxy OpenAQ `0.4.2`, da distribuire prima del frontend.
 
-# 0.7.13
+## [0.7.13]
 
 - Aggiunta l’opzione `Oggi` al selettore del periodo OpenAQ, accanto agli intervalli di 7, 15 e 30 giorni.
 - Il filtro usa la mezzanotte locale come soglia: non include misure di ieri anche quando hanno meno di 24 ore.
@@ -283,7 +285,7 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Aggiunti test automatici per mezzanotte locale, fallback a 30 giorni, soglia del Worker, health check e rifiuto delle date non valide.
 - App aggiornata alla versione `0.7.13` build 93 e proxy OpenAQ alla versione `0.4.1`; dataset e Worker ambientale restano invariati.
 
-# 0.7.12
+## [0.7.12]
 
 - Ridisegnata la vista previsionale con un’impostazione originale A.R.I.A.: riepilogo del giorno selezionato, metriche principali e navigazione orizzontale tra i cinque giorni.
 - Sostituite le righe espandibili e le barre segmentate con un grafico continuo delle 24 ore e quattro schede compatte per notte, mattina, pomeriggio e sera.
@@ -291,19 +293,19 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Estesi i test automatici al profilo orario e verificati cambio giorno, cambio inquinante e layout mobile senza overflow.
 - App aggiornata alla versione `0.7.12` build 92; dataset e Worker restano invariati.
 
-# 0.7.11
+## [0.7.11]
 
 - Rimossa dalla vista previsionale la seconda barra di pulsanti degli inquinanti: PM10, PM2.5, CO, SO₂, O₃ e NO₂ si selezionano ora soltanto dal controllo principale.
 - Eliminati markup, stili e gestori di evento non più necessari, mantenendo invariato il caricamento delle previsioni.
 - App aggiornata alla versione `0.7.11` build 91; dataset e Worker restano invariati.
 
-# 0.7.10
+## [0.7.10]
 
 - Aumentate di `0.2rem` tutte le dimensioni tipografiche dell’app, comprese le viste responsive, le previsioni, le schede stazione, Temperatura, Alberi e lo splash iniziale.
 - Aggiornate le chiavi di cache dei fogli di stile e la cache PWA per distribuire immediatamente le nuove dimensioni.
 - App aggiornata alla versione `0.7.10` build 90; dataset e Worker restano invariati.
 
-# 0.7.9
+## [0.7.9]
 
 - Aggiunta la fonte separata `Previsioni qualità dell’aria`, basata sui dati modellistici Open-Meteo/CAMS e distinta dalle misure EEA, ARPA e OpenAQ.
 - Le previsioni coprono PM10, PM2.5, CO, SO₂, O₃ e NO₂ per cinque giorni, con media, massimo e dettaglio per notte, mattina, pomeriggio e sera.
@@ -312,7 +314,7 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Aggiunti test automatici per URL, sei inquinanti, aggregazioni temporali, indici qualitativi, valori mancanti e cache previsionale.
 - App aggiornata alla versione `0.7.9` build 89; dataset e Worker restano invariati.
 
-# 0.7.8
+## [0.7.8]
 
 - I totali minimi escludono gli eventi `automatic_pending` e `manual_rejected`, anche quando riportano quantità e stato apparentemente completato.
 - Le date di esecuzione future restano programmate e non vengono confermate automaticamente.
@@ -324,7 +326,7 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Aggiunti test automatici per riepiloghi, parser, date future, distribuzione equa delle fonti, retry dei cursori, pagine oltre il limite e ricerca geografica per Comune.
 - Worker aggiornato alla versione `0.9.12`; app aggiornata alla versione `0.7.8` build 88, dataset invariato alla revisione 22.
 
-# 0.7.7
+## [0.7.7]
 
 - Sostituita la lettura della sola prima pagina con una scansione paginata e progressiva degli archivi dell'anno corrente.
 - Aggiunti connettori distinti per informazioni di servizio e notizie di Roma Capitale, determine e ordinanze di Guidonia Montecelio.
@@ -334,7 +336,7 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - La scansione completa viene eseguita ogni giorno alle 03:00 UTC; la coda geografica continua alle 03:30 UTC.
 - Worker aggiornato alla versione `0.9.11`; app aggiornata alla versione `0.7.7` build 87, dataset invariato alla revisione 22.
 
-# 0.7.6
+## [0.7.6]
 
 - Le schede strutturate con più blocchi `Ubicazione` vengono suddivise in eventi distinti, ciascuno con data, quantità e posizione proprie.
 - Il caso `IDS1634378` produce correttamente due interventi del 31 agosto e quello di Villa Borghese del 1° settembre 2026.
@@ -343,7 +345,7 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Non è richiesta una nuova migrazione: al primo refresh il record originario viene aggiornato e le ubicazioni aggiuntive vengono inserite come record distinti.
 - Worker aggiornato alla versione `0.9.10`; app aggiornata alla versione `0.7.6` build 86, dataset invariato alla revisione 22.
 
-# 0.7.5
+## [0.7.5]
 
 - La scansione Roma distingue ora la data di pubblicazione dalla data prevista dell’intervento.
 - Gli avvisi pubblicati durante l’anno vengono acquisiti anche quando programmano lavori fino al 31 dicembre.
@@ -351,14 +353,14 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Gli interventi futuri restano classificati come programmati e non entrano nei totali degli eventi eseguiti.
 - Worker aggiornato alla versione `0.9.9`; app aggiornata alla versione `0.7.5` build 85, dataset invariato alla revisione 22.
 
-# 0.7.4
+## [0.7.4]
 
 - Corretta la fusione tra eventi consolidati e D1: coordinate e geometrie vengono associate tramite `sourceKey`, non più scartate quando più eventi condividono la stessa `sourceUrl`.
 - Gli eventi `manual_confirmed` senza coordinate sono indicati come documentati con “geolocalizzazione in attesa”, distinguendoli dagli eventi realmente da verificare.
 - Aggiunta la migrazione `0009_retry_guidonia_geocoding.sql` per rimettere in coda tutte le località automatiche di Guidonia; gli override geografici approvati restano separati e continuano ad avere priorità.
 - Worker aggiornato alla versione `0.9.8`; app aggiornata alla versione `0.7.4` build 84, dataset invariato alla revisione 22.
 
-# 0.7.3
+## [0.7.3]
 
 - Ripristinato Valle Pilella nell'anno 2019 con il collegamento puntuale all'ordinanza n. 1/2019 e la quantità documentata di 50 alberi.
 - Divise le 61 piantumazioni AVR del 2024 in tre eventi geolocalizzabili: Colle Fiorito 49, Piazza Matteotti 5 e Piazza Carrara 7.
@@ -369,14 +371,14 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Aggiunta la migrazione `0008_guidonia_verified_tree_events.sql`.
 - App aggiornata alla versione `0.7.3` build 83, dataset alla revisione 22 e Worker alla versione `0.9.7`.
 
-# 0.7.2
+## [0.7.2]
 
 - Rimosso l'evento `guidonia-valle-pilella-messa-dimora`: la fonte indicata non identifica un'ordinanza specifica e non consente di verificare l'intervento.
 - Aggiunta la migrazione `0007_remove_invalid_valle_pilella_event.sql` per rimuovere lo stesso record da D1 senza modificare la migrazione storica 0005.
 - Corretto l'errore `sourceKey is not defined` nell'invio di “Segnala evento”, centralizzando la risoluzione della chiave della fonte.
 - App aggiornata alla versione `0.7.2` build 82 e dataset alla revisione 21; Worker invariato alla versione `0.9.6`.
 
-# 0.7.1
+## [0.7.1]
 
 - Verificato il PDF ufficiale dell'autorizzazione paesaggistica 34/2024 di Guidonia Montecelio.
 - Corretto l'evento esistente, senza cambiarne l'identificativo: 109 alberi autorizzati all'abbattimento, stato programmato e successivo reimpianto sostitutivo previsto.
@@ -385,7 +387,7 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Controllati gli altri risultati indicizzati per “Autorizzazione Paesaggistica”: non sono stati aggiunti atti privi di un riferimento esplicito ad alberi, alberature, abbattimenti o reimpianti.
 - App aggiornata alla versione `0.7.1` build 81, dataset alla revisione 20; Worker invariato alla versione `0.9.6`.
 
-# 0.7.0
+## [0.7.0]
 
 - Aggiunto Guidonia Montecelio alla selezione della fonte Alberi con identificatore isolato `guidonia-montecelio`.
 - Aggiunti il confine comunale ISTAT 058047, centro mappa e periodo documentato 2024.
@@ -394,15 +396,19 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Aggiunta la migrazione dati `0005_guidonia_seed_events.sql`; non altera lo schema e non modifica eventi di Roma.
 - Dataset aggiornato alla revisione 19.
 
-# 0.6.6
+## [0.6.6]
 
 - Corretto il collegamento tra le serie EEA UTD/E2a 2025 di Roma e i metadati mediante il codice ufficiale EoI della stazione, usato solo come fallback dopo il confronto esatto di SampleId.
 - Gli identificatori originali non vengono modificati; il fallback serve esclusivamente al confronto in memoria.
 - Aggiunto alla diagnostica il conteggio stationCodeFallbackMatches.
 
-# Changelog
+## [0.6.5]
 
-## [Proxy 0.9.5 / App 0.6.4] - 2026-09-02
+- Corretto l'abbinamento tra i Samplingpoint dei file Parquet EEA UTD/E2a e i metadati delle stazioni quando l'identificatore contiene metodo e data.
+- Ripristinata la visualizzazione delle stazioni EEA preliminari 2025 su Roma senza modificare la soglia minima di copertura del 75%.
+- Reso disponibile Segnala evento anche quando la chiave della fonte deve essere ricavata dall'URL o dall'identificatore dinamico.
+
+## [0.6.4] — Proxy ambientale 0.9.5 — 2026-09-02
 
 - Gli eventi dinamici non geolocalizzati mostrano “Segnala evento” al posto del comando relativo alla posizione.
 - Il nuovo modulo raccoglie descrizione, nome ed email facoltativi senza caricare una mappa.
@@ -412,34 +418,34 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Rafforzato anche il filtro delle fonti: vengono rimossi i falsi eventi relativi alle chiusure di via del Foro Italico/viale Newton e al PUI Tor Bella Monaca.
 - App aggiornata alla versione `0.6.4` build 77 e Worker alla versione `0.9.5`; dataset invariato alla revisione 18 e nessuna migrazione D1 richiesta.
 
-## [Proxy 0.9.3] - 2026-09-01
+## Proxy ambientale [0.9.3] — 2026-09-01
 
 - Separata la scansione settimanale delle fonti dallo smaltimento quotidiano della coda geografica.
 - Il lunedì alle 03:00 UTC resta attivo il refresh completo; ogni giorno alle 03:30 UTC vengono elaborate soltanto le località ancora in attesa.
 - Il limite resta di otto località per esecuzione, senza interrogare quotidianamente il portale Roma Capitale.
 - Aggiornato `wrangler.toml.example`; non sono richieste migrazioni D1 e l’app resta alla versione `0.6.1` build 74.
 
-## [0.6.3] - 2026-09-01
+## [0.6.3] — 2026-09-01
 
 - Rimossi dalla lista Alberi i testi “mostra sulla mappa” e “verifica automatica”.
 - Gli eventi privi di coordinate mostrano soltanto l’indicazione “da verificare”, senza la dicitura ridondante “posizione in verifica”.
 - “Segnala posizione” non viene più proposto per gli eventi non geolocalizzati, perché manca un punto iniziale attendibile da correggere.
 - App aggiornata alla versione `0.6.3` (build 76), dataset invariato alla revisione 18 e Worker invariato alla versione `0.9.3`.
 
-## [0.6.2] - 2026-09-01
+## [0.6.2] — 2026-09-01
 
 - Gli eventi ancora classificati come programmati mostrano “Programmato · data trascorsa” quando l’ultimo giorno documentato è già passato.
 - La scadenza è soltanto un’indicazione temporale: lo stato ufficiale non viene convertito automaticamente in eseguito.
 - La quantità degli alberi è stata spostata sotto l’icona nella lista degli eventi; quando non è disponibile viene mostrato un trattino.
 - App aggiornata alla versione `0.6.2` (build 75), dataset invariato alla revisione 18 e Worker invariato alla versione `0.9.3`.
 
-## [Proxy 0.9.2] - 2026-09-01
+## Proxy ambientale [0.9.2] — 2026-09-01
 
 - Il refresh arboreo ricontrolla anche gli avvisi già archiviati, ordinandoli dal meno recente, oltre alle pagine presenti nell’elenco corrente di Roma Capitale.
 - I record storici rimasti con indirizzi troncati, come `IDS1631055` e `IDS1630638`, vengono così riprocessati dal parser corretto.
 - Il limite complessivo resta di 40 pagine per esecuzione; non sono richieste migrazioni D1 e l’app resta alla versione `0.6.1` build 74.
 
-## [0.6.1] - 2026-09-01
+## [0.6.1] — 2026-09-01
 
 - La mappa delle segnalazioni usa una vista satellitare con attribuzione Esri.
 - Il punto proposto è indicato da un mirino fisso al centro: si sposta la cartografia, non il marker.
@@ -447,7 +453,7 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Aggiunto il pulsante “Ripristina” per tornare alla posizione iniziale della località selezionata.
 - App aggiornata alla versione `0.6.1` (build 74), dataset invariato alla revisione 18 e Worker aggiornato alla versione `0.9.1`.
 
-## [0.6.0] - 2026-09-01
+## [0.6.0] — 2026-09-01
 
 - Lo zoom degli eventi multilocalità considera contemporaneamente tutte le geometrie e tutti i marker dell’avviso.
 - Le geometrie stradali o di area restituite dalla geocodifica vengono conservate e mostrate in azzurro sotto le etichette della cartografia.
@@ -459,14 +465,14 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Aggiunta la migrazione D1 `0004_tree_location_reports.sql` per segnalazioni e override geografici.
 - App aggiornata alla versione `0.6.0` (build 73), dataset invariato alla revisione 18 e Worker aggiornato alla versione `0.9.0`.
 
-## [Proxy 0.8.5] - 2026-09-01
+## Proxy ambientale [0.8.5] — 2026-09-01
 
 - Gli avvisi dinamici conservano tutte le ubicazioni riportate dalla stessa pagina ufficiale e le espongono come marker appartenenti a un unico evento.
 - Corretti definitivamente i luoghi abbreviati già archiviati come `P`: una nuova scansione sostituisce il dato precedente e annulla le coordinate obsolete.
 - La geocodifica procede per singola ubicazione, conserva i risultati parziali e mantiene il limite di otto nuovi luoghi per esecuzione.
 - Aggiunta la migrazione D1 `0003_tree_event_locations.sql`; app invariata alla `0.5.19` build 72, dataset invariato alla revisione 18.
 
-## [0.5.19] - 2026-09-01
+## [0.5.19] — 2026-09-01
 
 - Corretta l'estrazione degli indirizzi nelle nuove schede di Roma Capitale: abbreviazioni come `P.co`, `P.za` e le entità HTML non interrompono più il nome del luogo.
 - Ripristinata l'estrazione delle quantità indicate con `n°` e mantenuta la validazione prudente delle schede prive dei requisiti completi.
@@ -475,7 +481,7 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Ripristinata la regola CSS che nasconde il pulsante `Installa app` quando l'app è già installata.
 - App aggiornata alla versione `0.5.19` (build 72), dataset invariato alla revisione 18 e Worker aggiornato alla versione `0.8.4`.
 
-## [0.5.18] - 2026-08-30
+## [0.5.18] — 2026-08-30
 
 - Corretto il calcolo delle temperature annuali: `MIN` è ora il minimo assoluto dell'anno e `MAX` il massimo assoluto dell'anno.
 - `MEDIA` resta l'unica aggregazione media annuale ed è calcolata sulle temperature medie giornaliere.
@@ -483,21 +489,21 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 - Aggiornate le etichette in mappa da “minima/massima media annuale” a “minima/massima assoluta annuale”.
 - App aggiornata alla versione `0.5.18` (build 71), dataset invariato alla revisione 18 e Worker aggiornato alla versione `0.8.3`.
 
-## [0.5.17] - 2026-08-30
+## [0.5.17] — 2026-08-30
 
 - Il pulsante `Installa app` viene mostrato soltanto durante la navigazione nel browser.
 - Il pulsante resta nascosto quando la PWA è avviata dalla schermata Home su Android o iOS/iPadOS.
 - Gestiti anche l'evento di installazione e il cambio dinamico della modalità di visualizzazione, senza lampeggio iniziale del pulsante.
 - App aggiornata alla versione `0.5.17` (build 70); dataset invariato alla revisione 18 e Worker invariato alla versione `0.8.2`.
 
-## [0.5.16] - 2026-08-30
+## [0.5.16] — 2026-08-30
 
 - Corretta la select dei comuni in OpenAQ: il cambio città ora sposta immediatamente la mappa sul centro geografico selezionato.
 - Il cambio comune azzera l'area visibile precedente e richiede subito le stazioni OpenAQ della nuova inquadratura.
 - Soppressa la richiesta duplicata che poteva essere generata dall'evento `moveend` durante il riposizionamento automatico.
 - App aggiornata alla versione `0.5.16` (build 69); dataset invariato alla revisione 18 e Worker invariato alla versione `0.8.2`.
 
-## [0.5.15] - 2026-08-30
+## [0.5.15] — 2026-08-30
 
 - Corretta la discordanza cromatica EEA tra elenco e mappa: la superficie non usa più la densità della heatmap per determinare il colore.
 - La superficie sfumata usa ora le stesse soglie del valore riportato nell'elenco (`<10`, `10–19,9`, `20–29,9`, `≥30 µg/m³`).
@@ -506,7 +512,7 @@ Verificare `/health` (`0.4.3`), quindi riaprire la PWA. Il push su GitHub non di
 
 Questo file registra le modifiche funzionali dell'app. Da questa release deve essere aggiornato insieme a ogni incremento di versione.
 
-## [0.5.14] - 2026-08-30
+## [0.5.14] — 2026-08-30
 
 ### EEA · puntamento dei capoluoghi
 
@@ -517,7 +523,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Incrementata la versione del catalogo `data/italian-capitals.json` da 1 a 2.
 - App aggiornata alla versione `0.5.14` (build 67), dataset alla revisione 18 e Worker invariato alla versione `0.8.2`.
 
-## [0.5.13] - 2026-08-30
+## [0.5.13] — 2026-08-30
 
 ### ARPA Lazio · elenco completo dei comuni
 
@@ -527,7 +533,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Rinominata la voce della fonte da `ARPA Lazio · comune` a `ARPA Lazio`.
 - App aggiornata alla versione `0.5.13` (build 66); dataset invariato alla revisione 17 e Worker invariato alla versione `0.8.2`.
 
-## [0.5.12] - 2026-08-30
+## [0.5.12] — 2026-08-30
 
 ### ARPA Lazio · selezione del comune
 
@@ -538,7 +544,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Rimosso il grassetto dal selettore della fonte, compresa la voce OpenAQ.
 - App aggiornata alla versione `0.5.12` (build 65); dataset invariato alla revisione 17 e Worker invariato alla versione `0.8.2`.
 
-## [0.5.11] - 2026-08-30
+## [0.5.11] — 2026-08-30
 
 ### Interfaccia · installazione e periodi Alberi
 
@@ -550,7 +556,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Collegato il periodo `2024 – mar. 2025` alla notizia ufficiale specifica da cui provengono le quantità.
 - App aggiornata alla versione `0.5.11` (build 64), dataset alla revisione 17 e Worker invariato alla versione `0.8.2`.
 
-## [0.5.10] - 2026-08-28
+## [0.5.10] — 2026-08-28
 
 ### Alberi · messaggi e fonti degli aggregati
 
@@ -559,7 +565,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Aggiunto il collegamento `Fonte ufficiale` ai riepiloghi di entrambi i periodi aggregati.
 - App aggiornata alla versione `0.5.10` (build 63); dataset invariato alla revisione 16 e Worker invariato alla versione `0.8.2`.
 
-## [0.5.9] - 2026-08-28
+## [0.5.9] — 2026-08-28
 
 ### Alberi · annualità disponibili
 
@@ -569,7 +575,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Le annualità delle altre fonti ambientali restano invariate.
 - App aggiornata alla versione `0.5.9` (build 62); dataset invariato alla revisione 16 e Worker invariato alla versione `0.8.2`.
 
-## [0.5.8] - 2026-08-28
+## [0.5.8] — 2026-08-28
 
 ### Alberi · geometrie storiche 2023–2025
 
@@ -584,7 +590,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Dataset aggiornato alla revisione 16 e schema dei percorsi alla versione 3.
 - App aggiornata alla versione `0.5.8` (build 61); Worker invariato alla versione `0.8.2`.
 
-## [0.5.7] - 2026-08-28
+## [0.5.7] — 2026-08-28
 
 ### Alberi · legenda unica
 
@@ -593,7 +599,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Nascosto il contenitore della guida nella fonte Alberi, evitando spazio vuoto residuo.
 - App aggiornata alla versione `0.5.7` (build 60); dataset invariato alla revisione 15 e Worker invariato alla versione `0.8.2`.
 
-## [0.5.6] - 2026-08-28
+## [0.5.6] — 2026-08-28
 
 ### Intestazione · logo A.R.I.A.
 
@@ -602,7 +608,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Incluso il logo nella cache offline della PWA.
 - App aggiornata alla versione `0.5.6` (build 59); dataset invariato alla revisione 15 e Worker invariato alla versione `0.8.2`.
 
-## [0.5.5] - 2026-08-28
+## [0.5.5] — 2026-08-28
 
 ### Alberi · interfaccia semplificata
 
@@ -612,7 +618,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Rimossa la dicitura `Copertura parziale · totale minimo documentato` dal riepilogo.
 - App aggiornata alla versione `0.5.5` (build 58), con cache offline dedicata; dataset invariato alla revisione 15.
 
-## [0.5.4] - 2026-08-28
+## [0.5.4] — 2026-08-28
 
 ### Alberi · popup evento esclusivo
 
@@ -620,7 +626,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Rimane visibile al massimo un popup evento alla volta, senza modificare evidenziazione, colori o inquadratura geografica.
 - App aggiornata alla versione `0.5.4` (build 57), con cache offline dedicata; dataset invariato alla revisione 15.
 
-## [0.5.3] - 2026-08-28
+## [0.5.3] — 2026-08-28
 
 ### Alberi · selezione e inquadratura degli eventi
 
@@ -632,7 +638,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Durante la selezione, gli alberi estranei diventano grigi e restano colorati soltanto quelli appartenenti all'evento scelto.
 - App aggiornata alla versione `0.5.3` (build 56), con cache offline dedicata; dataset invariato alla revisione 15.
 
-## [0.5.2] - 2026-08-28
+## [0.5.2] — 2026-08-28
 
 ### Alberi · messaggio di aggiornamento
 
@@ -641,14 +647,14 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Dataset invariato alla revisione 15.
 - La stessa patch aggiorna il Worker alla versione `0.8.2` con scansione settimanale.
 
-## Proxy arboreo [0.8.2] - 2026-08-28
+## Proxy arboreo [0.8.2] — 2026-08-28
 
 - Modificata la pianificazione automatica da mensile a settimanale: il refresh viene eseguito ogni lunedì alle 03:00 UTC.
 - Aggiornati il valore diagnostico `treeSyncSchedule`, l'esempio `wrangler.toml.example` e le istruzioni di deploy.
 - Nessuna migrazione D1 e nessuna modifica al token amministrativo sono necessarie.
 - La versione dell'app è `0.5.2` build 55; il dataset resta alla revisione 15.
 
-## [0.5.1] - 2026-08-28
+## [0.5.1] — 2026-08-28
 
 ### Alberi · percorsi multilocalità e marker coerenti
 
@@ -667,7 +673,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Cache offline aggiornata a `qualita-aria-v0.5.1`.
 - Worker invariato alla versione `0.8.1`: non è richiesto un nuovo deploy del proxy.
 
-## [0.5.0] - 2026-08-26
+## [0.5.0] — 2026-08-26
 
 ### Alberi · evidenziazione geografica degli eventi
 
@@ -685,7 +691,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Dataset visibile aggiornato alla revisione 14.
 - Cache offline aggiornata a `qualita-aria-v0.5.0`.
 
-## [0.4.9] - 2026-08-26
+## [0.4.9] — 2026-08-26
 
 ### Alberi · leggibilità e riepilogo
 
@@ -702,14 +708,14 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Dataset invariato alla revisione 13.
 - Cache offline aggiornata a `qualita-aria-v0.4.9`.
 
-## Proxy arboreo [0.8.1] - 2026-08-26
+## Proxy arboreo [0.8.1] — 2026-08-26
 
 - Rimossa la chiave duplicata `locationPrecision` dalla trasformazione degli eventi D1.
 - Conservato il valore geocodificato quando disponibile, con fallback coerente a `city` per Roma o `address` per gli altri luoghi.
 - Eliminato il warning Wrangler `Duplicate key "locationPrecision" in object literal`.
 - La versione dell'app resta `0.4.8` build 51; il dataset resta alla revisione 13.
 
-## [0.4.8] - 2026-08-26
+## [0.4.8] — 2026-08-26
 
 ### Alberi · eventi sulla mappa
 
@@ -735,7 +741,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Dataset visibile aggiornato alla revisione 13.
 - Cache offline aggiornata a `qualita-aria-v0.4.8`.
 
-## [0.4.7] - 2026-08-26
+## [0.4.7] — 2026-08-26
 
 ### Splash screen A.R.I.A.
 
@@ -754,7 +760,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Cache aggiornata da `qualita-aria-v0.4.6` a `qualita-aria-v0.4.7`.
 - App aggiornata alla versione `0.4.7` (build 50); dataset invariato alla revisione 12.
 
-## [0.4.6] - 2026-08-26
+## [0.4.6] — 2026-08-26
 
 ### Documentazione proxy arboreo
 
@@ -766,7 +772,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 
 - App aggiornata alla versione `0.4.6` (build 49); dataset invariato alla revisione 12.
 
-## [0.4.5] - 2026-08-26
+## [0.4.5] — 2026-08-26
 
 ### Alberi · aggiornamento dinamico
 
@@ -785,7 +791,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Dataset visibile aggiornato alla revisione 12.
 - App aggiornata alla versione `0.4.5` (build 48).
 
-## [0.4.4] - 2026-08-26
+## [0.4.4] — 2026-08-26
 
 ### Alberi · eventi 2026
 
@@ -801,7 +807,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Dataset visibile aggiornato alla revisione 11.
 - App aggiornata alla versione `0.4.4` (build 47).
 
-## [0.4.3] - 2026-08-26
+## [0.4.3] — 2026-08-26
 
 ### Alberi · periodi e copertura
 
@@ -819,7 +825,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Dataset arboreo aggiornato allo schema 2.
 - App aggiornata alla versione `0.4.3` (build 46).
 
-## [0.4.2] - 2026-08-25
+## [0.4.2] — 2026-08-25
 
 ### Alberi come fonte dati
 
@@ -835,7 +841,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 
 - App aggiornata alla versione `0.4.2` (build 45).
 
-## [0.4.1] - 2026-08-25
+## [0.4.1] — 2026-08-25
 
 ### Alberi · visualizzazione territoriale
 
@@ -852,7 +858,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 
 - App aggiornata alla versione `0.4.1` (build 44).
 
-## [0.4.0] - 2026-08-25
+## [0.4.0] — 2026-08-25
 
 ### Statistiche arboree
 
@@ -871,7 +877,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Avviata la serie `0.4.x`.
 - App aggiornata alla versione `0.4.0` (build 43).
 
-## [0.3.9] - 2026-08-25
+## [0.3.9] — 2026-08-25
 
 ### Interfaccia
 
@@ -882,7 +888,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 
 - App aggiornata alla versione `0.3.9` (build 42).
 
-## [0.3.8] - 2026-08-25
+## [0.3.8] — 2026-08-25
 
 ### Temperature · copertura nazionale
 
@@ -905,7 +911,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - `qualita-aria-temperature-proxy` aggiornato alla versione `0.6.0`.
 - App aggiornata alla versione `0.3.8` (build 41).
 
-## [0.3.7] - 2026-08-23
+## [0.3.7] — 2026-08-23
 
 ### Interfaccia e mappa
 
@@ -923,7 +929,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 
 - App aggiornata alla versione `0.3.7` (build 40).
 
-## [0.3.6] - 2026-08-23
+## [0.3.6] — 2026-08-23
 
 ### Mappa mobile
 
@@ -956,7 +962,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 
 - Aggiornata l'app a `0.3.6` build `39`.
 
-## [0.3.5] - 2026-08-23
+## [0.3.5] — 2026-08-23
 
 ### Separazione fonti inquinante / temperatura
 
@@ -1018,7 +1024,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 
 - Aggiornata l'app a `0.3.5` build `38`.
 
-## [0.3.4] - 2026-08-23
+## [0.3.4] — 2026-08-23
 
 ### Temperatura sovrapposta agli inquinanti
 
@@ -1057,7 +1063,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 
 - Aggiornata l'app a `0.3.4` build `37`.
 
-## [0.3.3] - 2026-08-23
+## [0.3.3] — 2026-08-23
 
 ### Temperatura · mappa
 
@@ -1079,7 +1085,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 
 - Aggiornata l'app a `0.3.3` build `36`.
 
-## [0.3.2] - 2026-08-23
+## [0.3.2] — 2026-08-23
 
 ### Temperatura · periodo annuale
 
@@ -1112,7 +1118,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 
 - Aggiornata l'app a `0.3.2` build `35`.
 
-## [0.3.1] - 2026-08-23
+## [0.3.1] — 2026-08-23
 
 ### Correzioni mappa
 
@@ -1130,7 +1136,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 
 - Aggiornata l'app a `0.3.1` build `34`.
 
-## [0.3.0] - 2026-08-23
+## [0.3.0] — 2026-08-23
 
 ### Temperatura
 
@@ -1169,7 +1175,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 
 - Aggiornata l'app a `0.3.0` build `33`.
 
-## [0.2.14] - 2026-08-23
+## [0.2.14] — 2026-08-23
 
 ### Proxy EEA e prestazioni
 
@@ -1194,7 +1200,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 
 - Aggiornata l'app a `0.2.14` build `32`.
 
-## [0.2.13] - 2026-08-23
+## [0.2.13] — 2026-08-23
 
 ### Prestazioni EEA
 
@@ -1218,7 +1224,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 
 - Aggiornata l'app a `0.2.13` build `31`.
 
-## [0.2.12] - 2026-08-22
+## [0.2.12] — 2026-08-22
 
 ### EEA · area visibile
 
@@ -1245,7 +1251,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 
 - Aggiornata l'app a `0.2.12` build `30`.
 
-## [0.2.11] - 2026-08-22
+## [0.2.11] — 2026-08-22
 
 ### EEA · dati preliminari UTD
 
@@ -1271,7 +1277,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 
 - Aggiornata l'app a `0.2.11` build `29`.
 
-## [0.2.10] - 2026-08-22
+## [0.2.10] — 2026-08-22
 
 ### EEA
 
@@ -1291,7 +1297,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Aggiornati service worker e riferimenti cache-busting.
 - Aggiornato il README con il comportamento temporale OpenAQ.
 
-## [0.2.9] - 2026-08-22
+## [0.2.9] — 2026-08-22
 
 ### EEA · selezione geografica Italia
 
@@ -1310,7 +1316,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Aggiornati i riferimenti cache-busting di `app.js`, `openaq-world.js`, `version.json` e service worker.
 - La patch incorpora anche la correzione `0.2.8` sulla conservazione della posizione della mappa OpenAQ, perché il branch `main` risultava ancora alla `0.2.7`.
 
-## [0.2.8] - 2026-08-22
+## [0.2.8] — 2026-08-22
 
 ### OpenAQ
 
@@ -1319,7 +1325,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Se lo zoom corrente è inferiore al limite OpenAQ, viene aumentato solo fino al `minZoom` mantenendo invariato il centro.
 - Il ripristino della camera sopprime il relativo `moveend`, evitando una seconda chiamata API non necessaria.
 
-## [0.2.7] - 2026-08-22
+## [0.2.7] — 2026-08-22
 
 ### Documentazione e versioning
 
@@ -1330,7 +1336,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Aggiornati cache name e riferimenti versionati del service worker.
 - La patch è cumulativa e incorpora anche le modifiche della 0.2.6 che non risultavano pubblicate su `main`.
 
-## [0.2.6] - 2026-08-22
+## [0.2.6] — 2026-08-22
 
 > Patch preparata ma non risultava pubblicata sul branch `main`; le modifiche sono state incorporate nella 0.2.7.
 
@@ -1345,7 +1351,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Nascosto il controllo mensile per EEA e ARPA finché non viene implementata una vera aggregazione mensile.
 - Il controllo temporale OpenAQ viene usato come selettore di recenza.
 
-## [0.2.5] - 2026-08-22
+## [0.2.5] — 2026-08-22
 
 ### Mappa
 
@@ -1353,7 +1359,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Rese nuovamente leggibili città, Paesi e strade.
 - Aumentato leggermente lo zoom iniziale della vista OpenAQ.
 
-## [0.2.4] - 2026-08-22
+## [0.2.4] — 2026-08-22
 
 ### OpenAQ
 
@@ -1364,7 +1370,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Disabilitati temporaneamente Confronto e Differenza per OpenAQ.
 - Preparati endpoint proxy per lo storico annuale dei sensori.
 
-## [0.2.3] - 2026-08-22
+## [0.2.3] — 2026-08-22
 
 ### Infrastruttura OpenAQ
 
@@ -1373,7 +1379,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Aggiunti CORS, allowlist degli endpoint e cache.
 - La API key OpenAQ non viene mai salvata nel frontend o nel repository.
 
-## [0.2.2] - 2026-08-22
+## [0.2.2] — 2026-08-22
 
 ### Elenco stazioni
 
@@ -1382,7 +1388,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Aggiunto supporto tastiera con Invio e Spazio.
 - Il comportamento è compatibile con la modalità Confronto.
 
-## [0.2.1] - 2026-08-22
+## [0.2.1] — 2026-08-22
 
 ### Elenco stazioni
 
@@ -1391,13 +1397,13 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Aggiunta paginazione reale a 12 stazioni per pagina.
 - La paginazione funziona anche con dataset EEA europei numerosi.
 
-## [0.2.0] - 2026-08-22
+## [0.2.0] — 2026-08-22
 
 ### Versioning
 
 - Avviata la serie di versioni `0.2.x`.
 
-## [0.1.16] - 2026-08-22
+## [0.1.16] — 2026-08-22
 
 ### EEA
 
@@ -1406,7 +1412,7 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Aggiunta paginazione delle query Discodata.
 - Migliorata la resa della heatmap a scala europea.
 
-## [0.1.15] - 2026-08-22
+## [0.1.15] — 2026-08-22
 
 ### ARPA Lazio
 
@@ -1414,20 +1420,20 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Visualizzati MIN, MED e MAX dal 2013 al 2025.
 - Aggiunto caricamento concorrente controllato dei file annuali.
 
-## [0.1.14] - 2026-08-22
+## [0.1.14] — 2026-08-22
 
 ### Confronto
 
 - Aggiunti indicatori di andamento: aumento, diminuzione e stabilità.
 
-## [0.1.13] - 2026-08-22
+## [0.1.13] — 2026-08-22
 
 ### Confronto
 
 - L'elenco mostra i valori dei due periodi affiancati.
 - Gestite le stazioni presenti in un solo periodo tramite valore mancante.
 
-## [0.1.12] - 2026-08-22
+## [0.1.12] — 2026-08-22
 
 ### ARPA Lazio
 
@@ -1435,8 +1441,3 @@ Questo file registra le modifiche funzionali dell'app. Da questa release deve es
 - Corretta la conversione dei valori mancanti per evitare falsi zeri.
 - Aggiunto fallback posizionale per MIN, MED e MAX nei fogli XLSX.
 - Confermata la distinzione tra valutazione comunale e stazione di misura.
-# 0.6.5
-
-- Corretto l'abbinamento tra i Samplingpoint dei file Parquet EEA UTD/E2a e i metadati delle stazioni quando l'identificatore contiene metodo e data.
-- Ripristinata la visualizzazione delle stazioni EEA preliminari 2025 su Roma senza modificare la soglia minima di copertura del 75%.
-- Reso disponibile Segnala evento anche quando la chiave della fonte deve essere ricavata dall'URL o dall'identificatore dinamico.
