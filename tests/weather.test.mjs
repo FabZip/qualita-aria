@@ -8,7 +8,7 @@ const city={name:'Roma <script>',lat:41.9,lon:12.5};
 let calls=0,clock=Date.now(),failure=null;
 class TestDate extends Date{static now(){return clock}}
 const storage=new Map();
-const context=vm.createContext({URL,URLSearchParams,Date:TestDate,Intl,AbortController,setTimeout,clearTimeout,localStorage:{getItem:key=>storage.get(key),setItem:(key,value)=>storage.set(key,value)},fetch:async()=>{calls++;if(failure)throw failure;return Response.json(payload)}});
+const context=vm.createContext({URL,URLSearchParams,Date:TestDate,Intl,AbortController,DOMException,setTimeout,clearTimeout,localStorage:{getItem:key=>storage.get(key),setItem:(key,value)=>storage.set(key,value)},fetch:async()=>{calls++;if(failure)throw failure;return Response.json(payload)}});
 vm.runInContext(source,context);const api=context.WeatherForecast;
 const url=new URL(api.buildUrl(city));assert.equal(url.origin,'https://api.open-meteo.com');assert.equal(url.searchParams.get('forecast_days'),'7');assert.equal(url.searchParams.get('timezone'),'auto');assert.ok(!url.searchParams.has('apikey'));
 for(const coords of [{lat:null,lon:0},{lat:91,lon:0},{lat:0,lon:181}])assert.throws(()=>api.buildUrl(coords),/Coordinate/);
@@ -30,7 +30,7 @@ assert.match(fs.readFileSync(new URL('../service-worker.js',import.meta.url),'ut
 // UI failures and old geolocation callbacks cannot overwrite a newly selected city.
 let selected='geolocate',denyGeo,uiCalls=0;
 const handlers=new Map();const nodes=new Map();const node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(type,handler){handlers.set(`${id}:${type}`,handler)}});return nodes.get(id)};
-const ui=vm.createContext({URL,URLSearchParams,Date,Intl,AbortController,setTimeout,clearTimeout,console,
+const ui=vm.createContext({URL,URLSearchParams,Date,Intl,AbortController,DOMException,setTimeout,clearTimeout,console,
  document:{documentElement:node('html'),querySelector:node},$:node,source:()=> 'weather',isTemperature:()=>false,
  SOURCE_INFO:{},configureSourceUI(){},render(){},setTemperatureModeLock(){},configureTreeCityOptions(){},clearTemperatureOverlays(){},
  state:{renderToken:0,eeaCities:new Map([['roma',{name:'Roma',lat:41.9,lon:12.5}]])},EEA_DEFAULT_CITY:'roma',eeaCity:()=>selected,
@@ -87,3 +87,16 @@ oldSearchResolve(Response.json({results:[{id:2,name:'Napoli',latitude:40.85,long
 assert.match(node('weatherSearchResults').innerHTML,/Milano/);assert.doesNotMatch(node('weatherSearchResults').innerHTML,/Napoli/);
 assert.match(node('weatherSearchStatus').textContent,/1 risultati/);
 ui.fetch=async()=>Response.json({results:[]});await handlers.get('weatherSearchForm:submit')({preventDefault(){}});assert.match(node('weatherSearchStatus').textContent,/Nessuna località/);
+
+// Postal codes preserve leading zeros and resolve locally, without relying on the city-name API.
+const postal=JSON.parse(fs.readFileSync(new URL('../data/italian-postal-codes.json',import.meta.url),'utf8'));
+assert.equal(api.postalCode('00012'),'00012');assert.equal(api.postalCode(' IT-00012 '),'00012');assert.equal(api.postalCode('00012, Italia'),'00012');assert.equal(api.postalCode('Guidonia'),null);
+const postalResults=api.postalLocations(postal,'00012');assert.ok(postalResults.some(place=>place.name.includes('Guidonia Montecelio')));assert.ok(postalResults.some(place=>place.name.includes('Villalba')));assert.ok(postalResults.every(place=>place.name.startsWith('00012 · ')&&place.timezone==='Europe/Rome'));
+assert.equal(api.postalLocations(postal,'99999').length,0);
+assert.match(api.locationDetails({},postalResults[0]),/non indirizzo preciso/);
+let catalogFetches=0;context.fetch=async url=>{assert.match(String(url),/^data\/italian-postal-codes\.json/);catalogFetches++;return Response.json(postal)};
+const postalLookups=await Promise.all([api.findLocations('00012'),api.findLocations('20121')]);assert.equal(catalogFetches,1);assert.ok(postalLookups[0].length>0);assert.ok(postalLookups[1].some(place=>place.name.includes('Milano')));
+await api.findLocations('00012');assert.equal(catalogFetches,1);await assert.rejects(()=>api.findLocations('0012'),/5 cifre/);
+const cancelled=new AbortController();cancelled.abort();await assert.rejects(()=>api.findLocations('00012',cancelled.signal),/annullata/);
+node('weatherSearch').value='00012';ui.fetch=async url=>{assert.match(String(url),/^data\/italian-postal-codes\.json/);return Response.json(postal)};await handlers.get('weatherSearchForm:submit')({preventDefault(){}});assert.match(node('weatherSearchResults').innerHTML,/Guidonia Montecelio/);assert.match(node('weatherSearchResults').innerHTML,/00012/);
+node('weatherSearch').value='99999';await handlers.get('weatherSearchForm:submit')({preventDefault(){}});assert.match(node('weatherSearchStatus').textContent,/CAP italiano non trovato/);

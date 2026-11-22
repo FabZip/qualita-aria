@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.8.6` |
-| Build | `119` |
+| Applicazione | `0.8.7` |
+| Build | `120` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.0` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,18 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 0.8.7 — Widget ufficiale RainViewer e ricerca CAP italiani
+
+Il radar usa ora il widget ufficiale offerto dal comando **Incorpora** di [RainViewer](https://www.rainviewer.com/it/weather-radar-map-live.html), con tema scuro e centratura sulla località scelta. Animazione, timeline, zoom e funzioni interne sono gestiti direttamente da RainViewer; i controlli esterni consentono di ricentrare, ricaricare e aprire il radar in una nuova scheda. Disponibilità e funzioni dipendono dal servizio. Sostituito il precedente renderer delle immagini radar: le limitazioni dell'API pubblica descritte nella release 0.8.6 non definiscono le funzioni del widget.
+
+Su dispositivi touch la mappa parte protetta dal pulsante **Attiva radar**, per consentire lo scorrimento della pagina; **Blocca interazione** ripristina la protezione. I gesti dentro l'iframe dipendono da RainViewer: non è possibile imporre dall'app lo spostamento con due dita. Il widget viene rimosso quando si cambia fonte o si nasconde la pagina e ripristinato al ritorno. Spostare il radar non cambia la località delle previsioni.
+
+Corretta la ricerca di CAP come `00012`, assenti nella risposta del geocoding Open-Meteo: i CAP italiani completi sono cercati in un catalogo GeoNames locale, preservando gli zeri iniziali e mostrando tutte le località associate. `00012` propone anche Guidonia Montecelio. CAP sconosciuti e codici incompleti hanno messaggi espliciti; la ricerca mondiale per nome continua a usare Open-Meteo. Le coordinate dei CAP sono punti di riferimento delle località, non indirizzi precisi.
+
+Catalogo: 4.736 CAP e 18.415 località, [GeoNames IT.zip](https://download.geonames.org/export/zip/IT.zip), CC BY 4.0, acquisito il 22 novembre 2026. File di circa 1 MB caricato solo alla prima ricerca CAP, non nel precaricamento PWA. Rigenerazione: scaricare IT.zip e usare `python3 tools/build_postal_codes.py /percorso/IT.zip --date YYYY-MM-DD`. Attribuzione visibile nell'app.
+
+App **0.8.7 build 120**, cache PWA aggiornata. Nessuna modifica a Worker, database o secret. Verifiche: 30 test automatici superati, ricerca e selezione di `00012` nel browser e caricamento effettivo del widget ufficiale.
 
 ### 0.8.6 — Radar meteo, ricerca località e avvio geolocalizzato
 

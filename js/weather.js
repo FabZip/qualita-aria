@@ -49,7 +49,7 @@
     try{return {...city,...await task}}finally{locationInflight.delete(key)}
   }
   function locationDetails(payload,city){
-    return `<p class="weather-position">${escape(coordinateLabel(city.lat,city.lon))}${city.geolocated&&number(city.accuracy)!==null?` · accuratezza circa ${format(city.accuracy,' m')}`:''}${city.geolocated&&!city.locationResolved?' · nome della località non disponibile':''}</p>`
+    return `<p class="weather-position">${escape(coordinateLabel(city.lat,city.lon))}${city.geolocated&&number(city.accuracy)!==null?` · accuratezza circa ${format(city.accuracy,' m')}`:''}${city.geolocated&&!city.locationResolved?' · nome della località non disponibile':''}${city.postalCode?' · punto di riferimento della località, non indirizzo preciso':''}</p>`
   }
   function searchUrl(query){
     const name=String(query||'').trim();
@@ -59,6 +59,38 @@
   }
   function searchLocations(payload){
     return (Array.isArray(payload?.results)?payload.results:[]).filter(item=>item?.name&&number(item.latitude)!==null&&number(item.longitude)!==null&&Math.abs(Number(item.latitude))<=90&&Math.abs(Number(item.longitude))<=180).map(item=>({id:String(item.id),lat:Number(item.latitude),lon:Number(item.longitude),timezone:item.timezone,name:[...new Set([item.name,item.admin2,item.admin1,item.country].filter(Boolean))].join(' · ')}))
+  }
+  function postalCode(query){
+    return String(query||'').trim().match(/^(?:IT[-\s]*)?(\d{5})(?:\s*,?\s*(?:Italia|Italy|IT))?$/i)?.[1]||null
+  }
+  function postalLocations(payload,code){
+    const entries=payload?.codes?.[code];
+    if(!Array.isArray(entries))return[];
+    return entries.filter(row=>Array.isArray(row)&&row[0]&&number(row[3])!==null&&number(row[4])!==null&&Math.abs(Number(row[3]))<=90&&Math.abs(Number(row[4]))<=180).map((row,i)=>({id:`it-postal-${code}-${i}`,postalCode:code,lat:Number(row[3]),lon:Number(row[4]),timezone:'Europe/Rome',coordinatePrecision:'locality',name:[code,...new Set([row[0],row[1],row[2],'Italia'].filter(Boolean))].join(' · ')}))
+  }
+  let postalData=null,postalPending=null;
+  async function findLocations(query,signal){
+    const code=postalCode(query);
+    if(code){
+      if(!postalData){
+        if(!postalPending)postalPending=(async()=>{
+          const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+          try{
+          const response=await fetch('data/italian-postal-codes.json?v=0.8.7',{signal:controller.signal});
+          if(!response.ok)throw Error('Catalogo CAP temporaneamente non disponibile. Cerca il nome del comune.');
+          const payload=await response.json();if(!payload?.codes||typeof payload.codes!=='object')throw Error('Catalogo CAP non valido. Cerca il nome del comune.');
+          postalData=payload;return payload
+          }finally{clearTimeout(timer)}
+        })().finally(()=>postalPending=null);
+        await postalPending;
+      }
+      if(signal?.aborted)throw new DOMException('Ricerca annullata','AbortError');
+      return postalLocations(postalData,code)
+    }
+    if(/^\d+$/.test(String(query).trim()))throw Error('Per un CAP italiano inserisci tutte le 5 cifre, compresi gli zeri iniziali.');
+    const response=await fetch(searchUrl(query),{signal,cache:'no-store'});
+    if(!response.ok)throw Error('Ricerca temporaneamente non disponibile.');
+    return searchLocations(await response.json())
   }
   function condition(code,day=1){
     const n=number(code);
@@ -114,9 +146,9 @@
       <div class="weather-metrics"><article>Umidità<strong>${format(c.relative_humidity_2m,' %')}</strong></article><article>Vento<strong>${format(c.wind_speed_10m,' km/h')}</strong></article><article>Precipitazioni<strong>${format(c.precipitation,' mm')}</strong></article></div>
       <!--weather-radar--><h3>Prossime 24 ore</h3><div class="weather-scroll" tabindex="0" role="region" aria-label="Previsioni orarie, scorri orizzontalmente"><div class="weather-hours">${hourlyRows(payload).map(row=>{const [symbol,text]=condition(row.code,row.isDay);return`<article><time datetime="${escape(row.time)}">${escape(row.time.slice(8,10))}/${escape(row.time.slice(5,7))} · ${escape(row.time.slice(11,16))}</time><span role="img" aria-label="${text}">${symbol}</span><strong>${format(row.temperature,'°')}</strong><small>Pioggia ${format(row.probability,'%')}<br>${format(row.rain,' mm')} · ${format(row.wind,' km/h')}</small></article>`}).join('')}</div></div>
       <h3>Previsioni a 7 giorni</h3><p class="weather-kicker">Temperature minime / massime</p><div class="weather-days">${payload.daily.time.slice(0,7).map((date,i)=>{const d=payload.daily,[symbol,text]=condition(d.weather_code?.[i]);return`<article><time datetime="${escape(date)}">${escape(dayLabel(date))}</time><span class="weather-condition"><span aria-hidden="true">${symbol}</span> ${text}</span><strong>${format(d.temperature_2m_min?.[i],'°')} / ${format(d.temperature_2m_max?.[i],'°')}</strong><small>Pioggia ${format(d.precipitation_probability_max?.[i],'%')} · ${format(d.precipitation_sum?.[i],' mm')}<br>Vento max ${format(d.wind_speed_10m_max?.[i],' km/h')}</small></article>`}).join('')}</div>
-      <p class="weather-attribution">Dati e previsioni modellistiche di <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. Le condizioni attuali sono stime del modello. Orari della località selezionata. Ricerca località: <a href="https://open-meteo.com/en/docs/geocoding-api" target="_blank" rel="noopener noreferrer">Open-Meteo / GeoNames</a>.</p>${city.geolocated?'<p class="weather-attribution">Nome località tramite coordinate: <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a> · <a href="https://www.bigdatacloud.com/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy</a>.</p>':''}`
+      <p class="weather-attribution">Dati e previsioni modellistiche di <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. Le condizioni attuali sono stime del modello. Orari della località selezionata. Ricerca località: <a href="https://open-meteo.com/en/docs/geocoding-api" target="_blank" rel="noopener noreferrer">Open-Meteo / GeoNames</a>. CAP italiani: <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a> (CC BY 4.0).</p>${city.geolocated?'<p class="weather-attribution">Nome località tramite coordinate: <a href="https://www.bigdatacloud.com/" target="_blank" rel="noopener noreferrer">BigDataCloud</a> · <a href="https://www.bigdatacloud.com/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy</a>.</p>':''}`
   }
-  globalThis.WeatherForecast={buildUrl,fetchWeather,condition,hourlyRows,renderContent,validate,coordinateLabel,distanceKm,localityName,resolveLocation,locationDetails,searchUrl,searchLocations};
+  globalThis.WeatherForecast={buildUrl,fetchWeather,condition,hourlyRows,renderContent,validate,coordinateLabel,distanceKm,localityName,resolveLocation,locationDetails,searchUrl,searchLocations,postalCode,postalLocations,findLocations};
   if(typeof document==='undefined'||typeof source!=='function')return;
   SOURCE_INFO.weather={name:'Meteo · Open-Meteo',years:['forecast'],description:'<strong>Meteo:</strong> situazione attuale stimata, prossime 24 ore e previsioni a 7 giorni per la città selezionata. Dati Open-Meteo.',hint:''};
   const baseConfigure=configureSourceUI,baseRender=render;
@@ -168,12 +200,10 @@
     const timeout=setTimeout(()=>controller.abort(),10000);
     $('weatherSearchStatus').textContent='Ricerca località…';
     try{
-      const response=await fetch(searchUrl(query),{signal:controller.signal,cache:'no-store'});
-      if(!response.ok)throw Error('Ricerca temporaneamente non disponibile.');
-      const payload=await response.json();if(token!==searchSequence||!weather())return;
-      results=searchLocations(payload);
+      const found=await findLocations(query,controller.signal);if(token!==searchSequence||!weather())return;
+      results=found;
       $('weatherSearchResults').innerHTML=results.map((city,i)=>`<li><button type="button" data-weather-place="${i}">${escape(city.name)}</button></li>`).join('');
-      $('weatherSearchStatus').textContent=results.length?`${results.length} risultati. Scegli la località.`:'Nessuna località trovata. Prova con un nome o CAP diverso.'
+      $('weatherSearchStatus').textContent=results.length?`${results.length} risultati. Scegli la località.`:postalCode(query)?'CAP italiano non trovato nel catalogo. Cerca il nome del comune.':'Nessuna località trovata. Prova con un nome diverso.'
     }catch(error){if(token===searchSequence&&weather())$('weatherSearchStatus').textContent=error.name==='AbortError'?'Ricerca interrotta. Riprova.':error.message}
     finally{clearTimeout(timeout)}
   }
