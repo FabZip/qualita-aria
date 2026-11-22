@@ -1,3 +1,11 @@
+# 0.8.10 — Rimozione della fonte ARPA Lazio
+
+Rimossa la fonte autonoma ARPA Lazio: opzione nel menu, selezione del comune, valutazioni annuali, grafico storico, parser CSV/XLSX, cache e stili dedicati. Rimossa anche la dipendenza SheetJS, usata soltanto per quei file. Restano Meteo, EEA, OpenAQ, previsioni della qualità dell'aria e alberi, con i rispettivi confronti e filtri.
+
+I confini ISTAT condivisi con gli alberi restano disponibili tramite funzioni comunali generiche. Le stazioni fisiche ARPA usate dal servizio temperature per EEA restano una provenienza dei dati, non una fonte selezionabile; nessuna modifica ai Worker o al database.
+
+App **0.8.10 build 123**, cache PWA aggiornata. Superate le 29 suite rimaste; eliminato il test del parser ARPA rimosso, aggiornati i test di cambio fonte e render OpenAQ.
+
 # 0.8.9 — Radar senza testi ridondanti
 
 Rimossi la spiegazione permanente sotto il radar e il collegamento esterno duplicato: restano il marchio e il link RainViewer nel widget. Il messaggio di caricamento scompare al caricamento dell'iframe; eventuali errori invitano a usare Ricarica radar.
@@ -302,24 +310,6 @@ I dati UTD sono sempre marcati con **◐ Preliminare UTD** e non vengono present
 
 La visualizzazione sfumata attorno alle stazioni è una rappresentazione grafica dei punti misurati e non una superficie modellata continua.
 
-## ARPA Lazio · comuni
-
-La fonte ARPA Lazio utilizza le valutazioni comunali annuali ufficiali per i comuni dell'intera regione. Una select dedicata viene popolata direttamente con i comuni presenti nel file annuale; Roma resta selezionata per impostazione predefinita.
-
-L'app legge direttamente i file annuali pubblicati da ARPA Lazio e ricava, quando disponibili:
-
-- MIN
-- MED
-- MAX
-
-per:
-
-- PM2.5
-- PM10
-- NO₂
-
-Il colore applicato al perimetro del comune selezionato indica l'ambito territoriale della valutazione. Non implica che la concentrazione sia uniforme in ogni punto del territorio.
-
 ## OpenAQ · area visibile
 
 OpenAQ viene usato per estendere la copertura oltre l'Europa.
@@ -367,7 +357,7 @@ Mostra i dati della fonte, dell'inquinante e del periodo selezionati.
 
 Le stazioni sono ricercabili e l'elenco è paginato. Selezionando una stazione dall'elenco, la mappa viene centrata sulla relativa posizione.
 
-Gli aggiornamenti provocati da pan e zoom sono centralizzati: l'app aspetta **2 secondi dopo l'ultimo movimento** prima di ricaricare. Questo evita richieste ripetute mentre l'utente sta ancora esplorando la mappa. Per EEA e OpenAQ la nuova richiesta usa l'area visibile; ARPA Lazio mantiene invece il confine amministrativo del comune selezionato.
+Gli aggiornamenti provocati da pan e zoom sono centralizzati: l'app aspetta **2 secondi dopo l'ultimo movimento** prima di ricaricare. Questo evita richieste ripetute mentre l'utente sta ancora esplorando la mappa. Per EEA e OpenAQ la nuova richiesta usa l'area visibile.
 
 Per ridurre la latenza EEA, le richieste passano da un **Worker Cloudflare dedicato**. Le statistiche annuali E1a vengono memorizzate nella Cache API del Worker e quindi possono essere riutilizzate anche dopo un reload o da un'altra sessione. Il browser mantiene inoltre una cache spaziale locale: piccoli spostamenti dentro la stessa cella non generano una nuova richiesta.
 
@@ -387,7 +377,7 @@ Per OpenAQ il confronto è temporaneamente disabilitato: la vista attuale rappre
 
 ## Periodi temporali
 
-EEA e ARPA sono attualmente collegati a dataset annuali, quindi il selettore mensile non viene mostrato.
+EEA è collegata a dataset annuali, quindi il selettore mensile non viene mostrato.
 
 L'aggregazione mensile potrà essere aggiunta usando flussi dati dedicati. Questo sarà anche uno dei presupposti per un confronto OpenAQ temporalmente omogeneo.
 
@@ -408,17 +398,11 @@ La heatmap serve esclusivamente a facilitare la lettura spaziale dei punti e non
 
 ## Temperatura · stazioni fisiche nelle fonti osservazionali
 
-Il selettore `Fonte inquinante` continua a scegliere esclusivamente EEA,
-ARPA Lazio o Globale · OpenAQ.
+Il selettore `Fonte inquinante` continua a scegliere esclusivamente EEA o Globale · OpenAQ.
 
 I cerchi e le etichette numeriche dell'inquinante non vengono più mostrati
 sulla mappa: su mobile il campo cromatico resta leggibile e i valori puntuali
 rimangono nell'elenco sotto la mappa.
-
-### ARPA Lazio
-
-La temperatura usa la rete micro-meteorologica fisica ARPA Lazio. I marker
-`🌡` hanno dimensione fissa e restano alle coordinate reali delle postazioni.
 
 ### EEA
 
@@ -535,14 +519,12 @@ Frontend:
 - HTML, CSS e JavaScript
 - MapLibre GL JS
 - hyparquet per la lettura browser dei file EEA UTD in formato Parquet
-- SheetJS per i file XLSX ARPA
 - GitHub Pages
 
 Dati e servizi:
 
 - EEA Discodata
 - elenco locale dei capoluoghi italiani per delimitare le query EEA
-- file ufficiali ARPA Lazio
 - OpenAQ API v3
 - Cloudflare Worker per proteggere la API key OpenAQ e applicare cache, filtri e limiti geografici
 # A.R.I.A. 0.6.5

@@ -76,7 +76,7 @@
         if(!postalPending)postalPending=(async()=>{
           const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
           try{
-          const response=await fetch('data/italian-postal-codes.json?v=0.8.9',{signal:controller.signal});
+          const response=await fetch('data/italian-postal-codes.json?v=0.8.10',{signal:controller.signal});
           if(!response.ok)throw Error('Catalogo CAP temporaneamente non disponibile. Cerca il nome del comune.');
           const payload=await response.json();if(!payload?.codes||typeof payload.codes!=='object')throw Error('Catalogo CAP non valido. Cerca il nome del comune.');
           postalData=payload;return payload
@@ -159,7 +159,7 @@
     if(!active)return;
     document.documentElement.classList.remove('trees-source','forecast-source');
     for(const selector of ['.mode-tabs','.legend-bar','.map-card','.summary','.station-list'])document.querySelector(selector)?.classList.add('hidden');
-    for(const id of ['forecastPanel','eeaScopeField','arpaCityField','pollutantField','temperatureMetricField','singleYearField','monthField','comparePanel','mapHint','arpaHistoryPanel'])$(id)?.classList.add('hidden');
+    for(const id of ['forecastPanel','eeaScopeField','pollutantField','temperatureMetricField','singleYearField','monthField','comparePanel','mapHint'])$(id)?.classList.add('hidden');
   }
   configureSourceUI=function(){
     $('weatherPanel').classList.add('hidden');

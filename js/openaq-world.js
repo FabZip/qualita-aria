@@ -381,7 +381,6 @@
     $('singleYearField')?.classList.add('hidden');
     configureTreeCityOptions(false);
     $('eeaCityField')?.classList.remove('hidden');
-    $('arpaCityField')?.classList.add('hidden');
     $('pollutantField')?.classList.remove('hidden');
     $('temperatureMetricField')?.classList.add('hidden');
 

@@ -1,3 +1,11 @@
+# 0.8.10 — Rimozione della fonte ARPA Lazio
+
+Rimossa la fonte autonoma ARPA Lazio: opzione nel menu, selezione del comune, valutazioni annuali, grafico storico, parser CSV/XLSX, cache e stili dedicati. Rimossa anche la dipendenza SheetJS, usata soltanto per quei file. Restano Meteo, EEA, OpenAQ, previsioni della qualità dell'aria e alberi, con i rispettivi confronti e filtri.
+
+I confini ISTAT condivisi con gli alberi restano disponibili tramite funzioni comunali generiche. Le stazioni fisiche ARPA usate dal servizio temperature per EEA restano una provenienza dei dati, non una fonte selezionabile; nessuna modifica ai Worker o al database.
+
+App **0.8.10 build 123**, cache PWA aggiornata. Superate le 29 suite rimaste; eliminato il test del parser ARPA rimosso, aggiornati i test di cambio fonte e render OpenAQ.
+
 # 0.8.9 — Radar senza testi ridondanti
 
 Rimossi la spiegazione permanente sotto il radar e il collegamento esterno duplicato: restano il marchio e il link RainViewer nel widget. Il messaggio di caricamento scompare al caricamento dell'iframe; eventuali errori invitano a usare Ricarica radar.

@@ -212,7 +212,6 @@
     document.querySelector('.summary')?.classList.toggle('hidden',active);
     document.querySelector('.station-list')?.classList.toggle('hidden',active);
     $('mapHint')?.classList.toggle('hidden',active);
-    $('arpaHistoryPanel')?.classList.add('hidden');
     if(active){
       $('comparePanel')?.classList.add('hidden');
       $('singleYearField')?.classList.add('hidden');
@@ -228,7 +227,6 @@
     $('sourceDescription').innerHTML=SOURCE_INFO.forecast.description;
     $('eeaScopeField')?.classList.add('hidden');
     $('eeaCityField')?.classList.remove('hidden');
-    $('arpaCityField')?.classList.add('hidden');
     $('pollutantField')?.classList.remove('hidden');
     $('treeLegend')?.classList.add('hidden');
     $('temperatureMetricField')?.classList.add('hidden')

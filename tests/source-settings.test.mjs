@@ -14,7 +14,6 @@ function options(id,values){
   select.value=values.includes(old)?old:values[0]||''
 }
 options('eeaScopeSelect',['italy','europe']);
-options('arpaCitySelect',['058091','058047']);
 const modes=['map','compare','difference'].map(mode=>({dataset:{mode},classList:{toggle(){}}}));
 const context=vm.createContext({console,
   state:{mode:'map',activeSource:'eea',sourceSettings:new Map()},$:node,
@@ -47,7 +46,6 @@ set('eeaCitySelect','geolocate');set('yearSelect','today');set('pollutantSelect'
 switchTo('forecast');set('eeaCitySelect','milano');set('pollutantSelect','CO');
 switchTo('openaq');set('eeaCitySelect','milano');set('monthSelect','15');set('pollutantSelect','SO2');
 switchTo('trees');set('eeaCitySelect','guidonia-montecelio');context.fillYears();set('yearSelect','2025');set('compareYearA','2024');set('compareYearB','2026');
-switchTo('arpa');set('arpaCitySelect','058047');set('yearSelect','2019');set('pollutantSelect','NO2');context.state.mode='compare';set('compareYearA','2018');set('compareYearB','2020');
 
 for(let iteration=0;iteration<2;iteration++){
   switchTo('eea');
@@ -58,8 +56,6 @@ for(let iteration=0;iteration<2;iteration++){
   assert.equal(node('eeaCitySelect').value,'milano');assert.equal(node('monthSelect').value,'15');assert.equal(node('pollutantSelect').value,'SO2');assert.equal(context.state.mode,'map');
   switchTo('trees');
   assert.equal(node('eeaCitySelect').value,'guidonia-montecelio');assert.equal(node('yearSelect').value,'2025');assert.equal(node('compareYearA').value,'2024');assert.equal(node('compareYearB').value,'2026');
-  switchTo('arpa');
-  assert.equal(node('arpaCitySelect').value,'058047');assert.equal(node('yearSelect').value,'2019');assert.equal(node('pollutantSelect').value,'NO2');assert.equal(node('compareYearA').value,'2018');assert.equal(context.state.mode,'compare');
 }
 // I valori salvati ma non più disponibili non devono lasciare select vuote.
 context.state.sourceSettings.get('eea').values.pollutantSelect='CO';

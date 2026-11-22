@@ -4,8 +4,8 @@ const state={
   deferredPrompt:null,swipe:50,syncing:false,
   activeSource:null,sourceSettings:new Map(),
   toastTimer:null,renderToken:0,
-  eeaCache:new Map(),arpaCache:new Map(),
-  arpaBoundaryCache:new Map(),
+  eeaCache:new Map(),
+  municipalBoundaryCache:new Map(),
   eeaCities:new Map(),
   temperatureCache:new Map(),
   temperatureInflight:new Map(),
@@ -79,32 +79,10 @@ const EEA_SCOPES={
 const EEA_SQL_API='https://discodata.eea.europa.eu/sql';
 
 /*
- * ARPA Lazio:
- * Do not depend on the CKAN DataStore API at runtime.
- * The application reads the official static annual files published by ARPA Lazio.
- * 2013-2020 use ARPA CSV; 2021-2025 use ARPA XLSX. Open Data Lazio is not fetched at runtime because its download endpoint blocks cross-origin browser requests.
- */
-const ARPA_STATIC_FILES={
-  '2025':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_Comunali_2025.xlsx'},
-  '2024':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2024.xlsx'},
-  '2023':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2023.xlsx'},
-  '2022':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2022.xlsx'},
-  '2021':{type:'xlsx',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2021.xlsx'},
-  '2020':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2020.csv'},
-  '2019':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2019.csv'},
-  '2018':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2018.csv'},
-  '2017':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2017.csv'},
-  '2016':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2016.csv'},
-  '2015':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2015.csv'},
-  '2014':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2014.csv'},
-  '2013':{type:'csv',url:'https://www.arpalazio.it/documents/20124/430865/Standard_comunali_2013.csv'}
-};
-
-/*
  * Municipal boundaries in WGS84 derived from ISTAT limits.
- * The selected ARPA municipality determines which Lazio province file is loaded.
+ * Tree municipalities determine which Lazio province file is loaded.
  */
-const ARPA_BOUNDARY_URLS={
+const MUNICIPAL_BOUNDARY_URLS={
   '056':'https://raw.githubusercontent.com/guglielmo/geojson-italy/main/geojson/limits_P_56_municipalities.geojson',
   '057':'https://raw.githubusercontent.com/guglielmo/geojson-italy/main/geojson/limits_P_57_municipalities.geojson',
   '058':'https://raw.githubusercontent.com/guglielmo/geojson-italy/main/geojson/limits_P_58_municipalities.geojson',
@@ -113,9 +91,9 @@ const ARPA_BOUNDARY_URLS={
 };
 
 const POLLUTANTS={
-  'PM2.5':{eeaCode:6001,label:'PM2.5',arpaPrefix:'PM2.5 media annua'},
-  'PM10':{eeaCode:5,label:'PM10',arpaPrefix:'PM10 media annua'},
-  'NO2':{eeaCode:8,label:'NO₂',arpaPrefix:'NO2 media annua'},
+  'PM2.5':{eeaCode:6001,label:'PM2.5'},
+  'PM10':{eeaCode:5,label:'PM10'},
+  'NO2':{eeaCode:8,label:'NO₂'},
   O3:{label:'O₃'},
   SO2:{label:'SO₂'},
   CO:{label:'CO'}
@@ -123,7 +101,6 @@ const POLLUTANTS={
 
 const EEA_YEARS=Array.from({length:13},(_,i)=>String(2025-i));
 
-const ARPA_YEARS=Object.keys(ARPA_STATIC_FILES).sort((a,b)=>Number(b)-Number(a));
 
 const SOURCE_INFO={
   eea:{
@@ -131,12 +108,6 @@ const SOURCE_INFO={
     years:EEA_YEARS,
     description:'<strong>EEA:</strong> statistiche annuali delle stazioni ufficialmente riportate dai Paesi europei.',
     hint:'I punti rappresentano stazioni reali. La sfumatura aiuta a leggerne la distribuzione e non descrive una concentrazione uniforme sul territorio.'
-  },
-  arpa:{
-    name:'ARPA Lazio',
-    years:ARPA_YEARS,
-    description:'<strong>ARPA Lazio:</strong> stime comunali ufficiali pubblicate annualmente da ARPA.',
-    hint:'Il colore copre il territorio amministrativo del comune selezionato per mostrare a quale area si riferisce il dato. Non significa che la concentrazione sia uniforme in ogni punto del territorio.'
   },
   temperature:{
     name:'ERA5-Land · Open-Meteo',
@@ -151,7 +122,6 @@ function sourceSettingFields(name){
   const periods=['yearSelect','compareYearA','compareYearB'];
   switch(name){
     case 'eea':return['eeaScopeSelect','eeaCitySelect','pollutantSelect',...periods];
-    case 'arpa':return['arpaCitySelect','pollutantSelect',...periods];
     case 'openaq':return['eeaCitySelect','pollutantSelect','monthSelect'];
     case 'weather':return[];
     case 'forecast':return['eeaCitySelect','pollutantSelect'];
@@ -212,7 +182,6 @@ function isTrees(){return source()==='trees'}
 function isForecast(){return source()==='forecast'}
 function eeaScope(){return $('eeaScopeSelect')?.value||'italy'}
 function eeaCity(){return $('eeaCitySelect')?.value||EEA_DEFAULT_CITY}
-function arpaMunicipality(){return $('arpaCitySelect')?.value||'058091'}
 
 function eeaSelectedScope(){
   if(eeaScope()==='europe')return EEA_SCOPES.europe;
@@ -507,7 +476,6 @@ function configureSourceUI(){
     $('pollutantSourceField')?.classList.remove('hidden');
     $('eeaScopeField').classList.add('hidden');
     $('eeaCityField')?.classList.remove('hidden');
-    $('arpaCityField')?.classList.add('hidden');
     $('pollutantField')?.classList.add('hidden');
     $('monthField')?.classList.add('hidden');
     $('treeLegend')?.classList.remove('hidden');
@@ -534,13 +502,11 @@ function configureSourceUI(){
     :SOURCE_INFO[source()];
 
   const isEea=!temperature&&source()==='eea';
-  const isArpa=!temperature&&source()==='arpa';
   const isItaly=isEea&&eeaScope()==='italy';
 
   $('sourceDescription').innerHTML=info.description;
   $('eeaScopeField').classList.toggle('hidden',!isEea);
   $('eeaCityField')?.classList.toggle('hidden',!isItaly);
-  $('arpaCityField')?.classList.toggle('hidden',!isArpa);
   $('pollutantField')?.classList.toggle('hidden',temperature);
   $('temperatureMetricField')?.classList.toggle('hidden',!temperature);
   setTemperatureModeLock(temperature);
@@ -566,12 +532,6 @@ function configureSourceUI(){
     $('countLabel').textContent='Stazioni';
     $('countUnit').textContent='visualizzate';
     $('listTitle').textContent='Stazioni visualizzate';
-  }else{
-    const municipality=$('arpaCitySelect')?.selectedOptions?.[0]?.textContent||'Roma';
-    $('avgLabel').textContent='Valore MED';
-    $('countLabel').textContent='Ambito';
-    $('countUnit').textContent=`Comune di ${municipality}`;
-    $('listTitle').textContent='Valutazione visualizzata';
   }
 }
 
@@ -951,165 +911,10 @@ async function fetchEeaRows(year,pollutant){
   }
 }
 
-function normalizeArpaKey(v){
-  return normalizeText(v)
-    .replaceAll('μ','µ')
-    .replace(/pm\s*2\s*[,\.]\s*5/g,'pm2.5')
-    .replace(/pm\s*10/g,'pm10')
-    .replace(/no\s*2/g,'no2')
-    .replace(/\s+/g,' ')
-    .trim()
-}
-function arpaField(record,prefix,suffix){
-  const p=normalizeArpaKey(prefix);
-  const s=normalizeArpaKey(suffix);
-  return Object.keys(record).find(k=>{
-    const n=normalizeArpaKey(k);
-    return n.includes(p)&&(n.endsWith(s)||n.includes(` ${s} `))
-  })
-}
-const ARPA_POSITIONAL_GROUP={
-  'PM10':0,
-  'PM2.5':2,
-  'NO2':3
-};
-
-function arpaGenericHeaderToken(v){
-  const n=normalizeArpaKey(v);
-  if(n==='min')return'MIN';
-  if(n==='med')return'MED';
-  if(n==='max')return'MAX';
-  return null
-}
-
-function arpaPositionalMetric(record,headers,pollutant){
-  const cells=record?.__cells;
-  if(!Array.isArray(cells)||!Array.isArray(headers))return null;
-
-  const minColumns=[];
-  headers.forEach((header,index)=>{
-    if(arpaGenericHeaderToken(header)==='MIN')minColumns.push(index)
-  });
-
-  if(minColumns.length<2)return null;
-
-  const firstMetricColumn=minColumns[0];
-  const distances=[];
-  for(let i=1;i<minColumns.length;i++){
-    const distance=minColumns[i]-minColumns[i-1];
-    if(distance>0)distances.push(distance)
-  }
-
-  const frequency=new Map();
-  distances.forEach(d=>frequency.set(d,(frequency.get(d)||0)+1));
-
-  const groupWidth=[...frequency.entries()]
-    .sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0]?.[0];
-
-  const groupIndex=ARPA_POSITIONAL_GROUP[pollutant];
-  if(!Number.isInteger(groupWidth)||groupWidth<3||groupIndex===undefined)return null;
-
-  const base=firstMetricColumn+(groupIndex*groupWidth);
-  if(base+2>=cells.length)return null;
-
-  const min=parseNumber(cells[base]);
-  const med=parseNumber(cells[base+1]);
-  const max=parseNumber(cells[base+2]);
-  if(med===null)return null;
-
-  return{
-    min,med,max,
-    groupIndex,
-    groupWidth,
-    columns:{MIN:base,MED:base+1,MAX:base+2},
-    fields:{
-      MIN:`colonna ${base+1} · MIN`,
-      MED:`colonna ${base+2} · MED`,
-      MAX:`colonna ${base+3} · MAX`
-    }
-  }
-}
-
-function arpaRecordIdentity(record){
-  const entries=Object.entries(record||{});
-  const codeEntries=entries.filter(([k])=>{
-    const key=normalizeArpaKey(k);
-    return (key.includes('istat')||/cod(?:ice)?[ _]*comun/.test(key))&&!/provincia|regione/.test(key)
-  });
-  const istatEntry=codeEntries.find(([k])=>normalizeArpaKey(k).includes('comun'))||codeEntries[0];
-  const rawValue=String(istatEntry?.[1]??'').trim();
-  // Accetta codici numerici serializzati come 58091.0 o in notazione
-  // scientifica senza concatenare le cifre decimali al codice ISTAT.
-  const raw=/^\d+$/.test(rawValue)?rawValue:
-    /^\d+(?:\.0+|(?:\.\d+)?e\+?\d+)$/i.test(rawValue)&&Number.isSafeInteger(Number(rawValue))?String(Number(rawValue)):'';
-  // ARPA 2025 prefixes the six-digit municipality code with Lazio's
-  // two-digit regional code (12): Roma is 12058091 instead of 058091.
-  const municipalCode=raw.length===8&&raw.startsWith('12')?raw.slice(2):raw;
-  const padded=municipalCode.padStart(6,'0');
-  const code=/^0(?:56|57|58|59|60)\d{3}$/.test(padded)?padded:'';
-
-  const nameEntry=entries.find(([k])=>{
-    const n=normalizeArpaKey(k);
-    return !/cod|istat/.test(n)&&(n==='nome'||n.includes('comune')||n.includes('denominazione'))
-  });
-  const name=displayText(nameEntry?.[1]).trim();
-  return{code,name}
-}
-
-function arpaMunicipalityName(value){
-  const name=normalizeText(String(value??'').normalize('NFC')).replace(/[’‘]/g,"'");
-  return name==='roma capitale'?'roma':name
-}
-
-function findArpaRecord(records,code,name){
-  const byCode=records.find(record=>arpaRecordIdentity(record).code===code);
-  if(byCode)return byCode;
-  const expected=arpaMunicipalityName(name|| (code==='058091'?'Roma':''));
-  if(!expected)return undefined;
-  const byName=records.filter(record=>{
-    const identity=arpaRecordIdentity(record);
-    return !identity.code&&arpaMunicipalityName(identity.name)===expected
-  });
-  // Il nome è un ripiego soltanto se il codice manca e la riga è univoca.
-  return byName.length===1?byName[0]:undefined
-}
-
-function isRomeRecord(record){
-  const identity=arpaRecordIdentity(record);
-  const name=normalizeText(identity.name);
-  return identity.code==='058091'||name==='roma'||name==='roma capitale'
-}
-
-function populateArpaMunicipalities(records,selected=null){
-  const select=$('arpaCitySelect');
-  if(!select)return;
-  const municipalities=records
-    .map(arpaRecordIdentity)
-    .filter(item=>/^0(?:56|57|58|59|60)\d{3}$/.test(item.code)&&item.name)
-    .filter((item,index,all)=>all.findIndex(other=>other.code===item.code)===index)
-    .sort((a,b)=>a.name.localeCompare(b.name,'it'));
-  if(selected?.name&&!municipalities.some(item=>item.code===selected.code)){
-    municipalities.push(selected);
-    municipalities.sort((a,b)=>a.name.localeCompare(b.name,'it'))
-  }
-  if(!municipalities.length)return;
-  const signature=municipalities.map(item=>item.code).join(',');
-  if(select.dataset.optionSignature===signature)return;
-  const old=select.value||'058091';
-  select.replaceChildren(...municipalities.map(item=>{
-    const option=document.createElement('option');
-    option.value=item.code;
-    option.textContent=item.name;
-    return option
-  }));
-  select.value=municipalities.some(item=>item.code===old)?old:'058091';
-  select.dataset.optionSignature=signature
-}
-
-async function fetchArpaBoundary(code,name){
+async function fetchMunicipalBoundary(code,name){
   const normalized=String(code).padStart(6,'0');
-  if(state.arpaBoundaryCache.has(normalized))return state.arpaBoundaryCache.get(normalized);
-  const url=ARPA_BOUNDARY_URLS[normalized.slice(0,3)];
+  if(state.municipalBoundaryCache.has(normalized))return state.municipalBoundaryCache.get(normalized);
+  const url=MUNICIPAL_BOUNDARY_URLS[normalized.slice(0,3)];
   if(!url)throw new Error(`Provincia ISTAT non riconosciuta per ${name}.`);
 
   try{
@@ -1139,7 +944,7 @@ async function fetchArpaBoundary(code,name){
       }]
     };
 
-    state.arpaBoundaryCache.set(normalized,boundary);
+    state.municipalBoundaryCache.set(normalized,boundary);
     return boundary
   }catch(err){
     console.error(`Perimetro ${name} non disponibile`,err);
@@ -1149,386 +954,9 @@ async function fetchArpaBoundary(code,name){
 
 function fetchTreeBoundary(cityId){
   const city=TREE_CITY_CONFIG[cityId];
-  return city?fetchArpaBoundary(city.istat,city.name):Promise.resolve(null)
+  return city?fetchMunicipalBoundary(city.istat,city.name):Promise.resolve(null)
 }
 
-
-function fetchWithTimeout(url,options={},timeoutMs=16000){
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),timeoutMs);
-  return fetch(url,{...options,signal:controller.signal})
-    .finally(()=>clearTimeout(timer))
-}
-
-function csvDelimiter(text){
-  const sample=text.split(/\r?\n/).slice(0,15).join('\n');
-  const candidates=[',',';','\t'];
-  return candidates
-    .map(d=>({d,count:sample.split(d).length-1}))
-    .sort((a,b)=>b.count-a.count)[0]?.d||';'
-}
-
-function parseDelimitedRows(text,delimiter){
-  const rows=[];
-  let row=[],field='',quoted=false;
-  const pushField=()=>{row.push(field);field=''};
-  const pushRow=()=>{if(row.some(v=>String(v).trim()!==''))rows.push(row);row=[]};
-
-  for(let i=0;i<text.length;i++){
-    const c=text[i];
-    if(c==='"'){
-      if(quoted&&text[i+1]==='"'){field+='"';i++}
-      else quoted=!quoted
-    }else if(c===delimiter&&!quoted){
-      pushField()
-    }else if((c==='\n'||c==='\r')&&!quoted){
-      if(c==='\r'&&text[i+1]==='\n')i++;
-      pushField();pushRow()
-    }else field+=c
-  }
-  if(field.length||row.length){pushField();pushRow()}
-  return rows
-}
-
-function findArpaHeaderRow(matrix){
-  const limit=Math.min(matrix.length,40);
-  let best={index:-1,score:0};
-
-  for(let i=0;i<limit;i++){
-    const cells=(matrix[i]||[]).map(normalizeArpaKey);
-    let score=0;
-
-    if(cells.some(v=>v.includes('istat')))score+=5;
-    if(cells.some(v=>v==='nome'||v.includes('comune')||v.includes('denominazione')))score+=3;
-    if(cells.some(v=>v.includes('pm10')&&v.includes('media annua')))score+=3;
-    if(cells.some(v=>v.includes('pm2.5')&&v.includes('media annua')))score+=3;
-    if(cells.some(v=>v.includes('no2')&&v.includes('media annua')))score+=3;
-
-    if(score>best.score)best={index:i,score}
-  }
-
-  return best.score>=8?best.index:-1
-}
-
-function copyMatrix(matrix){
-  return (matrix||[]).map(row=>Array.isArray(row)?[...row]:[])
-}
-
-/*
- * In XLSX the pollutant title is often a merged cell spanning MIN/MED/MAX
- * and other subcolumns. SheetJS returns the value only in the top-left cell.
- * Expand the merge over the matrix before composing the final header.
- */
-function expandSheetMerges(matrix,sheet){
-  const out=copyMatrix(matrix);
-  const merges=sheet?.['!merges']||[];
-
-  for(const merge of merges){
-    const source=out[merge.s.r]?.[merge.s.c];
-    if(source===undefined||source===null||String(source).trim()==='')continue;
-
-    for(let r=merge.s.r;r<=merge.e.r;r++){
-      if(!out[r])out[r]=[];
-      for(let c=merge.s.c;c<=merge.e.c;c++){
-        if(out[r][c]===undefined||out[r][c]===null||String(out[r][c]).trim()===''){
-          out[r][c]=source
-        }
-      }
-    }
-  }
-
-  return out
-}
-
-function isArpaSubheaderRow(row){
-  const cells=(row||[])
-    .map(normalizeArpaKey)
-    .filter(Boolean);
-
-  if(!cells.length)return false;
-
-  const tokens=[
-    'min','med','max',
-    'area superamento',
-    'popolazione esposta',
-    'popolazione estesa',
-    'note'
-  ];
-
-  const tokenHits=cells.filter(v=>tokens.some(t=>v===t||v.includes(t))).length;
-  const identityHits=cells.filter(v=>
-    v.includes('istat')||v==='nome'||v.includes('comune')||v==='zona'
-  ).length;
-
-  // Municipality data rows must not be mistaken for a second header row.
-  const numericish=cells.filter(v=>/^[-+]?[0-9]+(?:[.,][0-9]+)?$/.test(v)).length;
-
-  return tokenHits>=2 && identityHits<=1 && numericish===0
-}
-
-function cleanHeaderPart(v){
-  return String(v??'')
-    .replace(/^\uFEFF/,'')
-    .replace(/\s+/g,' ')
-    .trim()
-}
-
-function isArpaDescriptor(v){
-  const n=normalizeArpaKey(v);
-  if(!n)return false;
-
-  const hasPollutant=
-    n.includes('pm2.5')||
-    n.includes('pm10')||
-    n.includes('no2')||
-    n.includes('o3')||
-    n.includes('so2')||
-    n.includes('benzene')||
-    /(^|\s)co(\s|$)/.test(n);
-
-  const hasMetric=
-    n.includes('media annua')||
-    n.includes('media 8')||
-    n.includes('massima media')||
-    n.includes('superament')||
-    n.includes('n° sup')||
-    n.includes('n. sup')||
-    n.includes('vl=')||
-    n.includes('µg/m3')||
-    n.includes('mg/m3');
-
-  return hasPollutant&&hasMetric
-}
-
-function buildArpaHeaders(matrix,headerRow){
-  const parentRows=[];
-
-  // 2025 can place the pollutant/group descriptor several rows above
-  // the MIN/MED/MAX row. Scan every physical row above the detected header.
-  for(let r=0;r<headerRow;r++){
-    if((matrix[r]||[]).some(isArpaDescriptor))parentRows.push(r)
-  }
-
-  const lowerRows=[headerRow];
-
-  // Retain compatibility with layouts where MIN/MED/MAX are below
-  // an identity/main header row.
-  for(let r=headerRow+1;r<Math.min(matrix.length,headerRow+3);r++){
-    if(isArpaSubheaderRow(matrix[r]))lowerRows.push(r);
-    else break
-  }
-
-  const usedRows=[...new Set([...parentRows,...lowerRows])].sort((a,b)=>a-b);
-  const maxCols=Math.max(...usedRows.map(r=>(matrix[r]||[]).length),0);
-  const headers=[];
-
-  for(let c=0;c<maxCols;c++){
-    const childParts=lowerRows
-      .map(r=>cleanHeaderPart(matrix[r]?.[c]))
-      .filter(Boolean);
-
-    const child=childParts.join(' ').trim();
-    const childNorm=normalizeArpaKey(child);
-
-    const isIdentity=
-      childNorm.includes('istat')||
-      childNorm==='nome'||
-      childNorm.includes('comune')||
-      childNorm.includes('denominazione')||
-      childNorm==='zona'||
-      childNorm.includes('note');
-
-    if(isIdentity){
-      headers[c]=child||`__col_${c}`;
-      continue
-    }
-
-    const parentParts=[];
-    for(const r of parentRows){
-      const value=cleanHeaderPart(matrix[r]?.[c]);
-      if(!isArpaDescriptor(value))continue;
-
-      if(!parentParts.some(p=>normalizeArpaKey(p)===normalizeArpaKey(value))){
-        parentParts.push(value)
-      }
-    }
-
-    const allParts=[...parentParts,...childParts]
-      .filter(Boolean)
-      .filter((v,i,arr)=>
-        arr.findIndex(x=>normalizeArpaKey(x)===normalizeArpaKey(v))===i
-      );
-
-    headers[c]=allParts.join(' ').trim()||`__col_${c}`
-  }
-
-  return{
-    headers,
-    headerRows:usedRows,
-    parentRows,
-    lowerRows,
-    dataStartRow:Math.max(...lowerRows)+1
-  }
-}
-function matrixToArpaRecords(matrix){
-  const headerRow=findArpaHeaderRow(matrix);
-  if(headerRow<0){
-    return{
-      records:[],
-      headerRow:-1,
-      headerRows:[],
-      dataStartRow:-1,
-      headers:[]
-    }
-  }
-
-  const built=buildArpaHeaders(matrix,headerRow);
-  const records=[];
-
-  for(const values of matrix.slice(built.dataStartRow)){
-    if(!values||!values.some(v=>String(v??'').trim()!==''))continue;
-
-    const record={};
-    built.headers.forEach((h,i)=>record[h]=values[i]??'');
-
-    Object.defineProperty(record,'__cells',{
-      value:[...values],
-      enumerable:false,
-      configurable:false,
-      writable:false
-    });
-
-    records.push(record)
-  }
-
-  return{
-    records,
-    headerRow,
-    headerRows:built.headerRows,
-    parentRows:built.parentRows||[],
-    lowerRows:built.lowerRows||[],
-    dataStartRow:built.dataStartRow,
-    headers:built.headers
-  }
-}
-
-function parseCsvText(text){
-  const clean=String(text??'').replace(/^\uFEFF/,'');
-  const lead=clean.trimStart().slice(0,120).toLowerCase();
-  if(lead.startsWith('<?xml')||lead.startsWith('<html')||lead.startsWith('<!doctype')){
-    throw new Error('il server ha restituito XML/HTML invece del CSV')
-  }
-  const matrix=parseDelimitedRows(clean,csvDelimiter(clean));
-  return matrixToArpaRecords(matrix)
-}
-
-function xlsxSignature(buffer){
-  const b=new Uint8Array(buffer.slice(0,4));
-  return b.length>=2&&b[0]===0x50&&b[1]===0x4b
-}
-
-function responsePreview(buffer){
-  try{return new TextDecoder('utf-8').decode(buffer.slice(0,240)).replace(/\s+/g,' ').trim()}
-  catch{return''}
-}
-
-function parseArpaWorkbook(buffer){
-  if(!window.XLSX)throw new Error('parser XLSX non disponibile');
-  if(!xlsxSignature(buffer)){
-    const preview=responsePreview(buffer);
-    const kind=preview.startsWith('<?xml')||preview.startsWith('<')?'XML/HTML':'contenuto non XLSX';
-    throw new Error(`il server ha restituito ${kind} invece di un file XLSX valido`)
-  }
-
-  const workbook=XLSX.read(buffer,{type:'array'});
-  const inspected=[];
-  for(const sheetName of workbook.SheetNames){
-    const sheet=workbook.Sheets[sheetName];
-    const rawMatrix=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false,blankrows:true});
-    const matrix=expandSheetMerges(rawMatrix,sheet);
-    const parsed=matrixToArpaRecords(matrix);
-
-    inspected.push({
-      sheet:sheetName,
-      rows:parsed.records.length,
-      headerRow:parsed.headerRow>=0?parsed.headerRow+1:null,
-      headerRows:parsed.headerRows.map(r=>r+1),
-      parentRows:(parsed.parentRows||[]).map(r=>r+1),
-      lowerRows:(parsed.lowerRows||[]).map(r=>r+1),
-      dataStartRow:parsed.dataStartRow>=0?parsed.dataStartRow+1:null,
-      sampleHeaders:parsed.headers.filter(h=>!h.startsWith('__col_')).slice(0,30),
-      headerMatrix:parsed.headerRows.map(r=>({
-        row:r+1,
-        cells:(matrix[r]||[]).slice(0,30).map(v=>String(v??'').trim())
-      }))
-    });
-
-    if(parsed.records.length&&parsed.records.some(isRomeRecord)){
-      return{
-        records:parsed.records,
-        sheetName,
-        headerRow:parsed.headerRow+1,
-        headerRows:parsed.headerRows.map(r=>r+1),
-        parentRows:(parsed.parentRows||[]).map(r=>r+1),
-        lowerRows:(parsed.lowerRows||[]).map(r=>r+1),
-        dataStartRow:parsed.dataStartRow+1,
-        headers:parsed.headers,
-        inspected
-      }
-    }
-  }
-  const detail=inspected.map(x=>`${x.sheet}: header ${x.headerRow??'non trovato'}, ${x.rows} righe`).join('; ');
-  throw new Error(`XLSX letto, ma nessun foglio contiene una tabella comunale riconoscibile (${detail})`)
-}
-
-async function loadArpaStaticRecords(year){
-  const cfg=ARPA_STATIC_FILES[year];
-  if(!cfg)throw new Error(`ARPA Lazio: file ufficiale ${year} non configurato.`);
-
-  // If a machine-readable CSV fallback exists, prefer it. XLSX remains the
-  // official fallback and is parsed by scanning every worksheet/header row.
-  const candidates=cfg.fallback
-    ?[{url:cfg.fallback,type:'csv'},{url:cfg.url,type:cfg.type}]
-    :[{url:cfg.url,type:cfg.type}];
-  const attempts=[];
-
-  for(const candidate of candidates){
-    const {url,type}=candidate;
-    try{
-      const response=await fetchWithTimeout(url,{cache:'no-store',mode:'cors'});
-      if(!response.ok)throw new Error(`HTTP ${response.status}`);
-      const contentType=(response.headers.get('content-type')||'').toLowerCase();
-
-      if(type==='xlsx'){
-        const buffer=await response.arrayBuffer();
-        const parsed=parseArpaWorkbook(buffer);
-        return{
-          records:parsed.records,url,format:'XLSX',contentType,
-          sheetName:parsed.sheetName,
-          headerRow:parsed.headerRow,
-          headerRows:parsed.headerRows,
-          parentRows:parsed.parentRows,
-          lowerRows:parsed.lowerRows,
-          dataStartRow:parsed.dataStartRow,
-          parsedHeaders:parsed.headers,
-          workbookInspection:parsed.inspected
-        }
-      }
-
-      const text=await response.text();
-      const parsed=parseCsvText(text);
-      if(!parsed.records.length)throw new Error('CSV letto ma tabella ARPA non riconosciuta');
-      return{records:parsed.records,url,format:'CSV',contentType,headerRow:parsed.headerRow+1}
-    }catch(err){
-      attempts.push({url,type,error:String(err.message||err)})
-    }
-  }
-
-  const detail=attempts.map(a=>`${a.type.toUpperCase()}: ${a.error}`).join(' · ');
-  const error=new Error(`ARPA Lazio: impossibile leggere i dati ${year}. ${detail}`);
-  error.attempts=attempts;
-  throw error
-}
 
 function coordinatesFromGeometry(geometry,acc=[]){
   if(!geometry)return acc;
@@ -1554,190 +982,6 @@ function boundsFromGeoJSON(geo){
     minLat=Math.min(minLat,lat);maxLat=Math.max(maxLat,lat)
   });
   return[[minLon,minLat],[maxLon,maxLat]]
-}
-
-function fitArpaScope(map,rows){
-  const municipal=rows.find(r=>r.kind==='municipal'&&r.boundary);
-  const bounds=boundsFromGeoJSON(municipal?.boundary);
-  if(bounds&&map){
-    map.fitBounds(bounds,{padding:34,duration:0,maxZoom:10.4})
-  }
-}
-
-async function fetchArpaRows(year,pollutant,silent=false){
-  const report=silent?()=>{}:diagnostics;
-  const selectedCode=arpaMunicipality();
-  const selectedName=$('arpaCitySelect')?.selectedOptions?.[0]?.textContent||'';
-  const cacheKey=`${selectedCode}:${year}:${pollutant}`;
-  if(state.arpaCache.has(cacheKey)){
-    const cached=state.arpaCache.get(cacheKey);
-    report({...cached.diagnostic,cache:'memory'});
-    return cached.rows
-  }
-
-  let loaded;
-  try{
-    loaded=await loadArpaStaticRecords(year)
-  }catch(err){
-    report({
-      source:'ARPA Lazio · file statico ufficiale',
-      year,pollutant,
-      data:'FAILED',
-      error:String(err.message||err),
-      attempts:err.attempts||null
-    });
-    throw err
-  }
-
-  const records=loaded.records||[];
-  const record=findArpaRecord(records,selectedCode,selectedName);
-  if(!silent&&record&&source()==='arpa'&&arpaMunicipality()===selectedCode){
-    populateArpaMunicipalities(records,{code:selectedCode,name:arpaRecordIdentity(record).name||selectedName})
-  }
-  const identity=arpaRecordIdentity(record);
-  const municipalityName=identity.name||$('arpaCitySelect')?.selectedOptions?.[0]?.textContent||selectedCode;
-
-  if(!record){
-    report({
-      source:'ARPA Lazio · file statico ufficiale',
-      year,pollutant,
-      data:'OK',
-      file:loaded.url,
-      format:loaded.format,
-      rowsReceived:records.length,
-      municipalityCode:selectedCode,
-      municipalityRecordFound:false,
-      firstColumns:Object.keys(records[0]||{}).slice(0,12)
-    });
-    throw new Error(`ARPA Lazio: record del Comune selezionato non trovato nel file ${year}.`)
-  }
-
-  let boundary=null;
-  try{
-    boundary=await fetchArpaBoundary(selectedCode,municipalityName)
-  }catch(err){
-    report({source:'ARPA Lazio',year,pollutant,municipalityCode:selectedCode,municipalityName,geometry:'FAILED',geometryError:String(err.message||err)});
-    throw err
-  }
-
-  const prefix=POLLUTANTS[pollutant].arpaPrefix;
-  let fieldMed=arpaField(record,prefix,'MED');
-  let fieldMin=arpaField(record,prefix,'MIN');
-  let fieldMax=arpaField(record,prefix,'MAX');
-
-  let med=parseNumber(fieldMed?record[fieldMed]:null);
-  let min=parseNumber(fieldMin?record[fieldMin]:null);
-  let max=parseNumber(fieldMax?record[fieldMax]:null);
-  let metricResolution='header';
-  let positional=null;
-
-  if((!fieldMed||!fieldMin||!fieldMax||med===null)&&loaded.format==='XLSX'){
-    positional=arpaPositionalMetric(
-      record,
-      loaded.parsedHeaders||[],
-      pollutant
-    );
-
-    if(positional){
-      min=positional.min;
-      med=positional.med;
-      max=positional.max;
-      fieldMin=positional.fields.MIN;
-      fieldMed=positional.fields.MED;
-      fieldMax=positional.fields.MAX;
-      metricResolution='positional-schema'
-    }
-  }
-
-  if(med===null){
-    report({
-      source:'ARPA Lazio · file statico ufficiale',
-      year,pollutant,
-      geometry:'OK',
-      data:'OK',
-      file:loaded.url,
-      format:loaded.format,
-      rowsReceived:records.length,
-      municipalityCode:selectedCode,
-      municipalityName,
-      municipalityRecordFound:true,
-      metricResolution,
-      positional,
-      fields:{
-        MIN:fieldMin||null,
-        MED:fieldMed||null,
-        MAX:fieldMax||null
-      },
-      parsedHeaderRows:loaded.headerRows||null,
-      parentRows:loaded.parentRows||null,
-      lowerRows:loaded.lowerRows||null,
-      dataStartRow:loaded.dataStartRow||null,
-      availableColumns:Object.keys(record),
-      parsedHeaders:loaded.parsedHeaders||Object.keys(record),
-      workbookInspection:loaded.workbookInspection||null
-    });
-    throw new Error(`ARPA Lazio: valore MED ${pollutant} non disponibile per ${municipalityName} nel ${year}.`)
-  }
-
-  const boundaryBounds=boundsFromGeoJSON(boundary);
-  const center=boundaryBounds
-    ?[(boundaryBounds[0][0]+boundaryBounds[1][0])/2,(boundaryBounds[0][1]+boundaryBounds[1][1])/2]
-    :ROME.center;
-
-  const rows=[{
-    id:`ARPA-${selectedCode}`,
-    name:`${municipalityName} · valutazione comunale`,
-    municipalityName,
-    lat:center[1],
-    lon:center[0],
-    value:med,min,max,
-    zone:String(record.zona||record.Zona||''),
-    kind:'municipal',
-    provider:'ARPA Lazio',
-    boundary
-  }];
-
-  const diagnostic={
-    source:'ARPA Lazio · file statico ufficiale',
-    runtimeApi:false,
-    year,pollutant,
-    municipalityCode:selectedCode,
-    municipalityName,
-    file:loaded.url,
-    format:loaded.format,
-    contentType:loaded.contentType||null,
-    sheetName:loaded.sheetName||null,
-    headerRow:loaded.headerRow||null,
-    headerRows:loaded.headerRows||null,
-    parentRows:loaded.parentRows||null,
-    lowerRows:loaded.lowerRows||null,
-    dataStartRow:loaded.dataStartRow||null,
-    workbookInspection:loaded.workbookInspection||null,
-    parsedHeaders:(loaded.parsedHeaders||Object.keys(record)).slice(0,30),
-    rowsReceived:records.length,
-    municipalityRecordFound:true,
-    metric:'MED',
-    metricResolution,
-    positional:positional?{
-      groupIndex:positional.groupIndex,
-      groupWidth:positional.groupWidth,
-      columns:positional.columns
-    }:null,
-    min,med,max,
-    fields:{
-      MIN:fieldMin||null,
-      MED:fieldMed||null,
-      MAX:fieldMax||null
-    },
-    geometry:'OK',
-    boundaryFeatures:boundary?.features?.length||0,
-    boundarySource:`ISTAT municipality limits · geojson-italy · ISTAT ${selectedCode}`,
-    note:'Nessuna chiamata CKAN DataStore viene eseguita a runtime.'
-  };
-
-  report(diagnostic);
-  state.arpaCache.set(cacheKey,{rows,diagnostic});
-  return rows
 }
 
 function temperatureMetric(){
@@ -1879,7 +1123,6 @@ async function rowsFor(year){
 
   const pollutant=$('pollutantSelect').value;
   if(source()==='eea')return fetchEeaRows(year,pollutant);
-  if(source()==='arpa')return fetchArpaRows(year,pollutant);
   throw new Error('Fonte dati non supportata.')
 }
 
@@ -2486,190 +1729,6 @@ function renderComparisonList(rows){
   }).join('')
 }
 
-function arpaHistoryTickMax(series){
-  const maxima=series
-    .filter(item=>item&&item.max!==null&&item.max!==undefined)
-    .map(item=>Number(item.max))
-    .filter(Number.isFinite);
-
-  const rawMax=maxima.length?Math.max(...maxima):10;
-  const step=rawMax<=20?5:rawMax<=50?10:20;
-  return Math.max(step,Math.ceil(rawMax/step)*step)
-}
-
-function arpaHistoryPercent(value,axisMax){
-  const n=Number(value);
-  if(!Number.isFinite(n)||!axisMax)return 0;
-  return Math.max(0,Math.min(100,(n/axisMax)*100))
-}
-
-function arpaHistoryDetailHtml(item){
-  if(!item||item.missing){
-    return item
-      ?`<strong>${item.year}</strong>&nbsp;· dati non disponibili`
-      :'Seleziona una barra per vedere i valori.'
-  }
-
-  const selectedA=String(item.year)===$('compareYearA').value;
-  const selectedB=String(item.year)===$('compareYearB').value;
-
-  const selectedClass=selectedA&&selectedB
-    ?'history-detail-a'
-    :selectedA
-      ?'history-detail-a'
-      :selectedB
-        ?'history-detail-b'
-        :'';
-
-  return `<strong class="${selectedClass}">${item.year}</strong>&nbsp;·&nbsp;`
-    +`MIN <strong>${fmt(item.min)}</strong>&nbsp;&nbsp;`
-    +`MED <strong>${fmt(item.med)}</strong>&nbsp;&nbsp;`
-    +`MAX <strong>${fmt(item.max)}</strong> µg/m³`
-}
-
-function renderArpaHistoryBars(series){
-  const chart=$('arpaHistoryChart');
-  if(!chart)return;
-
-  const valid=series.filter(item=>item&&!item.missing);
-  if(!valid.length){
-    chart.innerHTML='<div class="arpa-history-error">Nessun dato storico ARPA disponibile.</div>';
-    chart.setAttribute('aria-busy','false');
-    return
-  }
-
-  const axisMax=arpaHistoryTickMax(valid);
-  const ticks=[axisMax,axisMax*.75,axisMax*.5,axisMax*.25,0];
-
-  const axis=`<div class="arpa-history-axis" aria-hidden="true">${
-    ticks.map(value=>{
-      const bottom=(value/axisMax)*100;
-      return `<span style="bottom:${bottom}%">${fmt(value)}</span>`
-    }).join('')
-  }</div>`;
-
-  const grid=`<div class="arpa-history-grid" aria-hidden="true">${
-    ticks.map(value=>{
-      const bottom=(value/axisMax)*100;
-      return `<i style="bottom:${bottom}%"></i>`
-    }).join('')
-  }</div>`;
-
-  const yearA=$('compareYearA').value;
-  const yearB=$('compareYearB').value;
-
-  const items=series.map(item=>{
-    const selectedA=String(item.year)===yearA;
-    const selectedB=String(item.year)===yearB;
-    const selectedClass=`${selectedA?' selected-a':''}${selectedB?' selected-b':''}`;
-
-    if(item.missing){
-      return `<button type="button" class="arpa-year${selectedClass}" data-history-year="${item.year}"
-        aria-label="${item.year}: dati non disponibili">
-        <span class="arpa-year-missing">n/d</span>
-        <span class="arpa-year-label">${item.year}</span>
-      </button>`
-    }
-
-    const minP=arpaHistoryPercent(item.min,axisMax);
-    const medP=arpaHistoryPercent(item.med,axisMax);
-    const maxP=arpaHistoryPercent(item.max,axisMax);
-    const barBottom=minP;
-    const barHeight=Math.max(1,maxP-minP);
-
-    const aria=`${item.year}: minimo ${fmt(item.min)}, medio ${fmt(item.med)}, massimo ${fmt(item.max)} microgrammi per metro cubo`;
-
-    return `<button type="button" class="arpa-year${selectedClass}" data-history-year="${item.year}"
-      aria-label="${aria}">
-      <span class="arpa-year-plot">
-        <span class="arpa-range-bar" style="bottom:${barBottom}%;height:${barHeight}%"></span>
-        <span class="arpa-med-line" style="bottom:${medP}%"></span>
-        <span class="arpa-value-label arpa-value-max" style="bottom:${maxP}%">${fmt(item.max)}</span>
-        <span class="arpa-value-label arpa-value-med" style="bottom:${medP}%">${fmt(item.med)}</span>
-        <span class="arpa-value-label arpa-value-min" style="bottom:${minP}%">${fmt(item.min)}</span>
-      </span>
-      <span class="arpa-year-label">${item.year}</span>
-    </button>`
-  }).join('');
-
-  chart.innerHTML=`${axis}<div class="arpa-history-scroll"><div class="arpa-history-inner">${grid}${items}</div></div>`;
-  chart.setAttribute('aria-busy','false');
-
-  const byYear=new Map(series.map(item=>[String(item.year),item]));
-  chart.querySelectorAll('[data-history-year]').forEach(button=>{
-    button.addEventListener('click',()=>{
-      const item=byYear.get(button.dataset.historyYear);
-      $('arpaHistoryDetail').innerHTML=arpaHistoryDetailHtml(item)
-    })
-  });
-
-  const defaultItem=byYear.get(yearB)||byYear.get(yearA)||valid.at(-1);
-  $('arpaHistoryDetail').innerHTML=arpaHistoryDetailHtml(defaultItem);
-
-  // Start with Periodo B visible without moving the whole page vertically.
-  requestAnimationFrame(()=>{
-    const scroll=chart.querySelector('.arpa-history-scroll');
-    const target=chart.querySelector(`[data-history-year="${CSS.escape(yearB)}"]`)
-      ||chart.querySelector(`[data-history-year="${CSS.escape(yearA)}"]`);
-    if(scroll&&target){
-      const desired=target.offsetLeft-(scroll.clientWidth-target.offsetWidth)/2;
-      scroll.scrollLeft=Math.max(0,desired)
-    }
-  })
-}
-
-async function loadArpaHistorySeries(renderToken){
-  const panel=$('arpaHistoryPanel');
-  const chart=$('arpaHistoryChart');
-  if(!panel||!chart)return;
-
-  panel.classList.remove('hidden');
-  chart.setAttribute('aria-busy','true');
-  chart.innerHTML='<div class="arpa-history-loading">Caricamento storico ARPA…</div>';
-  const municipality=$('arpaCitySelect')?.selectedOptions?.[0]?.textContent||'Roma';
-  $('arpaHistorySubtitle').textContent=`${POLLUTANTS[$('pollutantSelect').value].label} · MIN, MED e MAX annuali · Comune di ${municipality}`;
-  $('arpaHistoryDetail').textContent='Caricamento dei valori annuali…';
-
-  const pollutant=$('pollutantSelect').value;
-  const years=[...ARPA_YEARS].sort((a,b)=>Number(a)-Number(b));
-  const results=new Array(years.length);
-  let cursor=0;
-
-  async function worker(){
-    while(cursor<years.length){
-      const index=cursor++;
-      const year=years[index];
-
-      try{
-        const rows=await fetchArpaRows(year,pollutant,true);
-        const row=rows[0];
-        results[index]=row
-          ?{year,min:row.min,med:row.value,max:row.max,missing:false}
-          :{year,missing:true}
-      }catch(err){
-        console.warn(`Storico ARPA ${year} non disponibile`,err);
-        results[index]={year,missing:true}
-      }
-
-      if(renderToken!==state.renderToken)return
-    }
-  }
-
-  // Three concurrent downloads are enough for mobile without hammering ARPA.
-  await Promise.all([worker(),worker(),worker()]);
-  if(renderToken!==state.renderToken)return;
-
-  renderArpaHistoryBars(results)
-}
-
-function updateArpaHistoryVisibility(){
-  const panel=$('arpaHistoryPanel');
-  if(!panel)return;
-
-  const visible=state.mode==='compare'&&source()==='arpa';
-  panel.classList.toggle('hidden',!visible)
-}
-
 function visibleMapBbox(map){
   if(!map)return null;
   const bounds=map.getBounds?.();
@@ -2739,8 +1798,7 @@ function fitCurrentScope(map,rows){
   if(state.viewportRefreshDepth>0)return;
 
   withMapRefreshSuppressed(()=>{
-    if(source()==='arpa')fitArpaScope(map,rows);
-    else fitEeaScope(map)
+    fitEeaScope(map)
   })
 }
 
@@ -2796,7 +1854,7 @@ function mapRefreshSuppressed(){
 
   /*
    * openaqSuppressMove è specifico di OpenAQ: non deve bloccare EEA,
-   * ARPA o temperatura.
+   * temperatura.
    */
   return source()==='openaq'&&Boolean(state.openaqSuppressMove)
 }
@@ -2904,9 +1962,7 @@ function setLoading(on){
     return
   }
 
-  $('loadingText').textContent=source()==='eea'
-    ?`Caricamento EEA · ${currentEeaScope().label}…`
-    :'Caricamento file ARPA Lazio…'
+  $('loadingText').textContent=`Caricamento EEA · ${currentEeaScope().label}…`
 }
 
 function clearTemperatureOverlays(){
@@ -2949,7 +2005,6 @@ function sourceNotice(rows){
       ?'Copernicus ERA5-Land · medie annuali MIN / MEDIA / MAX · griglia climatica 0,1°'
       :'ERA5-Land · nessuna cella disponibile';
   }
-  if(source()==='arpa')return'ARPA Lazio · Standard comunali';
   const scope=currentEeaScope().label;
   if(!rows.length)return`EEA · ${scope} · nessun dato annuale per questa selezione`;
   const unverified=rows.some(r=>normalizeText(r.verification).includes('unverified'));
@@ -3258,7 +2313,6 @@ async function render(){
   $('standardLegend').classList.toggle('hidden',state.mode==='difference'||isTrees());
   $('differenceLegend').classList.toggle('hidden',state.mode!=='difference'||isTrees());
   $('mapBadge').classList.toggle('hidden',state.mode==='compare');
-  updateArpaHistoryVisibility();
 
   try{
     if(isTrees()){
@@ -3282,7 +2336,7 @@ async function render(){
       fitCurrentScope(state.map,rows);
       renderList(rows,true);
       $('mapBadge').textContent=`Δ ${$('compareYearB').value} − ${$('compareYearA').value}`;
-      $('avgLabel').textContent=source()==='arpa'?'Differenza MED':'Differenza media stazioni';
+      $('avgLabel').textContent='Differenza media stazioni';
       const a=avg(rows);
       $('avgValue').textContent=`${a>0?'+':''}${fmt(a)}`;
       $('periodValue').textContent=`${$('compareYearA').value}→${$('compareYearB').value}`;
@@ -3290,18 +2344,9 @@ async function render(){
       const pair=await updateCompareMaps(token);
       if(token!==state.renderToken)return;
 
-      if(source()==='eea'){
-        rows=mergeComparisonRows(pair.a,pair.b);
-        renderComparisonList(rows)
-      }else{
-        rows=pair.b;
-        renderList(rows);
-        loadArpaHistorySeries(token)
-      }
-
-      $('avgLabel').textContent=source()==='arpa'
-        ?`MED ${$('compareYearB').value}`
-        :`Media stazioni ${$('compareYearB').value}`;
+      rows=mergeComparisonRows(pair.a,pair.b);
+      renderComparisonList(rows);
+      $('avgLabel').textContent=`Media stazioni ${$('compareYearB').value}`;
       $('avgValue').textContent=pair.b.length?fmt(avg(pair.b)):'—';
       $('periodValue').textContent=`${$('compareYearA').value}↔${$('compareYearB').value}`;
       requestAnimationFrame(()=>{
@@ -3322,15 +2367,14 @@ async function render(){
         'single'
       );
 
-      const municipality=source()==='arpa'?` · ${$('arpaCitySelect')?.selectedOptions?.[0]?.textContent||'Roma'}`:'';
-      $('mapBadge').textContent=`${POLLUTANTS[$('pollutantSelect').value].label} · ${$('yearSelect').value}${municipality}`;
-      $('avgLabel').textContent=source()==='arpa'?'Valore MED':'Media stazioni';
+      $('mapBadge').textContent=`${POLLUTANTS[$('pollutantSelect').value].label} · ${$('yearSelect').value}`;
+      $('avgLabel').textContent='Media stazioni';
       $('avgValue').textContent=rows.length?fmt(avg(rows)):'—';
       $('periodValue').textContent=$('yearSelect').value;
     }
 
     if($('avgUnit'))$('avgUnit').textContent='µg/m³';
-    $('stationCount').textContent=source()==='arpa'?($('arpaCitySelect')?.selectedOptions?.[0]?.textContent||'Roma'):rows.length;
+    $('stationCount').textContent=rows.length;
     $('sourceValue').textContent=source()==='eea'?`EEA · ${currentEeaScope().label}`:SOURCE_INFO[source()].name;
     $('dataNotice').textContent=sourceNotice(rows);
 $('mapHint').textContent=SOURCE_INFO[source()].hint;
@@ -3835,11 +2879,6 @@ function bind(){
     render()
   });
 
-  $('arpaCitySelect')?.addEventListener('change',()=>{
-    if(source()!=='arpa')return;
-    configureSourceUI();
-    render()
-  });
 
   ['pollutantSelect','yearSelect','compareYearA','compareYearB']
     .forEach(id=>$(id)?.addEventListener('change',render));

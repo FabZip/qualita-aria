@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `0.8.9` |
-| Build | `122` |
+| Applicazione | `0.8.10` |
+| Build | `123` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.0` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,14 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 0.8.10 — Rimozione della fonte ARPA Lazio
+
+Rimossa la fonte autonoma ARPA Lazio: opzione nel menu, selezione del comune, valutazioni annuali, grafico storico, parser CSV/XLSX, cache e stili dedicati. Rimossa anche la dipendenza SheetJS, usata soltanto per quei file. Restano Meteo, EEA, OpenAQ, previsioni della qualità dell'aria e alberi, con i rispettivi confronti e filtri.
+
+I confini ISTAT condivisi con gli alberi restano disponibili tramite funzioni comunali generiche. Le stazioni fisiche ARPA usate dal servizio temperature per EEA restano una provenienza dei dati, non una fonte selezionabile; nessuna modifica ai Worker o al database.
+
+App **0.8.10 build 123**, cache PWA aggiornata. Superate le 29 suite rimaste; eliminato il test del parser ARPA rimosso, aggiornati i test di cambio fonte e render OpenAQ.
 
 ### 0.8.9 — Radar senza testi ridondanti
 
@@ -425,7 +433,7 @@ Release preparata `0.7.14` build 94, con proxy `0.4.2` da distribuire: ingresso 
 
 Fornisce dati di stazioni fisiche. La select dei Comuni deve riposizionare la mappa e aggiornare le stazioni. La sua paginazione non deve rimanere visibile passando ad Alberi. Il selettore del periodo offre `Oggi`, 7, 15 e 30 giorni: `Oggi` invia al proxy la mezzanotte locale come `datetime_min` e accetta soltanto misure successive a quella soglia.
 
-### ARPA Lazio
+### ARPA Lazio — rimossa in 0.8.10 (note storiche)
 
 Patch `0.7.21`: il parser CSV riconosce virgola, punto e virgola e tabulazione; il precedente separatore vuoto impediva la separazione corretta delle colonne nei file storici. `arpaRecordIdentity` distingue codici comunali da regione/provincia e normalizza valori decimali/scientifici e prefisso 12. `findArpaRecord` usa il nome esatto e univoco solo se manca un codice valido. La richiesta cattura Comune e nome prima del download; la select conserva il Comune riconosciuto anche quando manca il codice nel file. Test CSV e concorrenza in `tests/arpa-municipality.test.mjs`. La verifica dei file remoti ufficiali resta limitata dalla rete dell’ambiente; test con dati simulati.
 
@@ -731,7 +739,7 @@ sha256sum qualita-aria-vX.Y.Z-patch.zip
 
 - PWA installabile e splash A.R.I.A.;
 - logo orizzontale nell’header;
-- fonti EEA, OpenAQ e ARPA Lazio;
+- fonti Meteo, EEA, OpenAQ, previsioni e alberi;
 - selezione di città e Comuni;
 - Mappa, Confronto e Differenza;
 - fonte Alberi e fallback locale;
@@ -748,7 +756,6 @@ sha256sum qualita-aria-vX.Y.Z-patch.zip
 - pannello e revisione amministrativa;
 - supporto Roma e Guidonia;
 - cron e cursori di scansione;
-- select ARPA per Comune;
 - correzione coordinate e colori EEA;
 - riposizionamento OpenAQ;
 - calcolo corretto delle temperature annuali;

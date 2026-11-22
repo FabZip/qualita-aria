@@ -3,7 +3,7 @@
 
   const markersBySide=new Map();
   const requestIdBySide=new Map();
-  const SOURCE_LABELS={arpa:'ARPA Lazio',eea:'EEA'};
+  const SOURCE_LABELS={eea:'EEA'};
   const todayCache=new Map();
 
   function todayUrl(bbox){
@@ -167,7 +167,7 @@
     // OpenAQ non mostra più celle o temperature.
     if(
       !map||
-      !['arpa','eea'].includes(pollutantSource)||
+      !['eea'].includes(pollutantSource)||
       !Number.isInteger(year)
     ){
       clearSide(side);
