@@ -6,7 +6,7 @@ A.R.I.A. è un’app web gratuita per consultare le condizioni ambientali e gli 
 
 ## Navigazione
 
-Sotto il logo, la barra di navigazione offre un **menu con icone** per aprire tutte le sezioni e un collegamento **Dashboard** sempre disponibile nell'intestazione. Ogni pagina mostra soltanto i propri filtri, senza selettore della fonte. Le schede di Intorno a me mantengono le icone colorate.
+Sotto il logo, la barra di navigazione offre un **menu con icone** per aprire tutte le sezioni, con **Dashboard** come prima voce. Ogni pagina mostra soltanto i propri filtri, senza selettore della fonte. Le schede di Intorno a me mantengono le icone colorate.
 
 Ogni sezione ha un collegamento diretto e il pulsante Indietro del browser permette di ripercorrere le pagine visitate.
 

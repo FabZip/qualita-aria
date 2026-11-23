@@ -76,7 +76,7 @@
         if(!postalPending)postalPending=(async()=>{
           const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
           try{
-          const response=await fetch('data/italian-postal-codes.json?v=1.0.2',{signal:controller.signal});
+          const response=await fetch('data/italian-postal-codes.json?v=1.0.3',{signal:controller.signal});
           if(!response.ok)throw Error('Catalogo CAP temporaneamente non disponibile. Cerca il nome del comune.');
           const payload=await response.json();if(!payload?.codes||typeof payload.codes!=='object')throw Error('Catalogo CAP non valido. Cerca il nome del comune.');
           postalData=payload;return payload

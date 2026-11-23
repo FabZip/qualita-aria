@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.3] — Ricerca località a tutta larghezza
+
+- Rimosso il collegamento Dashboard accanto al pulsante Menu: il ritorno resta disponibile nella prima voce del menu.
+- Corretta la griglia dei filtri dopo la rimozione della select della fonte: il campo condiviso di ricerca occupa l'intera riga, anziché la vecchia colonna stretta. A desktop il campo poteva ridursi a circa 30 pixel e nascondere il testo digitato.
+- Verificata a video la digitazione in Dashboard, Allerte, Terremoti, Incendi, Meteo e Diario, con suggerimenti e selezione della località; prova mobile a 390 pixel con campo largo 340 pixel.
+
+App **1.0.3 build 127**, rilasciata il **23 novembre 2026**, cache PWA aggiornata. Superate tutte le 31 suite automatiche; nessuna modifica a Worker o database.
+
 ## [1.0.2] — Menu di navigazione sotto il logo
 
 - Conservato il logo originale, con una barra di navigazione su una riga dedicata dentro `header.topbar`: menu a tendina con icone a sinistra e collegamento diretto Dashboard.

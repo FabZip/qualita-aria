@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `1.0.2` |
-| Build | `126` |
+| Applicazione | `1.0.3` |
+| Build | `127` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.0` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,14 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 1.0.3 — Ricerca località a tutta larghezza
+
+- Rimosso il collegamento Dashboard accanto al pulsante Menu: il ritorno resta disponibile nella prima voce del menu.
+- Corretta la griglia dei filtri dopo la rimozione della select della fonte: il campo condiviso di ricerca occupa l'intera riga, anziché la vecchia colonna stretta. A desktop il campo poteva ridursi a circa 30 pixel e nascondere il testo digitato.
+- Verificata a video la digitazione in Dashboard, Allerte, Terremoti, Incendi, Meteo e Diario, con suggerimenti e selezione della località; prova mobile a 390 pixel con campo largo 340 pixel.
+
+App **1.0.3 build 127**, rilasciata il **23 novembre 2026**, cache PWA aggiornata. Superate tutte le 31 suite automatiche; nessuna modifica a Worker o database.
 
 ### 1.0.2 — Menu di navigazione sotto il logo
 
