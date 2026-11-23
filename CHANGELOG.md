@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4] — Meteo subito riconoscibile nella dashboard
+
+- Stato del tempo in primo piano con icona coerente con le condizioni (sole, nuvole, pioggia, neve, temporali o notte); temperatura sotto, con font da 1,1 rem.
+- Alberi mostra solo l’evento più recente nei filtri della dashboard. Allerte conserva un unico riepilogo; gli approfondimenti restano nelle pagine dedicate.
+
+App **1.0.4 build 128**, rilasciata il **23 novembre 2026**, cache PWA aggiornata. Verifica a video con condizioni reali e singolo evento arboreo; superati tutti i 31 test automatici.
+
 ## [1.0.3] — Ricerca località a tutta larghezza
 
 - Rimosso il collegamento Dashboard accanto al pulsante Menu: il ritorno resta disponibile nella prima voce del menu.

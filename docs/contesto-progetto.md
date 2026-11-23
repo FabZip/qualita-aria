@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `1.0.3` |
-| Build | `127` |
+| Applicazione | `1.0.4` |
+| Build | `128` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.0` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,13 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 1.0.4 — Meteo subito riconoscibile nella dashboard
+
+- Stato del tempo in primo piano con icona coerente con le condizioni (sole, nuvole, pioggia, neve, temporali o notte); temperatura sotto, con font da 1,1 rem.
+- Alberi mostra solo l’evento più recente nei filtri della dashboard. Allerte conserva un unico riepilogo; gli approfondimenti restano nelle pagine dedicate.
+
+App **1.0.4 build 128**, rilasciata il **23 novembre 2026**, cache PWA aggiornata. Verifica a video con condizioni reali e singolo evento arboreo; superati tutti i 31 test automatici.
 
 ### 1.0.3 — Ricerca località a tutta larghezza
 
