@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.5] — Spiegazione degli archivi arborei senza eventi
+
+- Nella lista Alberi, un messaggio distingue i bilanci aggregati senza indirizzi dai periodi senza dati raccolti, spiegando perché mancano eventi e icone sulla mappa.
+- L’avviso compare anche quando è presente la nota di sincronizzazione; un aggiornamento non raggiungibile viene segnalato separatamente. I bilanci disponibili restano visibili.
+
+App **1.0.5 build 129**, rilasciata il **24 novembre 2026**, cache PWA aggiornata.
+
 ## [1.0.4] — Meteo subito riconoscibile nella dashboard
 
 - Stato del tempo in primo piano con icona coerente con le condizioni (sole, nuvole, pioggia, neve, temporali o notte); temperatura sotto, con font da 1,1 rem.

@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `1.0.4` |
-| Build | `128` |
+| Applicazione | `1.0.5` |
+| Build | `129` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.0` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,13 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 1.0.5 — Spiegazione degli archivi arborei senza eventi
+
+- Nella lista Alberi, un messaggio distingue i bilanci aggregati senza indirizzi dai periodi senza dati raccolti, spiegando perché mancano eventi e icone sulla mappa.
+- L’avviso compare anche quando è presente la nota di sincronizzazione; un aggiornamento non raggiungibile viene segnalato separatamente. I bilanci disponibili restano visibili.
+
+App **1.0.5 build 129**, rilasciata il **24 novembre 2026**, cache PWA aggiornata.
 
 ### 1.0.4 — Meteo subito riconoscibile nella dashboard
 

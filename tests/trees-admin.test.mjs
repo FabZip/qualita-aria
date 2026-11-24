@@ -27,7 +27,7 @@ class FixedDate extends Date{
   static now(){return Date.parse('2026-10-19T12:00:00Z')}
 }
 const context=vm.createContext({
-  URL,Date:FixedDate,console,TREE_EVENTS_PER_PAGE:6,
+  URL,Date:FixedDate,console,TREE_EVENTS_PER_PAGE:6,TREE_PERIOD_LABELS:new Map(),
   TreeStats:{fmt:value=>String(value),iconSvg:()=>'<svg></svg>'},
   window:{prompt:()=> 'test-password-not-a-real-secret'},$:()=>status,
   treeApiBase:async()=> 'https://worker.test',isTrees:()=>true,render:async()=>renders++,
@@ -84,3 +84,16 @@ const interval={...future,date:'2026-10-01',eventDate:'2026-10-01',eventEndDate:
 assert.doesNotMatch(context.treeListHtml({city:{available:true},events:[],documentedEvents:[interval]},'2026'),/Programmato · data trascorsa/);
 assert.match(context.treeListHtml({city:{available:true},events:[],documentedEvents:[{...interval,eventEndDate:'2026-10-01'}]},'2026'),/Programmato · data trascorsa/);
 assert.match(context.treeListHtml({city:{available:true},events:[],documentedEvents:[{...interval,eventType:'unknown'}]},'2026'),/is-unknown/);
+
+// A successful sync note must not hide the explanation of an empty archive.
+const emptyArchive={city:{available:true,name:'Roma'},events:[],documentedEvents:[],diagnostic:{dynamicAvailable:true,dynamicEvents:0}};
+assert.match(context.treeListHtml(emptyArchive,'2022'),/né eventi puntuali né un bilancio/);
+assert.match(context.treeListHtml(emptyArchive,'2022'),/non significa/);
+const annual={locationName:'Roma',period:'2017',plantings:120,decrements:1251,decrementLabel:'Abbattimenti',notes:''};
+const aggregateOnly=context.treeListHtml({...emptyArchive,events:[annual]},'2017');
+assert.match(aggregateOnly,/solo bilanci aggregati/);
+assert.match(aggregateOnly,/senza indirizzi o coordinate/);
+assert.match(aggregateOnly,/1251/);
+assert.match(context.treeListHtml({...emptyArchive,aggregate:annual},'period-2021-2025'),/solo bilanci aggregati/);
+assert.match(context.treeListHtml({...emptyArchive,diagnostic:{dynamicAvailable:false}},'2022'),/aggiornamento delle fonti non è al momento disponibile/);
+assert.doesNotMatch(html,/solo bilanci aggregati|né eventi puntuali né un bilancio/);

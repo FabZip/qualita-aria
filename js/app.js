@@ -2166,7 +2166,10 @@ function treeListHtml(result,year,includeAggregate=true){
   const aggregateNote=includeAggregate&&aggregate
     ?balanceRow(aggregate)
     :'';
-  return dynamicNote+rows+documentedList+aggregateNote||'<div class="empty-state">Nessun totale annuale o evento arboreo documentato disponibile per questa selezione.</div>'
+  const missingEventsNote=documentedEvents.length?'':`<div class="tree-period-note"><strong>${safe(city.name)} · ${safe(TREE_PERIOD_LABELS.get(String(year))||year)}</strong><br>${events.length||aggregate
+    ?'Sono disponibili solo bilanci aggregati, senza indirizzi o coordinate dei singoli interventi. I totali non possono essere rappresentati come eventi nella lista o come icone sulla mappa.'
+    :'Nella raccolta attuale non sono disponibili né eventi puntuali né un bilancio per questa selezione. L’assenza di dati non significa che non siano avvenute piantumazioni o abbattimenti.'}${diagnostic.dynamicAvailable===false?' L’aggiornamento delle fonti non è al momento disponibile: potrebbero mancare ulteriori eventi.':''}</div>`;
+  return dynamicNote+rows+documentedList+aggregateNote+missingEventsNote
 }
 
 function bindTreeEventLists(groups=[]){
@@ -2953,7 +2956,7 @@ function bind(){
 
 async function loadVersion(){
   const [appVersion,dataVersion]=await Promise.all([
-    fetch('version.json?v=1.0.4',{cache:'no-store'}).then(r=>r.json()),
+    fetch('version.json?v=1.0.5',{cache:'no-store'}).then(r=>r.json()),
     fetch('data/version.json?v=0.7.6',{cache:'no-store'}).then(r=>r.json())
   ]);
   $('appVersion').textContent=appVersion.version;
@@ -2973,7 +2976,7 @@ async function boot(){
   if(['weather','nearby'].includes(source()))render();
 
   if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./service-worker.js?v=1.0.4')
+    navigator.serviceWorker.register('./service-worker.js?v=1.0.5')
       .then(reg=>reg.update())
       .catch(console.error)
   }
