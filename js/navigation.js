@@ -1,8 +1,10 @@
 (()=>{
   'use strict';
   const pages={nearby:{label:'Dashboard · Intorno a me',icon:'nearby'},weather:{label:'Meteo',icon:'weather'},snow:{label:'Neve',icon:'snow'},eea:{label:'Qualità dell’aria · EEA',icon:'air'},openaq:{label:'Qualità dell’aria · OpenAQ',icon:'air'},forecast:{label:'Previsioni qualità dell’aria',icon:'air'},trees:{label:'Alberi',icon:'trees'},alerts:{label:'Allerte',icon:'alerts'},earthquakes:{label:'Terremoti',icon:'earthquakes'},fires:{label:'Incendi',icon:'fires'},diary:{label:'Diario ambientale',icon:'diary'}};
+  const nextPages={alerts:'snow',snow:'weather',weather:'forecast',forecast:'trees',eea:'trees',openaq:'trees',trees:'fires',fires:'earthquakes',earthquakes:'diary'};
+  const nextLabels={snow:'Neve',weather:'Meteo',forecast:'Qualità dell’aria',trees:'Alberi',fires:'Incendi',earthquakes:'Terremoti',diary:'Diario ambientale'};
   const route=hash=>{const key=String(hash||'').replace(/^#/,'');return Object.hasOwn(pages,key)?key:null};
-  globalThis.AppNavigation={pages,route};
+  globalThis.AppNavigation={pages,route,nextPages};
   if(typeof document==='undefined')return;
   const $=id=>document.getElementById(id),menu=$('appMenu'),toggle=$('appMenuToggle'),nav=$('appNavigation');
   const icon=name=>name==='nearby'?'<span class="app-special-icon" aria-hidden="true">⌂</span>':name==='diary'?'<span class="app-special-icon" aria-hidden="true">▤</span>':globalThis.Environment.icon(name);
@@ -11,6 +13,8 @@
   function close(focus=false){menu.hidden=true;toggle.setAttribute('aria-expanded','false');if(focus)toggle.focus()}
   function sync(){
     const name=source();document.documentElement?.setAttribute('data-app-page',name);
+    const next=$('pageNext'),target=nextPages[name];
+    if(next){next.hidden=!target;next.innerHTML=target?`${icon(pages[target].icon)}<div><strong>${nextLabels[target]}</strong>${name==='alerts'?'<p>Gli avvisi MeteoAlarm sono nella sezione Neve, con aree e scadenze.</p>':''}</div><a class="page-next-button" href="#${target}">Consulta ${nextLabels[target]}</a>`:''}
     const heading=$('sectionHeading');
     if(heading){const info={weather:['Meteo','Previsioni e radar per la località scelta.'],eea:['Qualità dell’aria','Misure delle stazioni EEA.'],openaq:['Qualità dell’aria','Stazioni e misure dal catalogo OpenAQ.'],forecast:['Previsioni qualità dell’aria','L’evoluzione degli inquinanti nei prossimi giorni.'],trees:['Alberi','Interventi documentati e bilanci delle fonti comunali.']}[name];heading.hidden=!info;if(info)heading.innerHTML=`${globalThis.Environment.icon(pages[name].icon)}<div><h1>${info[0]}</h1><p>${info[1]}</p></div>`}
     $('appCurrentPage').textContent=name==='nearby'?'':pages[name]?.label||'';

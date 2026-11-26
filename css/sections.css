@@ -39,3 +39,5 @@ html[data-app-page=alerts],[data-section=alerts]{--section-rgb:234,181,94;--sect
 .app-shell :is(.dashboard-card-actions,.environment-head,.weather-panel,.environment-filters,.alert-snow-link,.tree-pagination,.toolbar,.weather-search-row) button:focus-visible{outline:2px solid var(--text);outline-offset:3px}
 .app-shell .ui-day-picker button[aria-pressed=true],.app-shell .ui-day-picker button.active{background:var(--ui-card-bg);border-color:var(--text);box-shadow:inset 0 -2px var(--text)}
 .app-shell .ui-day-picker button:hover{border-color:var(--muted)}.app-shell .ui-day-picker button:focus-visible{outline-color:var(--text)}
+
+.page-next[hidden]{display:none}.page-next{margin:18px 0;border-top:1px solid var(--line)}.page-next-button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;border:1px solid var(--line);border-radius:11px;background:var(--panel2);color:var(--text);font:inherit;text-decoration:none}.page-next-button:hover{background:var(--panel);border-color:var(--muted)}.page-next-button:focus-visible{outline:2px solid var(--text);outline-offset:3px}

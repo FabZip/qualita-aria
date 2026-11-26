@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4] — Percorso tra le sezioni ambientali
+
+- Dashboard riordinata: Allerte, Neve, Meteo, Qualità dell’aria, Alberi, Incendi, Terremoti e Diario ambientale.
+- Collegamento in fondo alle pagine nella stessa sequenza, da Consulta Neve nelle Allerte fino a Consulta Diario ambientale nei Terremoti. Tutte le pagine della qualità dell’aria rimandano ad Alberi. Navigazione con icone colorate e pulsanti neutri, compatibile con Indietro.
+
+App **1.1.4 build 135**, rilasciata il **26 novembre 2026**, cache PWA aggiornata.
+
 ## [1.1.3] — Pulsanti uniformi e riepilogo Allerte essenziale
 
 - Pulsanti delle schede dashboard e delle azioni interne con superfici, bordi e testo neutri; colori di categoria conservati nelle icone. Uniformati anche gli stati hover, focus e selezione dei giorni.

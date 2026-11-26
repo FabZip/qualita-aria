@@ -21,3 +21,7 @@ console.log('navigation: menu, keyboard, URL and Back ok');
 context.AppNavigation.navigate('weather');assert.equal(node('sectionHeading').hidden,false);assert.match(node('sectionHeading').innerHTML,/Previsioni e radar/);
 context.AppNavigation.navigate('trees');assert.equal(node('sectionHeading').hidden,false);assert.match(node('sectionHeading').innerHTML,/Interventi documentati/);
 context.AppNavigation.navigate('nearby');assert.equal(node('sectionHeading').hidden,true);
+
+// The next-section path is available on all air sources and ends at the diary.
+for(const [from,to] of Object.entries(bare.AppNavigation.nextPages)){context.AppNavigation.navigate(from);assert.equal(node('pageNext').hidden,false);assert.ok(node('pageNext').innerHTML.includes(`href="#${to}"`))}
+for(const page of ['nearby','diary']){context.AppNavigation.navigate(page);assert.equal(node('pageNext').hidden,true)}

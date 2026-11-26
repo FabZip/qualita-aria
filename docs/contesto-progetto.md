@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `1.1.3` |
-| Build | `134` |
+| Applicazione | `1.1.4` |
+| Build | `135` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.1` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,10 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 1.1.4 — Percorso tra le sezioni
+
+Dashboard: Allerte, Neve, Meteo, Qualità dell’aria, Alberi, Incendi, Terremoti, Diario ambientale. Il componente condiviso `pageNext`, aggiornato da `AppNavigation.sync`, collega il fondo di ogni pagina alla successiva in questa sequenza. Le tre fonti aria rimandano ad Alberi; dashboard e Diario non hanno un collegamento successivo. Conservati hash, cronologia, icone colorate e pulsanti neutri. App **1.1.4 build 135**.
 
 ### 1.1.3 — Pulsanti e icona Allerte
 

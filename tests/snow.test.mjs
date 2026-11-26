@@ -23,7 +23,7 @@ assert.match(api.alertsHtml({...warnings,warnings:[{...warning,area:'<img>'}]}),
 // Dashboard order and only one diary entry point, in its own final card.
 const environment=fs.readFileSync(new URL('../js/environment.js',import.meta.url),'utf8');
 const overview=environment.slice(environment.indexOf('async function overview'),environment.indexOf('    const trees=',environment.indexOf('async function overview')));
-const headings=[...overview.matchAll(/<span>([^<]+)<\/span><\/h3>/g)].map(m=>m[1]);assert.deepEqual(headings,['Allerte','Meteo','Neve','Qualità dell’aria','Alberi · entro 50 km','Incendi','Terremoti · entro 100 km','Diario ambientale']);
+const headings=[...overview.matchAll(/<span>([^<]+)<\/span><\/h3>/g)].map(m=>m[1]);assert.deepEqual(headings,['Allerte','Neve','Meteo','Qualità dell’aria','Alberi · entro 50 km','Incendi','Terremoti · entro 100 km','Diario ambientale']);
 assert.equal((overview.match(/data-environment-open="diary"/g)||[]).length,1);
 const treeCard=overview.slice(overview.indexOf("${icon('trees')}"),overview.indexOf("${icon('fires')}"));assert.doesNotMatch(treeCard,/Apri diario/);assert.match(treeCard,/Fonti comunali/);
 console.log('snow: units, missing data, time windows, expired alerts and dashboard order ok');
