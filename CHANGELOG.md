@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1] — Stile uniforme tra dashboard e pagine
+
+- Tutte le otto schede della dashboard condividono icone, superfici, riquadro interno del riepilogo e area dei pulsanti. I colori di categoria restano riconoscibili; la scheda Allerte conserva i simboli di stato senza un riquadro più marcato delle altre.
+- Intestazioni con icone per tutte le pagine, compresi Meteo, EEA, OpenAQ, previsioni aria e Alberi. Bordi, raggi, spaziature e sfondi comuni per riepiloghi, eventi, liste, previsioni, neve e mappe.
+- Le Allerte mantengono colori semantici e legenda, con enfasi proporzionata agli altri riepiloghi. Filtri, contenuti, ordine della dashboard e funzionamento delle mappe sono preservati.
+
+App **1.1.1 build 132**, rilasciata il **26 novembre 2026**, cache PWA aggiornata. Nessuna modifica ai Worker o ai database. Superati 34 test automatici; verificati navigazione e intestazioni di tutte le sezioni, dashboard desktop e layout mobile a 390 pixel senza debordamenti.
+
 ## [1.1.0] — Allerte più chiare e riconoscibili
 
 - Nella dashboard un simbolo immediato distingue allerta presente, nessuna allerta segnalata e dati non disponibili/incompleti o scaduti. Livello massimo delle giornate coperte, colore, zona e data, con avvisi futuri esplicitamente indicati.

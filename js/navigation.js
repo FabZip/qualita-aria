@@ -10,7 +10,10 @@
   let restoring=false;
   function close(focus=false){menu.hidden=true;toggle.setAttribute('aria-expanded','false');if(focus)toggle.focus()}
   function sync(){
-    const name=source();$('appCurrentPage').textContent=name==='nearby'?'':pages[name]?.label||'';
+    const name=source();document.documentElement?.setAttribute('data-app-page',name);
+    const heading=$('sectionHeading');
+    if(heading){const info={weather:['Meteo','Previsioni e radar per la località scelta.'],eea:['Qualità dell’aria','Misure delle stazioni EEA.'],openaq:['Qualità dell’aria','Stazioni e misure dal catalogo OpenAQ.'],forecast:['Previsioni qualità dell’aria','L’evoluzione degli inquinanti nei prossimi giorni.'],trees:['Alberi','Interventi documentati e bilanci delle fonti comunali.']}[name];heading.hidden=!info;if(info)heading.innerHTML=`${globalThis.Environment.icon(pages[name].icon)}<div><h1>${info[0]}</h1><p>${info[1]}</p></div>`}
+    $('appCurrentPage').textContent=name==='nearby'?'':pages[name]?.label||'';
     nav.querySelectorAll('[data-page]').forEach(link=>{if(link.dataset.page===name)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current')});close()
   }
   const baseChange=changeSource;

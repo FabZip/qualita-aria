@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `1.1.0` |
-| Build | `131` |
+| Applicazione | `1.1.1` |
+| Build | `132` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.1` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,16 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 1.1.1 — Stile uniforme tra dashboard e pagine
+
+- Tutte le otto schede della dashboard condividono icone, superfici, riquadro interno del riepilogo e area dei pulsanti. I colori di categoria restano riconoscibili; la scheda Allerte conserva i simboli di stato senza un riquadro più marcato delle altre.
+- Intestazioni con icone per tutte le pagine, compresi Meteo, EEA, OpenAQ, previsioni aria e Alberi. Bordi, raggi, spaziature e sfondi comuni per riepiloghi, eventi, liste, previsioni, neve e mappe.
+- Le Allerte mantengono colori semantici e legenda, con enfasi proporzionata agli altri riepiloghi. Filtri, contenuti, ordine della dashboard e funzionamento delle mappe sono preservati.
+
+App **1.1.1 build 132**, rilasciata il **26 novembre 2026**, cache PWA aggiornata. Nessuna modifica ai Worker o ai database. Superati 34 test automatici; verificati navigazione e intestazioni di tutte le sezioni, dashboard desktop e layout mobile a 390 pixel senza debordamenti.
+
+Lo stile comune è in `css/sections.css`, caricato dopo gli stili delle singole pagine. L’attributo `data-app-page` segue la navigazione e i `data-section` definiscono gli accenti delle schede; le classi di rischio rimangono indipendenti dai colori di categoria.
 
 ### 1.1.0 — Allerte più chiare e riconoscibili
 

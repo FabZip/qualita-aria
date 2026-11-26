@@ -16,3 +16,8 @@ const before=writes.length;location.hash='#fires';windowEvents.get('popstate')()
 context.AppNavigation.navigate('invalid');assert.equal(changes,2);
 const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');assert.match(html,/<label id="pollutantSourceField" hidden>/);assert.ok(html.indexOf('id="appNavigation"')<html.indexOf('</header>'));assert.ok(html.indexOf('aria-header-logo')<html.indexOf('id="appNavigation"'));
 console.log('navigation: menu, keyboard, URL and Back ok');
+
+// Section headings follow the page, and disappear where the environment page owns its heading.
+context.AppNavigation.navigate('weather');assert.equal(node('sectionHeading').hidden,false);assert.match(node('sectionHeading').innerHTML,/Previsioni e radar/);
+context.AppNavigation.navigate('trees');assert.equal(node('sectionHeading').hidden,false);assert.match(node('sectionHeading').innerHTML,/Interventi documentati/);
+context.AppNavigation.navigate('nearby');assert.equal(node('sectionHeading').hidden,true);

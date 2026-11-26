@@ -34,6 +34,8 @@ La località è condivisa tra riepilogo, meteo, diario, allerte, terremoti e inc
 
 Le viste osservazionali della qualità dell’aria possono affiancare informazioni sulle temperature delle stazioni fisiche disponibili.
 
+Le sezioni condividono intestazioni con icone colorate e uno stile uniforme per schede, riepiloghi e pannelli. I livelli di allerta mantengono simboli e colori dedicati.
+
 ## Diario ambientale
 
 Il diario riunisce gli eventi arborei documentati e i terremoti in una cronologia con mappa. Consente di cercare per testo e filtrare per categoria, periodo e distanza dalla località scelta, da 10 a 200 km.
