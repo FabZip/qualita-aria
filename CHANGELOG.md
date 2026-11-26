@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.2] — Componenti comuni anche negli interni delle pagine
+
+- Corrette le differenze rimaste nei pannelli interni delle Allerte e nelle previsioni della qualità dell’aria: componenti condivisi `ui-panel`, `ui-card`, `ui-badge` e `ui-day-picker`, usati direttamente anche nel markup generato.
+- Superfici neutre, bordi, raggi e padding identici per i componenti dello stesso tipo. Rimossi i bordi superiori spessi delle schede di rischio e gli sfondi speciali dei pannelli aria; colori semantici conservati su simboli, valori e badge.
+- Eliminato il contenitore decorativo annidato delle previsioni aria e uniformati selezione del giorno, metriche, grafico e fasce orarie. Stessi componenti applicati anche a Meteo, Neve, riepiloghi EEA/OpenAQ, Alberi, eventi e dashboard.
+
+App **1.1.2 build 133**, rilasciata il **26 novembre 2026**, cache PWA aggiornata. Nessuna modifica a fonti, filtri, Worker o database. Superati 34 test automatici. Verifica browser: proprietà calcolate identiche per schede Allerte/aria/Meteo/EEA/OpenAQ, pannelli e selettori Allerte/aria; controllo del cambio giorno e del layout mobile a 390 pixel senza debordamenti.
+
 ## [1.1.1] — Stile uniforme tra dashboard e pagine
 
 - Tutte le otto schede della dashboard condividono icone, superfici, riquadro interno del riepilogo e area dei pulsanti. I colori di categoria restano riconoscibili; la scheda Allerte conserva i simboli di stato senza un riquadro più marcato delle altre.

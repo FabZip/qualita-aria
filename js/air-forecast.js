@@ -285,8 +285,8 @@
   }
 
   function qualityBadge(quality){
-    if(!quality)return'<span class="forecast-quality forecast-quality-neutral">Valore previsto</span>';
-    return`<span class="forecast-quality forecast-quality-${quality.level}">${escapeHtml(quality.label)}</span>`
+    if(!quality)return'<span class="forecast-quality ui-badge forecast-quality-neutral">Valore previsto</span>';
+    return`<span class="forecast-quality ui-badge forecast-quality-${quality.level}">${escapeHtml(quality.label)}</span>`
   }
 
   function renderHourlyChart(day,unit){
@@ -333,7 +333,7 @@
   }
 
   function renderPeriodCard(period,unit){
-    return`<article class="forecast-period-card">
+    return`<article class="forecast-period-card ui-card">
       <div class="forecast-period-card-head"><span aria-hidden="true">${periodIcon(period.id)}</span><strong>${escapeHtml(period.label)}</strong></div>
       <div class="forecast-period-value">${formatValue(period.value)} <small>${escapeHtml(unit)}</small></div>
       ${qualityBadge(period.quality)}
@@ -347,7 +347,7 @@
   }
 
   function renderDayPicker(days,selectedDate,unit){
-    return`<nav class="forecast-day-picker" aria-label="Scegli il giorno della previsione">
+    return`<nav class="forecast-day-picker ui-day-picker" aria-label="Scegli il giorno della previsione">
       ${days.map((day,index)=>{
         const label=dayPickerLabel(day.date,index);
         const selected=day.date===selectedDate;
@@ -363,20 +363,20 @@
   function renderSelectedDay(day,index,forecast){
     const peakPeriod=highestPeriod(day);
     return`<section class="forecast-overview" aria-labelledby="forecastSelectedDay">
-      <header class="forecast-overview-head">
+      <header class="forecast-overview-head ui-panel">
         <div><span class="forecast-kicker">Giorno selezionato</span><h3 id="forecastSelectedDay">${escapeHtml(dayLabel(day.date,index))}</h3></div>
         ${qualityBadge(day.quality)}
       </header>
       <div class="forecast-metrics">
-        <article><span>Media prevista</span><strong>${formatValue(day.mean)}</strong><small>${escapeHtml(forecast.unit)}</small></article>
-        <article><span>Picco orario</span><strong>${formatValue(day.max)}</strong><small>${escapeHtml(forecast.unit)}</small></article>
-        <article><span>Fascia più alta</span><strong>${escapeHtml(peakPeriod?.label||'—')}</strong><small>${peakPeriod?`${formatValue(peakPeriod.value)} ${escapeHtml(forecast.unit)}`:'—'}</small></article>
+        <article class="ui-card"><span>Media prevista</span><strong>${formatValue(day.mean)}</strong><small>${escapeHtml(forecast.unit)}</small></article>
+        <article class="ui-card"><span>Picco orario</span><strong>${formatValue(day.max)}</strong><small>${escapeHtml(forecast.unit)}</small></article>
+        <article class="ui-card"><span>Fascia più alta</span><strong>${escapeHtml(peakPeriod?.label||'—')}</strong><small>${peakPeriod?`${formatValue(peakPeriod.value)} ${escapeHtml(forecast.unit)}`:'—'}</small></article>
       </div>
-      <section class="forecast-chart-card">
+      <section class="forecast-chart-card ui-panel">
         <div><span class="forecast-kicker">Profilo giornaliero</span><h3>Andamento nelle 24 ore</h3></div>
         ${renderHourlyChart(day,forecast.unit)}
       </section>
-      <section class="forecast-period-section" aria-labelledby="forecastPeriodsTitle">
+      <section class="forecast-period-section ui-panel" aria-labelledby="forecastPeriodsTitle">
         <div><span class="forecast-kicker">Momenti della giornata</span><h3 id="forecastPeriodsTitle">Valori medi previsti</h3></div>
         <div class="forecast-period-grid">${day.periods.map(period=>renderPeriodCard(period,forecast.unit)).join('')}</div>
       </section>

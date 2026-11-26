@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `1.1.1` |
-| Build | `132` |
+| Applicazione | `1.1.2` |
+| Build | `133` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.1` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,16 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 1.1.2 — Componenti comuni anche negli interni delle pagine
+
+- Corrette le differenze rimaste nei pannelli interni delle Allerte e nelle previsioni della qualità dell’aria: componenti condivisi `ui-panel`, `ui-card`, `ui-badge` e `ui-day-picker`, usati direttamente anche nel markup generato.
+- Superfici neutre, bordi, raggi e padding identici per i componenti dello stesso tipo. Rimossi i bordi superiori spessi delle schede di rischio e gli sfondi speciali dei pannelli aria; colori semantici conservati su simboli, valori e badge.
+- Eliminato il contenitore decorativo annidato delle previsioni aria e uniformati selezione del giorno, metriche, grafico e fasce orarie. Stessi componenti applicati anche a Meteo, Neve, riepiloghi EEA/OpenAQ, Alberi, eventi e dashboard.
+
+App **1.1.2 build 133**, rilasciata il **26 novembre 2026**, cache PWA aggiornata. Nessuna modifica a fonti, filtri, Worker o database. Superati 34 test automatici. Verifica browser: proprietà calcolate identiche per schede Allerte/aria/Meteo/EEA/OpenAQ, pannelli e selettori Allerte/aria; controllo del cambio giorno e del layout mobile a 390 pixel senza debordamenti.
+
+La verifica del 26 novembre ha individuato la causa residua: alcuni stili interni erano ancora gestiti dalle classi specifiche, e il vecchio selettore `.forecast-periods-card` non copriva i componenti effettivi `.forecast-period-section` / `.forecast-period-card`. I componenti comuni ora sono applicati esplicitamente al markup e verificabili tramite stile calcolato nel browser.
 
 ### 1.1.1 — Stile uniforme tra dashboard e pagine
 
