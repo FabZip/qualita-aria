@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.5] — Descrizioni brevi dei collegamenti
+
+- Ogni collegamento alla sezione successiva include una descrizione di massimo dieci parole, compreso quello a Neve.
+
+App **1.1.5 build 136**, rilasciata il **26 novembre 2026**, cache PWA aggiornata.
+
 ## [1.1.4] — Percorso tra le sezioni ambientali
 
 - Dashboard riordinata: Allerte, Neve, Meteo, Qualità dell’aria, Alberi, Incendi, Terremoti e Diario ambientale.
