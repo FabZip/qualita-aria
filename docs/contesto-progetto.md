@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `1.1.5` |
-| Build | `136` |
+| Applicazione | `1.1.6` |
+| Build | `137` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.1` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,12 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 1.1.6 — Menu e Diario di tutte le categorie
+
+Menu allineato alla dashboard, con le tre viste aria raggruppate. `js/diary.js` normalizza DPC, MeteoAlarm, previsioni meteo/neve Open-Meteo, sei inquinanti CAMS e poligoni EFFIS; `environment.js` li integra con alberi e terremoti mediante richieste indipendenti, senza perdere le altre fonti in caso di errore. Filtri per tutte le sette categorie, ricerca, periodo e distanza; le voci senza coordinate non diventano punti sulla mappa. Gli avvisi neve regionali sono esplicitamente nazionali, fuori dal filtro di distanza.
+
+La copertura è visibile nel Diario: previsioni solo nei giorni disponibili, bollettini validi, INGV ultimo anno (massimo 500), alberi anno corrente e precedente, EFFIS fino a 500 aree nel riquadro di circa 200 km (distanza dal centro del poligono). Non viene creato un archivio storico delle previsioni; le misure puntuali EEA/OpenAQ rimangono nelle pagine dedicate. App **1.1.6 build 137**; nessuna modifica a Worker o database. Superati 35 test automatici, inclusi tipi di dato, unità, scadenze, avvisi regionali, inquinanti mancanti e ordine del menu. Verificati nel browser i sette filtri categoria, ricerca e caricamento con fonti reali su Roma.
 
 ### 1.1.5 — Descrizioni dei collegamenti
 

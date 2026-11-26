@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.6] — Menu ordinato e Diario esteso
+
+- Menu nello stesso ordine della dashboard: Allerte, Neve, Meteo, Qualità dell’aria (previsioni, EEA e OpenAQ), Alberi, Incendi, Terremoti e Diario ambientale.
+- Diario con valutazioni DPC, avvisi neve/ghiaccio MeteoAlarm, previsioni giornaliere meteo e neve, previsioni dei sei inquinanti CAMS, alberi documentati, aree bruciate EFFIS e terremoti INGV. Ricerca, categorie, periodo e distanza condivisi; fonte, stato e validità per ogni voce.
+- Previsioni esplicitamente distinte dalle osservazioni. Avvisi regionali italiani inclusi senza filtro di distanza, senza coordinate inventate. Copertura e indisponibilità dichiarate; nessun archivio storico artificiale per le previsioni. Le misure di stazione EEA/OpenAQ restano consultabili nelle rispettive pagine.
+
+App **1.1.6 build 137**, rilasciata il **26 novembre 2026**, cache PWA aggiornata. Nessuna modifica a Worker o database. Superati 35 test; verificati menu e filtri del Diario con fonti reali nel browser.
+
 ## [1.1.5] — Descrizioni brevi dei collegamenti
 
 - Ogni collegamento alla sezione successiva include una descrizione di massimo dieci parole, compreso quello a Neve.

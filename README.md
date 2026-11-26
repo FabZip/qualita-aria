@@ -38,7 +38,7 @@ Le sezioni condividono intestazioni con icone colorate e uno stile uniforme per 
 
 ## Diario ambientale
 
-Il diario riunisce gli eventi arborei documentati e i terremoti in una cronologia con mappa. Consente di cercare per testo e filtrare per categoria, periodo e distanza dalla località scelta, da 10 a 200 km.
+Il diario riunisce allerte ufficiali, avvisi neve e ghiaccio, previsioni meteo e neve, previsioni della qualità dell’aria, eventi arborei documentati, aree bruciate e terremoti in una cronologia con mappa. Ogni voce distingue previsioni, valutazioni e rilevamenti, con data e fonte. Consente di cercare per testo e filtrare per categoria, periodo e distanza dalla località scelta, da 10 a 200 km. Gli avvisi regionali italiani neve/ghiaccio sono indicati separatamente dal filtro di distanza e non sono posizionati sulla mappa. La copertura e le fonti non disponibili sono dichiarate: le previsioni non costituiscono un archivio storico; le misure delle stazioni EEA e OpenAQ restano nelle pagine dedicate.
 
 Gli interventi futuri restano riconoscibili come **programmati**, distinti da quelli eseguiti o da verificare. Ogni evento conserva il collegamento alla fonte; gli eventi senza posizione o data non vengono collocati sulla mappa. Le aree bruciate e i bollettini di allerta si consultano nelle rispettive sezioni.
 
