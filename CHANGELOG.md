@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0] — Allerte più chiare e riconoscibili
+
+- Nella dashboard un simbolo immediato distingue allerta presente, nessuna allerta segnalata e dati non disponibili/incompleti o scaduti. Livello massimo delle giornate coperte, colore, zona e data, con avvisi futuri esplicitamente indicati.
+- Pagina Allerte ridisegnata con riepilogo in evidenza, pulsanti per scegliere la giornata, icone SVG per rischio idraulico, temporali e rischio idrogeologico, badge colorati e legenda accessibile anche senza distinguere i colori. Fonte e validità restano visibili.
+- Valutazioni mancanti e zone non individuate non diventano un via libera verde; gli avvisi scaduti sono esclusi anche se una cache supera la mezzanotte. Collegamento alla sezione Neve per gli avvisi neve/ghiaccio, separati dal bollettino DPC.
+
+App **1.1.0 build 131**, rilasciata il **26 novembre 2026**, cache PWA aggiornata. Nessuna modifica ai Worker o ai database. Superati 34 test automatici, inclusi livelli, dati incompleti, scadenze, avvisi futuri e selezione della giornata; verificati a video pagina e dashboard con bollettino reale.
+
 ## [1.0.6] — Neve e nuova disposizione della dashboard
 
 - Dashboard ordinata: Allerte, Meteo, Neve, Qualità dell’aria, Alberi, Incendi, Terremoti, Diario ambientale. Il pulsante Apri diario è nella scheda dedicata, in fondo; Alberi mantiene soltanto Fonti comunali.

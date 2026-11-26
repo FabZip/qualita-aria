@@ -28,7 +28,7 @@ La località è condivisa tra riepilogo, meteo, diario, allerte, terremoti e inc
 | **Previsioni qualità dell’aria** | Previsioni modellistiche CAMS tramite Open-Meteo per PM10, PM2.5, NO₂, O₃, SO₂ e CO, con riepiloghi giornalieri e per fascia oraria. |
 | **Neve** | Nevicate stimate e neve prevista per la località cercata, spessore al suolo e mappa di località montane italiane campione tramite Open-Meteo. Avvisi ufficiali neve/ghiaccio MeteoAlarm con area regionale, livello e validità. |
 | **Alberi** | Bilanci, piantumazioni, abbattimenti e interventi documentati dalle fonti comunali, con luogo, quantità quando nota, periodo dei lavori, stato e fonte. Le raccolte di eventi coprono Roma e Guidonia Montecelio. |
-| **Allerte** | Bollettini ufficiali della Protezione Civile per la zona della località scelta: rischio idraulico, temporali e rischio idrogeologico, con validità e collegamento alla fonte. |
+| **Allerte** | Bollettini ufficiali della Protezione Civile per la zona della località scelta: rischio idraulico, temporali e rischio idrogeologico, con simboli e livelli colorati, scelta della giornata, validità e collegamento alla fonte. |
 | **Terremoti** | Eventi registrati da INGV, con magnitudo evidenziata, profondità, ora, epicentro e distanza. Una scheda mostra l’ultimo terremoto del catalogo anche senza geolocalizzazione; il clic sull’evento centra la mappa sull’epicentro. |
 | **Incendi** | Aree bruciate rilevate da Copernicus EFFIS negli ultimi uno, sette o trenta giorni. Una scheda mostra l’ultima area rilevata nel catalogo, senza filtro di distanza; il clic inquadra il suo perimetro. Collegamento al visualizzatore ufficiale per punti caldi satellitari e pericolo previsto. |
 
