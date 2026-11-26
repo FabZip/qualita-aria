@@ -6,7 +6,7 @@ const c=vm.createContext({URL,URLSearchParams,Date:FixedDate,Intl});vm.runInCont
 for(const [text,level] of [['Assenza / NESSUNA ALLERTA',0],['Ordinaria / ALLERTA GIALLA',1],['Moderata / ALLERTA ARANCIONE',2],['Elevata / ALLERTA ROSSA',3],['Valutazione non trasmessa',null],['',null]])assert.equal(api.alertLevel(text),level);
 const period=(date,level='NESSUNA ALLERTA')=>({date,zones:[{name:'Zona <Test>',risks:['idraulico','temporali','idrogeologico'].map(type=>({type,text:level}))}]});
 const data={title:'Bollettino <Test>',stale:false,current:[period('2026-11-26'),period('2026-11-27')]};
-assert.equal(api.alertStatus(data).key,'green');assert.match(api.alertHeroHtml(data,true),/Nessuna allerta segnalata/);assert.match(api.alertHeroHtml(data,true),/<svg/);
+assert.equal(api.alertStatus(data).key,'green');assert.match(api.alertHeroHtml(data,true),/Nessuna allerta segnalata/);assert.doesNotMatch(api.alertHeroHtml(data,true),/<svg/);assert.match(api.alertHeroHtml(data),/<svg/);
 const upcoming={...data,current:[period('2026-11-26'),period('2026-11-27','ALLERTA ARANCIONE')]};const status=api.alertStatus(upcoming);assert.equal(status.key,'orange');assert.match(status.detail,/Prevista/);assert.equal(status.selected.date,'2026-11-27');
 assert.match(api.alertHtml(upcoming),/data-alert-panel="2026-11-26" hidden/);assert.match(api.alertHtml(upcoming),/data-alert-day="2026-11-27" aria-pressed="true"/);
 assert.equal(api.alertStatus({...data,stale:true}).key,'unknown');assert.equal(api.alertStatus({...data,current:[period('2026-11-25','ALLERTA ROSSA')]}).label,'Bollettino scaduto');assert.equal(api.alertStatus(null).label,'Dati non disponibili');

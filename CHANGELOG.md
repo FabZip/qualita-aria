@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3] — Pulsanti uniformi e riepilogo Allerte essenziale
+
+- Pulsanti delle schede dashboard e delle azioni interne con superfici, bordi e testo neutri; colori di categoria conservati nelle icone. Uniformati anche gli stati hover, focus e selezione dei giorni.
+- Rimosso il simbolo duplicato nel riepilogo Allerte della dashboard: resta l’icona di stato nel titolo.
+
+App **1.1.3 build 134**, rilasciata il **26 novembre 2026**, cache PWA aggiornata.
+
 ## [1.1.2] — Componenti comuni anche negli interni delle pagine
 
 - Corrette le differenze rimaste nei pannelli interni delle Allerte e nelle previsioni della qualità dell’aria: componenti condivisi `ui-panel`, `ui-card`, `ui-badge` e `ui-day-picker`, usati direttamente anche nel markup generato.
