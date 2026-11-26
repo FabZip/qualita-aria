@@ -2593,6 +2593,45 @@ async function reviewTreeEvent(request,env,cors){
   return json({ok:true,sourceKey,validation,status,eventType,quantity},200,{...cors,'Cache-Control':'no-store'})
 }
 
+const SNOW_ALERT_FEED='https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-italy';
+function parseSnowAlerts(xml,now=Date.now()){
+  if(!/<feed\b/.test(xml)||!/<\/feed>\s*$/.test(xml)||/<!DOCTYPE|<!ENTITY/i.test(xml))throw Error('Feed MeteoAlarm non valido');
+  const text=(block,tag)=>decodeHtml(block.match(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`))?.[1]||'');
+  const updated=text(xml.split('<entry>')[0],'updated'),published=Date.parse(updated);
+  if(!Number.isFinite(published)||published>now+300000)throw Error('Data MeteoAlarm non valida');
+  const warnings=new Map();
+  for(const match of xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)){
+    const block=match[1],event=text(block,'cap:event');
+    if(!/snow|neve|ghiaccio/i.test(event)||text(block,'cap:status')!=='Actual'||text(block,'cap:scope')!=='Public'||!['Alert','Update'].includes(text(block,'cap:message_type')))continue;
+    const onset=text(block,'cap:onset')||text(block,'cap:effective'),expires=text(block,'cap:expires'),area=text(block,'cap:areaDesc');
+    if(!area||!Number.isFinite(Date.parse(onset))||!Number.isFinite(Date.parse(expires))||Date.parse(expires)<=now||Date.parse(expires)<=Date.parse(onset))continue;
+    const severity=text(block,'cap:severity'),level=({Moderate:'Gialla',Severe:'Arancione',Extreme:'Rossa'})[severity];
+    if(!level)continue;
+    const id=text(block,'cap:identifier'),key=`${id}:${area}:${onset}:${expires}`;
+    warnings.set(key,{id,area,level,onset,expires,url:'https://meteoalarm.org?region=IT'});
+  }
+  return {source:'MeteoAlarm / EUMETNET · Aeronautica Militare',url:SNOW_ALERT_FEED,updated,stale:now-published>6*3600000,warnings:[...warnings.values()]}
+}
+async function snowAlertsResponse(cors){
+  const edgeCache=typeof caches==='undefined'?null:caches.default,cacheKey=new Request('https://qualita-aria-temperature.fabzip.workers.dev/internal/snow-alerts-v1');
+  const cached=edgeCache?await edgeCache.match(cacheKey).catch(()=>null):null;
+  if(cached){const headers=new Headers(cached.headers);for(const [key,value] of Object.entries(cors))headers.set(key,value);return new Response(cached.body,{headers})}
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+  let reader;
+  try{
+    const response=await fetch(SNOW_ALERT_FEED,{signal:controller.signal,redirect:'manual',headers:{Accept:'*/*','User-Agent':'ARIA/1.0 (+https://fabzip.github.io/qualita-aria/)'},cache:'no-store'});
+    if(!response.ok||!response.body)throw Error(`Feed MeteoAlarm non disponibile (HTTP ${response.status})`);
+    reader=response.body.getReader();const chunks=[];let size=0;
+    while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>2000000)throw Error('Feed MeteoAlarm troppo grande');chunks.push(value)}
+    const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
+    const result=json(parseSnowAlerts(new TextDecoder().decode(bytes)),200,{'Cache-Control':'public, max-age=300'});
+    if(edgeCache)await edgeCache.put(cacheKey,result.clone()).catch(()=>{});
+    const headers=new Headers(result.headers);for(const [key,value] of Object.entries(cors))headers.set(key,value);
+    return new Response(result.body,{headers});
+  }catch(error){console.warn(JSON.stringify({service:'snow-alerts',error:String(error?.message||error)}));return json({error:'Avvisi neve e ghiaccio non disponibili. Consulta MeteoAlarm e la Protezione Civile regionale.'},502,{...cors,'Cache-Control':'no-store'})}
+  finally{clearTimeout(timer);if(reader)await reader.cancel().catch(()=>{})}
+}
+
 export default{
   async scheduled(controller,env,ctx){
     if(String(env.TREE_SYNC_ENABLED||'true')!=='true')return;
@@ -2669,11 +2708,13 @@ export default{
       })
     }
 
+    if(url.pathname==='/v1/weather/snow-alerts')return snowAlertsResponse(cors);
+
     if(url.pathname==='/health'){
       return json({
         ok:true,
         service:'qualita-aria-temperature-proxy',
-        version:'0.11.0',
+        version:'0.11.1',
         era5Land:true,
         observedStations:true,
         arpaLazioPhysical:true,

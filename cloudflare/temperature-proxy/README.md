@@ -1,3 +1,9 @@
+# Proxy ambientale 0.11.1 — avvisi neve e ghiaccio
+
+`GET /v1/weather/snow-alerts` legge esclusivamente il [feed Atom pubblico italiano MeteoAlarm](https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-italy), senza token o nuovi secret. Restituisce fonte, aggiornamento, indicatore di feed oltre 6 ore e avvisi ufficiali neve/ghiaccio non scaduti, in corso o futuri, con area regionale, livello e validità. Non comprende valanghe. Gli errori restituiscono HTTP 502, senza simulare assenza di allerta.
+
+Timeout 12 secondi, lettura limitata a 2 MB, redirect non ammessi, cache delle risposte valide di 5 minuti e origini CORS esistenti. Nessuna migrazione D1. Deploy con `wrangler deploy --config ./wrangler.toml --keep-vars`; usare esplicitamente TOML per preservare binding e cron esistenti.
+
 # Proxy ambientale 0.11.0 — calendari Roma / app 0.8.3
 
 Applicare **0013_tree_calendar_intervals.sql prima del deploy**. Il Worker importa le tabelle dei 15 Municipi dalla scheda ufficiale `INF1520290` (`pagina=2..16`), conservando il periodo dei lavori, il link all'atto e la pagina del calendario. Solo piantumazioni e abbattimenti espliciti; gli abbattimenti eventuali sono sconosciuti, potature e messe in sicurezza generiche escluse. Date invalide diagnosticate, quantità non dedotte, indirizzi generici senza geocodifica fittizia. Fonte Ambiente aggiunta alla scansione degli avvisi.

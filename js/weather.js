@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
   const TTL=15*60*1000,cache=new Map(),inflight=new Map();
-  const fields={current:'temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,is_day',hourly:'temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,is_day',daily:'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max'};
+  const fields={current:'temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,is_day,snowfall',hourly:'temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,is_day,snowfall,snow_depth',daily:'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,snowfall_sum'};
   const number=value=>value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value))?Number(value):null;
   const format=(value,unit='')=>number(value)===null?'—':`${Number(value).toLocaleString('it-IT',{maximumFractionDigits:1})}${unit}`;
   const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -76,7 +76,7 @@
         if(!postalPending)postalPending=(async()=>{
           const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
           try{
-          const response=await fetch('data/italian-postal-codes.json?v=1.0.5',{signal:controller.signal});
+          const response=await fetch('data/italian-postal-codes.json?v=1.0.6',{signal:controller.signal});
           if(!response.ok)throw Error('Catalogo CAP temporaneamente non disponibile. Cerca il nome del comune.');
           const payload=await response.json();if(!payload?.codes||typeof payload.codes!=='object')throw Error('Catalogo CAP non valido. Cerca il nome del comune.');
           postalData=payload;return payload
@@ -117,7 +117,7 @@
     return payload
   }
   async function fetchWeather(city){
-    const url=buildUrl(city),key=`aria-weather:${city.lat}:${city.lon}`;
+    const url=buildUrl(city),key=`aria-weather-snow:${city.lat}:${city.lon}`;
     let saved=cache.get(key);
     if(!saved)try{saved=JSON.parse(localStorage.getItem(key)||'null')}catch{}
     if(saved&&Date.now()-saved.savedAt>=0&&Date.now()-saved.savedAt<TTL){try{validate(saved.payload);return saved}catch{}}
@@ -153,7 +153,7 @@
   SOURCE_INFO.weather={name:'Meteo · Open-Meteo',years:['forecast'],description:'<strong>Meteo:</strong> situazione attuale stimata, prossime 24 ore e previsioni a 7 giorni per la città selezionata. Dati Open-Meteo.',hint:''};
   const baseConfigure=configureSourceUI,baseRender=render;
   let selection=null,geoPromise=null,geoSaved=null,searchTimer=null,searchController=null,searchSequence=0,results=[];
-  const locationSource=()=>['weather','nearby','diary','alerts','earthquakes','fires'].includes(source());
+  const locationSource=()=>['weather','nearby','diary','alerts','earthquakes','fires','snow'].includes(source());
   const weather=()=>source()==='weather'&&!isTemperature();
   function layout(active){
     $('weatherPanel').classList.toggle('hidden',!active);

@@ -110,3 +110,10 @@ await handlers.get('weatherSearchForm:submit')({preventDefault(){}});
 assert.equal(node('weatherSearchStatus').textContent,'');
 assert.equal(node('weatherSearchResults').innerHTML,'');
 assert.doesNotMatch(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),/<button type="submit">Cerca<\/button>/);
+
+// The shared location search must publish suggestions on the new Snow page too.
+ui.source=()=> 'snow';node('weatherSearch').value='Bormio';
+ui.fetch=async()=>Response.json({results:[{id:3181730,name:'Bormio',latitude:46.46717,longitude:10.37008,country:'Italia'}]});
+await handlers.get('weatherSearchForm:submit')({preventDefault(){}});
+assert.match(node('weatherSearchResults').innerHTML,/Bormio/);
+assert.match(node('weatherSearchStatus').textContent,/1 risultati/);

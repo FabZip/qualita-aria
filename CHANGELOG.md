@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.6] — Neve e nuova disposizione della dashboard
+
+- Dashboard ordinata: Allerte, Meteo, Neve, Qualità dell’aria, Alberi, Incendi, Terremoti, Diario ambientale. Il pulsante Apri diario è nella scheda dedicata, in fondo; Alberi mantiene soltanto Fonti comunali.
+- Nuova pagina Neve con ricerca condivisa, nevicata stimata corrente, neve nelle prossime 24 ore, spessore al suolo e riepilogo giornaliero Open-Meteo. Unità cm/m convertite esplicitamente; valori mancanti distinti dagli zeri.
+- Mappa di 18 località montane italiane campione, oltre alla località scelta, con viste corrente/24 ore, elenco cliccabile e spostamento touch a due dita. Copertura campionaria e natura modellistica dichiarate; non è una rete di osservazioni né una mappa continua di tutte le nevicate.
+- Avvisi ufficiali italiani neve/ghiaccio MeteoAlarm / EUMETNET, con aree regionali, livello e validità. Feed Atom pubblico senza chiavi, tramite endpoint fisso del Worker; esclusi avvisi scaduti, di test, cancellazioni e altri fenomeni. Feed non aggiornato o non raggiungibile non equivale ad assenza di avvisi. Il rischio valanghe è escluso.
+- Worker ambientale 0.11.1: `GET /v1/weather/snow-alerts`, CORS esistente, timeout 12 secondi, limite 2 MB e cache delle risposte valide di 5 minuti. Nessuna migrazione D1 o modifica ai secret. Cache meteo separata per includere i campi neve; cache PWA aggiornata.
+
+App **1.0.6 build 130**, rilasciata il **26 novembre 2026**. Superati 33 test automatici; verificati a video ricerca località, mappa, cambio periodo, popup, dashboard e avvisi ufficiali reali.
+
 ## [1.0.5] — Spiegazione degli archivi arborei senza eventi
 
 - Nella lista Alberi, un messaggio distingue i bilanci aggregati senza indirizzi dai periodi senza dati raccolti, spiegando perché mancano eventi e icone sulla mappa.

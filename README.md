@@ -26,6 +26,7 @@ La località è condivisa tra riepilogo, meteo, diario, allerte, terremoti e inc
 | **Qualità dell’aria · EEA** | Stazioni europee, dati osservati disponibili, statistiche annuali e dati preliminari distinti dai validati. Ricerca delle stazioni e consultazione per area, inquinante e periodo. |
 | **Qualità dell’aria · OpenAQ** | Stazioni e misure nell’area visibile della mappa, con selezione della città o geolocalizzazione, inquinante e finestra temporale. |
 | **Previsioni qualità dell’aria** | Previsioni modellistiche CAMS tramite Open-Meteo per PM10, PM2.5, NO₂, O₃, SO₂ e CO, con riepiloghi giornalieri e per fascia oraria. |
+| **Neve** | Nevicate stimate e neve prevista per la località cercata, spessore al suolo e mappa di località montane italiane campione tramite Open-Meteo. Avvisi ufficiali neve/ghiaccio MeteoAlarm con area regionale, livello e validità. |
 | **Alberi** | Bilanci, piantumazioni, abbattimenti e interventi documentati dalle fonti comunali, con luogo, quantità quando nota, periodo dei lavori, stato e fonte. Le raccolte di eventi coprono Roma e Guidonia Montecelio. |
 | **Allerte** | Bollettini ufficiali della Protezione Civile per la zona della località scelta: rischio idraulico, temporali e rischio idrogeologico, con validità e collegamento alla fonte. |
 | **Terremoti** | Eventi registrati da INGV, con magnitudo evidenziata, profondità, ora, epicentro e distanza. Una scheda mostra l’ultimo terremoto del catalogo anche senza geolocalizzazione; il clic sull’evento centra la mappa sull’epicentro. |
@@ -47,7 +48,7 @@ Le sezioni storiche compatibili offrono tre modalità:
 - **Confronto**: due periodi affiancati su mappe sincronizzate.
 - **Differenza**: variazione fra periodi e dati confrontabili.
 
-Gli elenchi consentono di trovare stazioni o eventi e riconoscerne la posizione sulla mappa. Le nuove mappe del diario, dei terremoti e delle aree bruciate richiedono due dita per lo spostamento su dispositivi touch. Il radar RainViewer dispone di un comando per attivare o bloccare l’interazione.
+Gli elenchi consentono di trovare stazioni o eventi e riconoscerne la posizione sulla mappa. Le nuove mappe del diario, dei terremoti e delle aree bruciate e della neve richiedono due dita per lo spostamento su dispositivi touch. Il radar RainViewer dispone di un comando per attivare o bloccare l’interazione.
 
 Per gli alberi è possibile segnalare problemi relativi agli eventi o alla loro posizione. L’amministrazione protetta permette di correggere quantità, tipo, stato, date e località, dividere gli interventi mantenendo la fonte comune ed escludere eventi errati dagli aggiornamenti successivi.
 

@@ -1,6 +1,6 @@
 (()=>{
   'use strict';
-  const pages={nearby:{label:'Dashboard · Intorno a me',icon:'nearby'},weather:{label:'Meteo',icon:'weather'},eea:{label:'Qualità dell’aria · EEA',icon:'air'},openaq:{label:'Qualità dell’aria · OpenAQ',icon:'air'},forecast:{label:'Previsioni qualità dell’aria',icon:'air'},trees:{label:'Alberi',icon:'trees'},alerts:{label:'Allerte',icon:'alerts'},earthquakes:{label:'Terremoti',icon:'earthquakes'},fires:{label:'Incendi',icon:'fires'},diary:{label:'Diario ambientale',icon:'diary'}};
+  const pages={nearby:{label:'Dashboard · Intorno a me',icon:'nearby'},weather:{label:'Meteo',icon:'weather'},snow:{label:'Neve',icon:'snow'},eea:{label:'Qualità dell’aria · EEA',icon:'air'},openaq:{label:'Qualità dell’aria · OpenAQ',icon:'air'},forecast:{label:'Previsioni qualità dell’aria',icon:'air'},trees:{label:'Alberi',icon:'trees'},alerts:{label:'Allerte',icon:'alerts'},earthquakes:{label:'Terremoti',icon:'earthquakes'},fires:{label:'Incendi',icon:'fires'},diary:{label:'Diario ambientale',icon:'diary'}};
   const route=hash=>{const key=String(hash||'').replace(/^#/,'');return Object.hasOwn(pages,key)?key:null};
   globalThis.AppNavigation={pages,route};
   if(typeof document==='undefined')return;

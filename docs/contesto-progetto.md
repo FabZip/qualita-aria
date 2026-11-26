@@ -16,15 +16,27 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `1.0.5` |
-| Build | `129` |
+| Applicazione | `1.0.6` |
+| Build | `130` |
 | Proxy EEA | `0.2.2` |
-| Worker ambientale | `0.11.0` |
+| Worker ambientale | `0.11.1` |
 | Proxy OpenAQ | `0.4.3` |
 | Dataset arboreo consolidato | `22` |
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 1.0.6 — Neve e nuova disposizione della dashboard
+
+- Dashboard ordinata: Allerte, Meteo, Neve, Qualità dell’aria, Alberi, Incendi, Terremoti, Diario ambientale. Il pulsante Apri diario è nella scheda dedicata, in fondo; Alberi mantiene soltanto Fonti comunali.
+- Nuova pagina Neve con ricerca condivisa, nevicata stimata corrente, neve nelle prossime 24 ore, spessore al suolo e riepilogo giornaliero Open-Meteo. Unità cm/m convertite esplicitamente; valori mancanti distinti dagli zeri.
+- Mappa di 18 località montane italiane campione, oltre alla località scelta, con viste corrente/24 ore, elenco cliccabile e spostamento touch a due dita. Copertura campionaria e natura modellistica dichiarate; non è una rete di osservazioni né una mappa continua di tutte le nevicate.
+- Avvisi ufficiali italiani neve/ghiaccio MeteoAlarm / EUMETNET, con aree regionali, livello e validità. Feed Atom pubblico senza chiavi, tramite endpoint fisso del Worker; esclusi avvisi scaduti, di test, cancellazioni e altri fenomeni. Feed non aggiornato o non raggiungibile non equivale ad assenza di avvisi. Il rischio valanghe è escluso.
+- Worker ambientale 0.11.1: `GET /v1/weather/snow-alerts`, CORS esistente, timeout 12 secondi, limite 2 MB e cache delle risposte valide di 5 minuti. Nessuna migrazione D1 o modifica ai secret. Cache meteo separata per includere i campi neve; cache PWA aggiornata.
+
+App **1.0.6 build 130**, rilasciata il **26 novembre 2026**. Superati 33 test automatici; verificati a video ricerca località, mappa, cambio periodo, popup, dashboard e avvisi ufficiali reali.
+
+Fonti verificate: [Open-Meteo](https://open-meteo.com/en/docs) e [feed ufficiali MeteoAlarm](https://feeds.meteoalarm.org/). Le API EDR MeteoAlarm richiedono un token; l’app usa il feed Atom pubblico italiano. Avvisi mostrati a livello nazionale, senza attribuirli automaticamente al comune selezionato. La pagina Neve funziona anche senza consenso GPS, con punti campione e avvisi nazionali.
 
 ### 1.0.5 — Spiegazione degli archivi arborei senza eventi
 
