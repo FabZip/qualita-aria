@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.13] — Previsioni orarie prima del radar
+
+- Le previsioni delle prossime 24 ore precedono la mappa radar; le previsioni a sette giorni rimangono sotto la mappa.
+
+App **1.1.13 build 144**, rilasciata il **27 novembre 2026**, cache PWA aggiornata.
+
 ## [1.1.12] — Maggiore contrasto delle previsioni orarie
 
 - Aumentato leggermente il contrasto di sfondo e bordo delle schede delle prossime 24 ore, con luce interna e ombra leggere, mantenendo la palette neutra.
