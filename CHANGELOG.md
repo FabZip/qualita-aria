@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.8] — Località della dashboard in evidenza
+
+- Località di riferimento in un riquadro dedicato, con icona di posizione, nome più leggibile e coordinate su una riga separata.
+
+App **1.1.8 build 139**, rilasciata il **27 novembre 2026**, cache PWA aggiornata.
+
 ## [1.1.7] — Schede del Diario più leggibili
 
 - Fonte originale con carattere ridotto, piccola icona colorata accanto alla categoria e pulsante neutro “Consulta…” in basso a destra in ogni scheda del Diario.

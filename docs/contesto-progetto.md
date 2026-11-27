@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `1.1.7` |
-| Build | `138` |
+| Applicazione | `1.1.8` |
+| Build | `139` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.1` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,10 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 1.1.8 — Località in evidenza
+
+La dashboard evidenzia la località di riferimento con icona di posizione, nome in grassetto e coordinate separate. Il riquadro conserva l’intero nome risolto o selezionato e va a capo sugli schermi stretti. App **1.1.8 build 139**, 27 novembre 2026.
 
 ### 1.1.7 — Schede del Diario
 
