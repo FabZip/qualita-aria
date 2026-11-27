@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.10] — Previsioni orarie più riconoscibili
+
+- Schede delle prossime 24 ore con sfondo neutro leggermente più chiaro, bordo più leggibile e ombra discreta. Orario e temperatura più evidenti.
+
+App **1.1.10 build 141**, rilasciata il **27 novembre 2026**, cache PWA aggiornata.
+
 ## [1.1.9] — Aggiornamento allineato al titolo
 
 - Nella dashboard il pulsante Aggiorna è sulla stessa riga di Intorno a me; la località occupa tutta la riga sottostante.
