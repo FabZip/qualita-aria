@@ -10,6 +10,9 @@ const weather=api.weatherEvents(payload,city);assert.equal(weather.length,2);ass
 assert.equal(api.weatherEvents({...payload,daily_units:{snowfall_sum:'m'}},city).length,1,'Unknown snow units must not become centimetres');
 assert.throws(()=>api.weatherEvents({},city));
 const air=api.airEvents({},city);assert.equal(air.length,6);assert.equal(new Set(air.map(e=>e.id)).size,6);assert.match(air[0].detail,/Non è una misura di stazione/);assert.match(air[0].detail,/Media prevista 0/);
+const airCard=env.eventHtml(air[0],{diary:true});assert.match(airCard,/data-environment-open="forecast"/);assert.match(airCard,/Consulta Qualità dell’aria/);assert.match(airCard,/diary-event-source/);assert.match(airCard,/environment-icon-air/);assert.doesNotMatch(env.eventHtml(air[0]),/diary-event-actions/);
+for(const category of Object.keys(api.labels)){const html=env.eventHtml({...air[0],category},{diary:true});assert.match(html,new RegExp(`data-environment-open="${category==='air'?'forecast':category}"`));}
+
 const aggregate=c.AirQualityForecast.aggregateForecast;c.AirQualityForecast.aggregateForecast=(p,key)=>{if(key==='CO')throw Error('Missing CO');return aggregate(p,key)};const partialAir=api.airEvents({},city);assert.equal(partialAir.length,5);assert.equal(partialAir.missing.join(','),'CO');c.AirQualityForecast.aggregateForecast=aggregate;
 const alert={stale:false,url:'https://example.com',current:[{date:'2026-11-25',zones:[{risks:[{type:'temporali',text:'ALLERTA ROSSA'}]}]},{date:'2026-11-26',zones:[{name:'Zona A',risks:[{type:'temporali',text:'NESSUNA ALLERTA'}]}]}]};
 assert.equal(api.alertEvents(alert,city).length,1);assert.match(api.alertEvents(alert,city)[0].locationNote,/Zona di allerta/);assert.equal(api.alertEvents({...alert,stale:true},city).length,0);

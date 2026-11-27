@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.7] — Schede del Diario più leggibili
+
+- Fonte originale con carattere ridotto, piccola icona colorata accanto alla categoria e pulsante neutro “Consulta…” in basso a destra in ogni scheda del Diario.
+- Il pulsante apre la sezione della categoria e riporta all’inizio della pagina; la fonte originale rimane un collegamento esterno separato.
+
+App **1.1.7 build 138**, rilasciata il **27 novembre 2026**, cache PWA aggiornata.
+
 ## [1.1.6] — Menu ordinato e Diario esteso
 
 - Menu nello stesso ordine della dashboard: Allerte, Neve, Meteo, Qualità dell’aria (previsioni, EEA e OpenAQ), Alberi, Incendi, Terremoti e Diario ambientale.

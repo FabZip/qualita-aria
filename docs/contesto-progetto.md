@@ -16,8 +16,8 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 
 | Componente | Versione |
 | --- | --- |
-| Applicazione | `1.1.6` |
-| Build | `137` |
+| Applicazione | `1.1.7` |
+| Build | `138` |
 | Proxy EEA | `0.2.2` |
 | Worker ambientale | `0.11.1` |
 | Proxy OpenAQ | `0.4.3` |
@@ -25,6 +25,10 @@ Ultima release preparata durante lo sviluppo descritto in questo documento:
 | Ultima migrazione D1 prevista | `0013_tree_calendar_intervals.sql` |
 
 La release frontend `0.7.28` è su `main` al commit `458e3ba`. L'8 novembre 2026 il Worker ambientale è `0.9.14`; il proxy EEA è aggiornato a `0.2.2` e i dati reali sono nuovamente disponibili. Il solo deploy `0.2.1` non risolveva il 403. Nessuna nuova migrazione D1 né rotazione dei secret applicativi. L'autenticazione Cloudflare dell'ambiente è stata configurata e verificata sull'account `f01ba9ed83503fc3833bf1c7f0f5e9e6`, senza esporre le credenziali.
+
+### 1.1.7 — Schede del Diario
+
+La lista del Diario passa l’opzione `diary` a `eventHtml`: icona compatta accanto alla categoria, fonte originale a 0,75 rem e pulsante “Consulta…” nel piè di scheda, allineato a destra e adattabile agli schermi stretti. Le sette categorie rimandano alle rispettive sezioni (aria → previsioni). Il pulsante riporta in cima alla pagina; i collegamenti delle fonti rimangono esterni. Le altre liste e i popup conservano la resa compatta precedente. App **1.1.7 build 138**, 27 novembre 2026.
 
 ### 1.1.6 — Menu e Diario di tutte le categorie
 
