@@ -4,6 +4,7 @@ import vm from 'node:vm';
 const src=fs.readFileSync(new URL('../js/weather-radar.js',import.meta.url),'utf8');
 const c=vm.createContext({URL,URLSearchParams});vm.runInContext(src,c);
 const url=new URL(c.WeatherRadar.widgetUrl({lat:41.9936,lon:12.7224}));
+const narrow=c.WeatherRadar.frameLayout(320,460);assert.equal(narrow.width,500);assert.equal(narrow.width*narrow.scale,320);assert.equal(narrow.height*narrow.scale,460);assert.equal(c.WeatherRadar.frameLayout(692,540).scale,1);assert.equal(c.WeatherRadar.frameLayout(0,0),null);
 assert.equal(url.origin,'https://www.rainviewer.com');assert.equal(url.pathname,'/map.html');assert.equal(url.searchParams.get('loc'),'41.9936,12.7224,7');assert.equal(url.searchParams.get('ts'),'2');assert.equal(url.searchParams.get('layer'),'radar');
 for(const city of [{lat:null,lon:12},{lat:91,lon:0},{lat:0,lon:181},{lat:NaN,lon:0},{}])assert.throws(()=>c.WeatherRadar.widgetUrl(city),/Coordinate/);
 assert.match(c.WeatherRadar.widgetUrl({lat:0,lon:0}),/loc=0%2C0%2C7/);

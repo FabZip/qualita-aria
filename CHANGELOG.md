@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.11] — Controlli radar visibili all’apertura
+
+- Widget RainViewer con viewport interno minimo di 500 px, adattato alla larghezza disponibile: evita la chiusura automatica dei comandi sugli schermi stretti. Ridimensionamento e rotazione aggiornano l’adattamento senza ricaricare il radar.
+- Conservata la protezione dello scorrimento touch con Attiva radar e Blocca interazione.
+
+App **1.1.11 build 142**, rilasciata il **27 novembre 2026**, cache PWA aggiornata.
+
 ## [1.1.10] — Previsioni orarie più riconoscibili
 
 - Schede delle prossime 24 ore con sfondo neutro leggermente più chiaro, bordo più leggibile e ombra discreta. Orario e temperatura più evidenti.
