@@ -51,4 +51,4 @@ html[data-app-page=nearby] #environmentPlace:not(:empty){display:flex;align-item
 html[data-app-page=nearby] .environment-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:16px}html[data-app-page=nearby] .environment-head>div{display:contents}html[data-app-page=nearby] #environmentTitle{grid-column:1;grid-row:1;min-width:0}html[data-app-page=nearby] #environmentRefresh{grid-column:2;grid-row:1;margin:0}html[data-app-page=nearby] #environmentPlace:not(:empty){grid-column:1/-1;grid-row:2;margin:0}html[data-app-page=nearby] #environmentPlace:empty{display:none}
 
 /* Subtle emphasis for hourly weather cards, retaining neutral surfaces. */
-.app-shell .weather-hours>.ui-card{background:#15273b;border-color:#3b5168;box-shadow:0 3px 8px rgba(0,0,0,.16)}.weather-hours time{color:var(--text);font-weight:600}.weather-hours strong{font-size:1.15rem}
+.app-shell .weather-hours>.ui-card{background:#1a2e44;border-color:#52677d;box-shadow:inset 0 1px rgba(255,255,255,.07),0 4px 10px rgba(0,0,0,.2)}.weather-hours time{color:var(--text);font-weight:600}.weather-hours strong{font-size:1.15rem}
