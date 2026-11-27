@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.9] — Aggiornamento allineato al titolo
+
+- Nella dashboard il pulsante Aggiorna è sulla stessa riga di Intorno a me; la località occupa tutta la riga sottostante.
+
+App **1.1.9 build 140**, rilasciata il **27 novembre 2026**, cache PWA aggiornata.
+
 ## [1.1.8] — Località della dashboard in evidenza
 
 - Località di riferimento in un riquadro dedicato, con icona di posizione, nome più leggibile e coordinate su una riga separata.
